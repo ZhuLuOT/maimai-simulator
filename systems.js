@@ -7,9 +7,9 @@
   const GLOVES=[{id:'cotton',name:'棉线手套',cost:8,durability:100,wear:1},{id:'sport',name:'耐磨手套',cost:25,durability:240,wear:.85}];
   const TALENTS=[
     ['transfer','其他音游转生者','初始全底力 +3',true],['endurance','体力过人','体力上限 +10',true],['musician','精通乐器','初始全底力 +2',true],['friends','熟人小团体','所有群友眼熟度 +25',true],['reader','读谱天才','读谱力 +4',true],['steady','稳定发挥','不会出现极差状态',true],['rich','富哥','初始资金 +1000',true],['dragon','龙B！','初始全底力 +4 · 第二周目起',true],['gifted','天赋异禀','每曲底力成长 +5%',true],
-    ['foundation','基本功扎实','B50 满 50 张且均为 12+ / 13 红谱，全底力 +2'],['adapt','快适应体质','同谱累计游玩 10 次；复打有效底力 +0.3'],['key','键盘B','累计 500 首键盘谱；键盘力 +5'],['star','星星B','累计 500 首星星谱；星星力 +5'],['slide','一眼会划','100 张 12+ 以上星星谱达到 SSS；星星力 +4'],['reading','见招拆招','初见 150 张谱面；读谱力 +2'],['speed','天生的手速','100 张 12+ 以上键盘谱达到 SSS；键盘力 +4'],['instinct','手比脑快','累计游玩 250 首；可开启凭手感模式'],['streak','越打越有','累计 50 PC；每段连续第 5 PC 全底力临时 +2'],['challenge','就爱越级','越级谱游玩 30 首；越级有效底力 +0.3'],['stage','舞台型选手','人多时累计游玩 40 首；人越多分数略有加成'],['expert','精于此道','累计 1000 首；全底力 +2'],['classic','吃屎大王','真超檄世代游玩 50 首；对应曲有效底力 +0.5'],['vocal','V家爱好者','V 家分区游玩 80 首；对应曲有效底力 +0.5'],['touhou','东方痴','东方分区游玩 80 首；对应曲有效底力 +0.5'],['ghost','鬼歌王','鬼歌游玩 50 首；对应曲有效底力 +0.5，但拼机伙伴眼熟度 -2']
+    ['foundation','基本功扎实','B50 满 50 张且均为 12+ / 13 红谱，全底力 +2'],['adapt','快适应体质','同谱累计游玩 10 次；复打有效底力 +0.3'],['key','键盘B','累计 500 首键盘谱；键盘力 +5'],['star','星星B','累计 500 首星星谱；星星力 +5'],['slide','一眼会划','100 张 12+ 以上星星谱达到鸟；星星力 +4'],['reading','见招拆招','初见 150 张谱面；读谱力 +2'],['speed','天生的手速','100 张 12+ 以上键盘谱达到鸟；键盘力 +4'],['instinct','手比脑快','累计游玩 250 首；可开启凭手感模式'],['streak','越打越有','累计 50 PC；每段连续第 5 PC 全底力临时 +2'],['challenge','就爱越级','越级谱游玩 30 首；越级有效底力 +0.3'],['stage','舞台型选手','人多时累计游玩 40 首；人越多分数略有加成'],['expert','精于此道','累计 1000 首；全底力 +2'],['classic','吃屎大王','真超檄世代游玩 50 首；对应曲有效底力 +0.5'],['vocal','V家爱好者','V 家分区游玩 80 首；对应曲有效底力 +0.5'],['touhou','东方痴','东方分区游玩 80 首；对应曲有效底力 +0.5'],['ghost','鬼歌王','鬼歌游玩 50 首；对应曲有效底力 +0.5，但拼机伙伴眼熟度 -2']
   ].map(([id,name,description,initial=false])=>({id,name,description,initial}));
-  const CONVERSATIONS=[['今晚谁出勤？','我下班就来，先帮我看看人数。','晚饭后人应该会多一点。'],['手套又打破了。','我包里有备用的，店里也能买。','别忘了带水！'],['刚刚差一点 SSS。','先休息一轮，别一直硬推。','换首熟歌找找感觉。'],['有谁拼机吗？','我想开两首星星。','可以，轮到我们叫一声。'],['饭点先撤了。','我也去吃面，晚点回来。','现在队伍短了。'],['海底谭的星星终于划明白了。','跟着节奏走，别抢拍。','今天试试。'],['今天状态不错！','推分还是看 B50 缺哪一边。','慢慢来，别忘了末班车。'],['早上人好少。','刚开门，几乎不用排队。','我上完课过来。']];
+  const CONVERSATIONS=[['今晚谁出勤？','我下班就来，先帮我看看人数。','晚饭后人应该会多一点。'],['手套又打破了。','我包里有备用的，店里也能买。','别忘了带水！'],['刚刚差一点鸟。','先休息一轮，别一直硬推。','换首熟歌找找感觉。'],['有谁拼机吗？','我想开两首星星。','可以，轮到我们叫一声。'],['饭点先撤了。','我也去吃面，晚点回来。','现在队伍短了。'],['海底谭的星星终于划明白了。','跟着节奏走，别抢拍。','今天试试。'],['今天状态不错！','推分还是看 B50 缺哪一边。','慢慢来，别忘了末班车。'],['早上人好少。','刚开门，几乎不用排队。','我上完课过来。']];
   const M=typeof module!=='undefined'?require('./gameplay'):root.Gameplay;
   let G;
   const has=(s,id)=>s.talents.includes(id);
@@ -25,14 +25,14 @@
     s.chat??=[];s.chatDay??=s.day;s.chatCount??=0;s.chatRefresh??=-1;
     s.completedRun??=false;s.setupDone??=s.started||Object.keys(s.records).length>0;
     for(const r of Object.values(s.records))r.bestCombo??=r.combo||'';
-    if(s.phase==='play'&&s.mode==='pair'&&s.partner===null)choosePartner(s);
+    if(['drink','play'].includes(s.phase)&&s.mode==='pair'&&(s.partner===null||G.peopleAt(s)===0))choosePartner(s);
     return s;
   }
   function rollCondition(s){let n=Math.floor(clamp(s.mood/25+(rand(s)-.5)*2,0,4.99));if(has(s,'steady'))n=Math.max(1,n);s.condition=n;}
   function tick(s){
     const now=(s.day-1)*1440+s.clock,blocks=Math.floor((now-s.socialTick)/60);
     if(blocks>0){M.npcTick(s,blocks);s.socialTick+=blocks*60;}
-    const bucket=Math.floor(s.clock/30);if(s.crowdTick!==bucket){s.crowdTick=bucket;s.crowdShift=Math.floor(rand(s)*5)-2;}M.crowdChat(s);
+    const bucket=Math.floor(s.clock/30);if(s.crowdTick!==bucket){s.crowdTick=bucket;s.crowdShift=Math.floor(rand(s)*5)-2;}M.crowdChat(s);if(['drink','play'].includes(s.phase)&&s.mode==='pair'){if(G.peopleAt(s)===0){s.partner=null;s.partnerSongs=null;s.friendship=false;}else if(s.partner===null)choosePartner(s);}
   }
   function addSkills(s,n,skill){for(const k of skill?[skill]:['star','key','reading'])s.skills[k]=clamp(s.skills[k]+n,1,22);}
   function grant(s,id){if(has(s,id))return;const t=TALENTS.find(x=>x.id===id);if(!t)throw Error('未知词条。');s.talents.push(id);
@@ -45,19 +45,19 @@
   function draw(s,run=1){const a=TALENTS.filter(t=>t.initial&&(t.id!=='dragon'||run>=2));for(let i=a.length-1;i>0;i--){const j=Math.floor(rand(s)*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a.slice(0,3).map(t=>t.id);}
   function setup(s,{name,id,talent,offers}){if(s.setupDone||s.started)throw Error('角色已经创建。');name=String(name??'').trim()||'神秘人';id=String(id??'').trim()||'Maimai';if(name.length>16||id.length>16)throw Error('姓名和舞萌 ID 请填写 1–16 个字符。');if(!offers?.includes(talent))throw Error('请在本次三个词条中选择一个。');s.profile={name,id,plate:'default',title:'title-1',avatar:null};s.setupDone=true;grant(s,talent);rollCondition(s);}
   function crowdOffset(s){const h=s.clock/60;return h<12?-5:h>=12&&h<14?-6:h>=17&&h<19?-3:h>=19&&h<22?3:h>=22?-2:0;}
-  function choosePartner(s){if(s.mode!=='pair'){s.partner=null;s.friendship=false;return;}s.partner=Math.floor(rand(s)*s.npcs.length);const n=s.npcs[s.partner];s.friendship=n.familiarity>=40&&rand(s)<.35;if(s.friendship)G.log(s,`${n.id}：今天你多选一首吧！本轮可自选 3 首。`,'heart');}
+  function choosePartner(s){if(s.mode!=='pair'||G.peopleAt(s)===0){s.partner=null;s.partnerSongs=null;s.friendship=false;return;}s.partner=Math.floor(rand(s)*s.npcs.length);s.partnerSongs=null;const n=s.npcs[s.partner];s.friendship=n.familiarity>=40&&rand(s)<.35;if(s.friendship)G.log(s,`${n.id}：今天你多选一首吧！本轮可自选 3 首。`,'heart');}
   function selectCount(s){return s.mode==='pair'?(s.friendship?3:2):3;}
-  function partnerCharts(s,pool,count){M.setPool(pool);return M.choose(s.npcs[s.partner],s,count);}
+  function partnerCharts(s,pool,count){if(s.partner===null||G.peopleAt(s)===0)return [];M.setPool(pool);return M.choose(s.npcs[s.partner],s,count);}
   function abilityBonus(s,c){let b=0;const played=s.practice[G.key(c)]||0;
     if(has(s,'adapt')&&played)b+=.3;if(has(s,'streak')&&s.consecutive>=4)b+=2;
-    if(has(s,'challenge')&&c.ds>s.skills.star*c.starWeight+s.skills.key*(1-c.starWeight))b+=.3;
+    if(has(s,'challenge')&&G.levelValue(c)>=G.challengeThreshold(s.rating))b+=.3;
     if(has(s,'classic')&&classic(c))b+=.5;if(has(s,'vocal')&&/VOCALOID/i.test(c.genre))b+=.5;if(has(s,'touhou')&&/東方|东方/.test(c.genre))b+=.5;if(has(s,'ghost')&&c.tag==='ghost')b+=.5;
     if(s.instinct&&has(s,'instinct'))b+=.3;return b;
   }
   function scoreBonus(s,c){const plays=s.practice[G.key(c)]||0,reading=clamp((s.skills.reading-9.8)*.065,-.4,.65);return CONDITIONS[s.condition].score-(s.sleepDebt||0)*.04-Math.max(0,55-s.stamina)*.025-(s.liquid<=0?.3:0)+reading*(plays? .6:1)+(has(s,'stage')?Math.min(.2,G.peopleAt(s)*.007):0);}
   function consume(s,c){const loss=M.staminaCost(s,c);if(s.trip)s.trip.staminaSpent=(s.trip.staminaSpent||0)+loss;s.stamina=clamp(s.stamina-loss,0,s.maxStamina);s.liquid=Math.max(0,s.liquid-60);s.gloves.durability=Math.max(0,s.gloves.durability-s.gloves.wear*(1+c.ds/30));}
   function classic(c){return ['maimai','maimai PLUS','maimai GreeN'].includes(c.originalVersion||c.version);}
-  function progress(s,results){for(const c of results){s.metrics[c.tendency]++;if(c.ds>s.skills.star*c.starWeight+s.skills.key*(1-c.starWeight))s.metrics.challenge++;if(G.peopleAt(s)>=12)s.metrics.crowd++;if(classic(c))s.metrics.classic++;if(/VOCALOID/i.test(c.genre))s.metrics.vocal++;if(/東方|东方/.test(c.genre))s.metrics.touhou++;if(c.tag==='ghost'){s.metrics.ghost++;if(has(s,'ghost')&&s.mode==='pair'&&s.partner!==null)s.npcs[s.partner].familiarity=Math.max(0,s.npcs[s.partner].familiarity-2);}}
+  function progress(s,results){for(const c of results){s.metrics[c.tendency]++;if(c.overreach??G.isOverreach(c.ratingBefore??s.rating,c))s.metrics.challenge++;if(G.peopleAt(s)>=12)s.metrics.crowd++;if(classic(c))s.metrics.classic++;if(/VOCALOID/i.test(c.genre))s.metrics.vocal++;if(/東方|东方/.test(c.genre))s.metrics.touhou++;if(c.tag==='ghost'){s.metrics.ghost++;if(has(s,'ghost')&&s.mode==='pair'&&s.partner!==null)s.npcs[s.partner].familiarity=Math.max(0,s.npcs[s.partner].familiarity-2);}}
     const records=Object.values(s.records),b=G.best(s),b50=[...b.old,...b.fresh];
     const triggers={foundation:b50.length===50&&b50.every(c=>c.index===2&&c.ds>=12.7&&c.ds<13.7),adapt:Object.values(s.practice).some(n=>n>=10),key:s.metrics.key>=500,star:s.metrics.star>=500,slide:records.filter(c=>c.tendency==='star'&&c.ds>=12.7&&c.achievement>=100).length>=100,reading:records.length>=150,speed:records.filter(c=>c.tendency==='key'&&c.ds>=12.7&&c.achievement>=100).length>=100,instinct:s.tracks>=250,streak:s.credits>=50,challenge:s.metrics.challenge>=30,stage:s.metrics.crowd>=40,expert:s.tracks>=1000,classic:s.metrics.classic>=50,vocal:s.metrics.vocal>=80,touhou:s.metrics.touhou>=80,ghost:s.metrics.ghost>=50};
     for(const [id,ready]of Object.entries(triggers))if(ready)grant(s,id);
@@ -67,13 +67,13 @@
     else{s.mood=clamp(s.mood+4,0,100);G.log(s,'随机事件：旁边的玩家为你刚才的发挥点赞，心情 +4。','event');}
   }
   function afterPlay(s,results){s.consecutive++;if(s.mode==='pair'&&s.partner!==null)s.npcs[s.partner].familiarity=clamp(s.npcs[s.partner].familiarity+2,0,100);progress(s,results);randomEvent(s);if(rand(s)<.35){const leaving=1+Math.floor(rand(s)*3);s.crowdShift-=leaving;G.log(s,`${leaving} 位玩家离开，队伍变短了。`,'crowd');}s.queueUntil=s.clock+G.roundInfo(s).queue;choosePartner(s);}
-  function assertActive(s){if(s.ending||s.school.pending||s.event!==null||s.videoEvent)throw Error('请先处理当前事件。');}
+  function assertActive(s){if(s.ending||s.school.pending||s.event!==null||s.videoEvent||s.city.encounter)throw Error('请先处理当前事件。');}
   function spend(s,minutes){if(!G.canSpendTime(s,minutes))throw Error('时间不足或与固定日程冲突。');if(s.phase==='play'&&s.clock+minutes>G.availableUntil(s))throw Error('接近闭店或回程时间，请先下机。');G.advance(s,minutes);}
   function waitQueue(s){assertActive(s);if(s.phase!=='play')throw Error('当前不在排队。');const minutes=Math.max(0,s.queueUntil-s.clock)||15;spend(s,minutes);M.recover(s,minutes);G.log(s,`等待 ${minutes} 分钟，体力逐渐恢复。`,'rest');}
   function rest(){throw Error('休息选项已移除，请等待或下机吃饭。');}
   function buyGloves(s,id){assertActive(s);if(!['home','travel','drink','play'].includes(s.phase))throw Error('现在不能买手套。');const g=GLOVES.find(g=>g.id===id);if(!g||s.money<g.cost)throw Error('购买手套余额不足。');s.money-=g.cost;s.gloves={...g};if(s.trip)s.trip.cost+=g.cost;G.log(s,`购买${g.name}，花费 ¥${g.cost}，耐久 ${g.durability}。`,'money');G.check(s);}
   function refill(s,id){assertActive(s);if(s.phase!=='play')throw Error('当前不在机厅。');const d=G.DRINKS.find(x=>x.id===id);if(!d||s.money<d.cost)throw Error('余额不足。');spend(s,5);s.money-=d.cost;s.trip.cost+=d.cost;s.drink=id;s.liquid=600;s.mood=clamp(s.mood+d.mood,0,100);G.log(s,`${d.name}补满 600 ml，花费 ¥${d.cost}。`,'rest');G.check(s);}
-  function chatOpen(s){const bucket=(s.day-1)*48+Math.floor(s.clock/30);if(bucket===s.chatRefresh){M.crowdChat(s);return;}s.chatRefresh=bucket;const conversations=CONVERSATIONS.filter((_,i)=>i!==7||s.clock>=600&&s.clock<720&&[0,1,2].every(a=>G.peopleAt(s,a)<=10));const lines=conversations[Math.floor(rand(s)*conversations.length)];for(const text of lines){const n=s.npcs[Math.floor(rand(s)*s.npcs.length)];s.chat.push({id:n.id,text,day:s.day,time:s.clock});}s.chat=s.chat.slice(-60);M.crowdChat(s);}
+  function chatOpen(s){const bucket=(s.day-1)*48+Math.floor(s.clock/30);if(bucket===s.chatRefresh){M.crowdChat(s);return;}s.chatRefresh=bucket;const conversations=CONVERSATIONS.filter((_,i)=>i!==7||s.clock>=600&&s.clock<720&&G.unlockedArcades(s).every(a=>G.peopleAt(s,a.id)<=10));const lines=conversations[Math.floor(rand(s)*conversations.length)];for(const text of lines){const n=s.npcs[Math.floor(rand(s)*s.npcs.length)];s.chat.push({id:n.id,text,day:s.day,time:s.clock});}s.chat=s.chat.slice(-60);M.crowdChat(s);}
   function chatSend(s,text){assertActive(s);if(!['home','play','travel'].includes(s.phase))throw Error('先完成当前阶段再聊天。');text=String(text).trim();if(!text||text.length>100)throw Error('消息请输入 1–100 个字符。');if(M.bot(s,text))return;spend(s,5);if(s.ending)return;if(s.chatDay!==s.day){s.chatDay=s.day;s.chatCount=0;}s.chat.push({id:s.profile.id,text,day:s.day,time:s.clock,self:true});if(s.chatCount<5){s.npcs.forEach(n=>n.familiarity=clamp(n.familiarity+3,0,100));s.mood=clamp(s.mood+1,0,100);}s.chatCount++;const n=s.npcs[Math.floor(rand(s)*s.npcs.length)];s.chat.push({id:n.id,text:['好耶，机厅见。','收到，记得带水和手套。','等轮到我们一起拼。'][Math.floor(rand(s)*3)],day:s.day,time:s.clock});s.chat=s.chat.slice(-60);G.log(s,'在舞萌群聊了 5 分钟。','heart');}
   function newDay(s){s.stamina=s.maxStamina;s.consecutive=0;s.queueUntil=0;s.liquid=0;s.partner=null;s.partnerSongs=null;s.friendship=false;rollCondition(s);tick(s);}
   function plates(s,pool){const groups=[['真',['maimai','maimai PLUS']],['超',['maimai GreeN']],['檄',['maimai GreeN PLUS']],['橙',['maimai ORANGE']],['晓',['maimai ORANGE PLUS']]];const out=[{id:'default',name:'初来乍到',text:'初始名牌',unlocked:true,done:0,total:0}];for(const [name,versions]of groups){const charts=pool.filter(c=>versions.includes(c.version)&&c.index<4&&c.type==='SD'&&c.title!=='ジングルベル');for(const kind of name==='真'?['极','神']:['极','将','神']){const done=charts.filter(c=>{const r=s.records[G.key(c)];return kind==='极'?!!r?.bestCombo:kind==='将'?(r?.achievement||0)>=100:r?.bestCombo==='AP';}).length;out.push({id:name+kind,name:name+kind,text:`${versions.join(' / ')} 全 BASIC–MASTER ${kind==='极'?'FC':kind==='将'?'SSS':'AP'}`,done,total:charts.length,unlocked:charts.length>0&&done===charts.length});}}return out;}

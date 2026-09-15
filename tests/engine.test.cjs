@@ -35,7 +35,7 @@ test('practice count increments even when best score does not improve',()=>{
  G.play(s,[c,c,c],pool);assert.equal(s.practice[G.key(c)],3);assert.equal(s.records[G.key(c)].achievement,101);assert.equal(s.records[G.key(c)],before);
 });
 test('B35 + B15 retains separate records per chart and version',()=>{
- const s=G.create();for(let i=0;i<50;i++)s.records['old'+i]={ra:300+i,isNew:false,achievement:100};for(let i=0;i<25;i++)s.records['new'+i]={ra:300+i,isNew:true,achievement:100};G.recalculate(s);
+ const s=G.create();for(let i=0;i<50;i++)s.records['old'+i]={ds:(300.5+i)/21.6,ra:300+i,isNew:false,achievement:100};for(let i=0;i<25;i++)s.records['new'+i]={ds:(300.5+i)/21.6,ra:300+i,isNew:true,achievement:100};G.recalculate(s);
  assert.equal(G.best(s).old.length,35);assert.equal(G.best(s).fresh.length,15);assert.equal(s.rating,35*(315+349)/2+15*(310+324)/2);
 });
 test('daily actions consume hours without ending the day; sleep charges baseline once',()=>{

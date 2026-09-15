@@ -15,6 +15,8 @@ const filesToCopy = [
   'update.css',
   'judgement.js',
   'gameplay.js',
+  'city.js',
+  'competition.js',
   'b50.js',
   'collection.js',
   'systems.js',
@@ -22,6 +24,7 @@ const filesToCopy = [
 ];
 
 const directoriesToCopy = ['assets', 'data', 'vendor'];
+require('./cache-b50-headers.cjs');
 
 buildSync({
   entryPoints: ['src/main.js'],

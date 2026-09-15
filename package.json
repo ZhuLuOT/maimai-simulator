@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "node --test tests/engine.test.cjs tests/life.test.cjs tests/expansion.test.cjs tests/update.test.cjs",
-    "test:browser": "node tests/browser-check.cjs && node tests/search-input.cjs",
+    "test": "node --test tests/engine.test.cjs tests/life.test.cjs tests/expansion.test.cjs tests/update.test.cjs tests/city.test.cjs",
+    "test:browser": "node tests/browser-check.cjs && node tests/search-input.cjs && node tests/city-browser.cjs && node tests/b50-header.cjs",
     "refresh-music": "node scripts/import-music.cjs",
     "build": "node scripts/build.cjs",
     "dev": "npm run build && node scripts/dev.cjs"
