@@ -1,0 +1,78 @@
+{
+  "covers": {
+    "primary": "https://www.diving-fish.com/covers/",
+    "fallback": "https://assets.lxns.net/maimai/jacket/",
+    "localFormat": "160x160 WebP",
+    "count": 1394,
+    "note": "DX/standard and alternate chart IDs may share a song jacket; canonical song IDs are used for fallback."
+  },
+  "rating": {
+    "reference": "https://maimai.wahlap.com/maimai-mobile/",
+    "current": {
+      "files": "assets/rating/wahlap/rating_base_{normal,blue,green,orange,red,purple,bronze,silver,gold,platinum,rainbow}.png",
+      "source": "https://maimai.wahlap.com/maimai-mobile/img/",
+      "manifest": "assets/rating/wahlap/sources.json",
+      "note": "11 unmodified PNGs served publicly by the official mainland Wahlap maimai DX website. All have the DX RATING label; no Japanese lettering or drawn replacement. Five number glyphs overlaid separately.",
+      "digits": "assets/rating/diving-fish/UI_NUM_Drating_0.png through _9.png (Diving-Fish public resource archive)",
+      "tiers": [
+        0,
+        1000,
+        2000,
+        4000,
+        7000,
+        10000,
+        12000,
+        13000,
+        14000,
+        14500,
+        15000
+      ]
+    },
+    "legacy": "Japanese frames, homemade adaptations and the Lxns gradient badge are no longer rendered."
+  },
+  "plates": {
+    "archive": "Resource CN1.55.7z, static/mai/plate_version",
+    "default": "https://assets2.lxns.net/maimai/plate/1.png",
+    "conditions": "https://maimai.lxns.net/api/v0/maimai/plate/list?required=true",
+    "count": 397,
+    "note": "Exact song, chart type and difficulty requirements from public API, including required ReMASTER charts. Missing charts never unlock an award. Stamp and regional unlocks adapted to simulator; no travel companions.",
+    "images": "https://assets2.lxns.net/maimai/plate/{id}.png",
+    "achievementCount": 71
+  },
+  "notice": "Unofficial fan simulator. Game art belongs to its respective rights holders. No official audio or playable chart files are included.",
+  "titles": {
+    "source": "https://maimai.lxns.net/api/v0/maimai/trophy/list?required=true",
+    "count": 1837,
+    "removedAwakeningTitles": 1162,
+    "note": "Awakening titles removed. Movement titles use actual simulated outbound/return arcade kilometers with original thresholds; machine-readable song/rating requirements implemented. Unsupported sync and event conditions remain locked."
+  },
+  "techniqueTags": {
+    "source": "https://miruku.dxrating.net/api/v1/tags",
+    "reference": "https://github.com/ChiffonOwO/ChiffonMai",
+    "matchedCharts": 1305,
+    "note": "Matches title, SD/DX and difficulty. Community technique tags take priority; note-ratio estimation is an explicit fallback. Technical tags are hidden from queries/details and drive original simulated segment checks; no chart timing data is claimed."
+  },
+  "judgements": {
+    "reference": "https://github.com/ChiffonOwO/ChiffonMai",
+    "files": [
+      "DetailedJudgement.dart",
+      "AchievementRateCalculatorPage.dart"
+    ],
+    "note": "Scoring fractions cross-checked against the MIT-licensed project's calculator. Random judgement probabilities are original simulator design."
+  },
+  "expansionSnapshot": "2026-09-15",
+  "mainlandVersions": {
+    "source": "https://maimai.lxns.net/api/v0/maimai/song/list?notes=true",
+    "date": "2026-09-15",
+    "matched": 1393,
+    "unmatched": "Link(CoF), retains ORANGE history",
+    "current": "舞萌DX 2026"
+  },
+  "b50": {
+    "layoutReferences": [
+      "https://github.com/ChiffonOwO/ChiffonMai/blob/main/lib/widgets/B50GameCardWidget.dart",
+      "https://github.com/Yuri-YuzuChaN/maimaiDX/blob/main/core/image/best50.py"
+    ],
+    "note": "Original canvas renderer, five columns, B35/B15, local jackets and existing simulator palette. Offline data-URL jacket resources support PNG export from file URLs."
+  }
+}

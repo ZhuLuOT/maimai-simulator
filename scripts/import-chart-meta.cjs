@@ -1,0 +1,21 @@
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const root = path.join(__dirname, '..');
+const context = {window:{}};
+vm.runInNewContext(fs.readFileSync(path.join(root,'data/music.js'),'utf8'),context);
+const stats = JSON.parse(fs.readFileSync(path.join(process.env.TEMP,'maimai-chart-stats.json')));
+const lxns = JSON.parse(fs.readFileSync(path.join(process.env.TEMP,'lxns-song-list.json')));
+const lookup = new Map(lxns.songs.map(s=>[s.id,s]));
+const entries = {};
+for(const song of context.window.MUSIC_DATA) song.ds.forEach((ds,i)=>{
+  const stat = stats.charts[song.id]?.[i];
+  const baseId = Number(song.id) >= 10000 ? Number(song.id)-10000 : Number(song.id);
+  const other = lookup.get(baseId)?.difficulties[song.type==='DX'?'dx':'standard']?.find(c=>c.difficulty===i);
+  if(!Number.isFinite(stat?.fit_diff))return;
+  const consistent = !!other && Math.abs(other.level_value-ds)<.001;
+  entries[`${song.id}:${i}`]={fit:Number(stat.fit_diff.toFixed(4)),samples:stat.cnt||0,other:other?.level_value??null,tag:stat.cnt>=100&&consistent&&ds>=10&&i>0?(stat.fit_diff-ds>=.3?'ghost':i>1&&stat.fit_diff-ds<=-.3?'easy':null):null};
+});
+const data={date:'2026-09-14',threshold:.3,minSamples:100,source:'https://www.diving-fish.com/api/maimaidxprober/chart_stats',comparison:'https://maimai.lxns.net/api/v0/maimai/song/list?notes=true',entries,overrides:{'417:3':{starWeight:.88,reason:'用户指出：ウミユリ海底譚 MASTER 为典型星星谱，人工覆盖音符占比估算。'}}};
+fs.writeFileSync(path.join(root,'data/chart-meta.js'),`(function(r){const data=${JSON.stringify(data)};if(typeof module!=='undefined')module.exports=data;else r.CHART_META=data;})(globalThis);\n`);
+console.log(JSON.stringify({charts:Object.keys(entries).length,ghost:Object.values(entries).filter(x=>x.tag==='ghost').length,easy:Object.values(entries).filter(x=>x.tag==='easy').length}));

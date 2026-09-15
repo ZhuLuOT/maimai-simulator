@@ -1,0 +1,71 @@
+{
+  "source": "华立舞萌 DX 国服官网",
+  "files": [
+    {
+      "tier": 1,
+      "file": "rating_base_normal.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/rating_base_normal.png",
+      "sha256": "644226d7c6a08830ee83f3693e3485cc0ac76f81ab92e839e86b1189c6981eb9"
+    },
+    {
+      "tier": 2,
+      "file": "rating_base_blue.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/rating_base_blue.png",
+      "sha256": "70a95a95dfeb32e4c9a2473d284b7fc47a1f0771e52f64323141e874981dc2ba"
+    },
+    {
+      "tier": 3,
+      "file": "rating_base_green.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/rating_base_green.png",
+      "sha256": "97bdd797a5c1d2b5beeeb941b986a7b94a5a519474befaa5348c33297efd5aba"
+    },
+    {
+      "tier": 4,
+      "file": "rating_base_orange.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/rating_base_orange.png",
+      "sha256": "671672f0a670fe2b151a5b03bc9ad83649fd91711156a79e6c533096e333a605"
+    },
+    {
+      "tier": 5,
+      "file": "rating_base_red.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/rating_base_red.png",
+      "sha256": "3659995f06a6a2231dc781f7085e1ac4089ed905aa41b4ec43cc41a0592874d1"
+    },
+    {
+      "tier": 6,
+      "file": "rating_base_purple.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/rating_base_purple.png",
+      "sha256": "4e0a279519dd380714a07a503878bfc030b948a86504149d532348d221dd9df2"
+    },
+    {
+      "tier": 7,
+      "file": "rating_base_bronze.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/rating_base_bronze.png",
+      "sha256": "2262d4a08816c1284d735ece548e86c6d4f6f3776c28c7d6859279bd28c1e734"
+    },
+    {
+      "tier": 8,
+      "file": "rating_base_silver.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/rating_base_silver.png",
+      "sha256": "1e03672a6923f6682814ffe6b0b91c0d23616a2ce8f0fe135ca904b9c0fd8c52"
+    },
+    {
+      "tier": 9,
+      "file": "rating_base_gold.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/rating_base_gold.png",
+      "sha256": "edb6c0eb8e7a47d36a88606336e1adc300d4a85c9c70613cd16f4ff497ac15c2"
+    },
+    {
+      "tier": 10,
+      "file": "rating_base_platinum.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/rating_base_platinum.png",
+      "sha256": "d7c57a0ebcc486567ca65d732c153bd0129af0f9ef5de18bd5032b2dbc7b08c4"
+    },
+    {
+      "tier": 11,
+      "file": "rating_base_rainbow.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/rating_base_rainbow.png",
+      "sha256": "0f040c007a81b212fe4ab52506734fda0fbc256d859141c6aeb39c4db52ba31c"
+    }
+  ]
+}

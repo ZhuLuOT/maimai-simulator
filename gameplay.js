@@ -1,0 +1,62 @@
+(function(root){
+  'use strict';
+  let G,pool=[];const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),rand=s=>{s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296;};
+  const genres=['流行&动漫','niconico & VOCALOID','东方Project','音击&中二节奏','舞萌','其他游戏'];
+  function ensure(s){s.learning??={};s.selectedCharts??=[];s.videoEvent??=null;s.npcBoasts??={day:s.day,count:0};s.crowdAlerts??=Array.from({length:3},()=>({high:false,last:-1}));s.npcs?.forEach((n,i)=>{n.genre??=genres[i%genres.length];n.tendency??=i%2?'key':'star';n.risk??=.2+(i%5)*.12;n.lastBoast??=0;n.bestAchievement??=0;n.hesitateUntil??=0;});if(s.trip)s.trip.staminaSpent??=0;}
+  function tag(c){if(c.ds<10||c.index===0)return null;if(c.index===1&&c.tag==='easy')return null;return c.tag||null;}
+  function effective(s,c){if(tag(c)!=='ghost'||!Number.isFinite(c.fit))return c.ds;const learned=s.learning?.[G.key(c)];return learned==='clear'?(c.tendency==='star'?c.ds:Math.floor((c.ds+c.fit)*5)/10):Math.max(c.ds,c.fit);}
+  function score(s,c){return tag(c)==='easy'?.16:tag(c)==='ghost'&&!(s.practice[G.key(c)]||s.learning[G.key(c)])?-.45:0;}
+  function growth(c){return tag(c)==='ghost'?1.3:tag(c)==='easy'?.7:1;}
+  function staminaCost(s,c){const notes=c.notes.reduce((a,b)=>a+b,0);return (1+notes/180)*Math.pow(Math.max(3,c.ds)/10,1.7)*(s.instinct?1.35:1);}
+  function recover(s,minutes){s.stamina=clamp(s.stamina+minutes*.35,0,s.maxStamina);if(minutes>=15)s.consecutive=0;}
+  function mealTime(s){return s.clock>=660&&s.clock<840||s.clock>=1020&&s.clock<1200;}
+  function canSkipMeal(s){return s.phase==='meal'&&!mealTime(s)&&(s.trip?.staminaSpent||0)<25&&s.stamina>=60;}
+  function choose(n,s,count=1){const level=clamp(n.rating/1110,5,15.1),candidates=pool.filter(c=>!G.isUtage(c)&&c.ds>=level-.65&&c.ds<=level+.5+n.risk);let remaining=candidates.length?candidates:pool.filter(c=>!G.isUtage(c));const out=[];for(let i=0;i<count&&remaining.length;i++){const weights=remaining.map(c=>1+(c.genre===n.genre?3:0)+(c.tendency===n.tendency?2:0)+(c.ds>level?1:0)),total=weights.reduce((a,b)=>a+b,0);let x=rand(s)*total,index=weights.length-1;for(let j=0;j<weights.length;j++){x-=weights[j];if(x<=0){index=j;break;}}out.push(remaining[index]);remaining=remaining.filter((_,j)=>j!==index);}return out;}
+  function message(s,id,text,extra={}){s.chat.push({id,text:String(text).slice(0,100),day:s.day,time:s.clock,...extra});s.chat=s.chat.slice(-60);}
+  const J=typeof module!=='undefined'?require('./judgement'):root.Judgement;
+  const praise=['这么强！？','龙B来了','太强了！这段我还在练。','好成绩！下次教教我。','恭喜推分，今天状态真好。','这就是你的实力吗！','恭喜拿下！','我先抄作业了。','手元交一下！','这也能推，厉害。'];
+  const canBoast=(c,r)=>c.ds>=12.4&&(r.achievement>100.5||r.combo==='AP');
+  function crowdChat(s){
+    if(!s.crowdAlerts)return;
+    if(s.clock<600||s.clock>1410){s.crowdAlerts.forEach(a=>{a.high=false;});return;}
+    const now=(s.day-1)*1440+s.clock;
+    ['星光游艺','街角电玩','次元空间'].forEach((name,i)=>{
+      const alert=s.crowdAlerts[i],count=G.peopleAt(s,i),high=count>10;
+      if(high&&!alert.high&&(alert.last<0||now-alert.last>=180)){
+        alert.last=now;
+        const index=Math.floor(rand(s)*s.npcs.length),a=s.npcs[index],b=s.npcs[(index+1)%s.npcs.length],c=s.npcs[(index+2)%s.npcs.length];
+        message(s,a.id,`${name}现在 ${count} 人，大B队来了！`);
+        message(s,b.id,['这么多人，我先看看再决定出不出勤。','排队怕是要好久，要不晚点再去？','本来想出门的，等人数少一点吧。'][Math.floor(rand(s)*3)]);
+        message(s,c.id,['我也犹豫了，先吃个饭。','那我先不去了，有空位再叫我。','我晚一点，先在群里蹲人数。'][Math.floor(rand(s)*3)]);
+        b.hesitateUntil=Math.max(b.hesitateUntil,now+45);c.hesitateUntil=Math.max(c.hesitateUntil,now+45);
+      }
+      alert.high=high;
+    });
+  }
+  function npcTick(s,blocks){
+    if(!pool.length||s.clock<600||s.clock>1410)return;
+    if(s.npcBoasts.day!==s.day)s.npcBoasts={day:s.day,count:0};
+    const now=(s.day-1)*1440+s.clock;
+    for(const n of s.npcs){
+      if(now<n.hesitateUntil||rand(s)>Math.min(.8,blocks*.08*n.activity))continue;
+      const c=choose(n,s)[0];if(!c)continue;
+      const level=n.rating/1110,expected=clamp(99.4-(c.ds-level)*1.3+(rand(s)-.5)*2,85,100.95);
+      const simulated={seed:s.seed,skills:{star:level+(n.tendency==='star'?.2:0),key:level+(n.tendency==='key'?.2:0)},practice:{},condition:2};
+      const result=J.simulate(simulated,c,expected,level);s.seed=simulated.seed;
+      n.rating=clamp(n.rating+Math.floor(Math.max(0,result.achievement-97)*n.activity),0,16900);
+      if(canBoast(c,result)&&n.lastBoast!==s.day&&s.npcBoasts.count<2){
+        n.lastBoast=s.day;s.npcBoasts.count++;n.bestAchievement=Math.max(n.bestAchievement,result.achievement);
+        message(s,n.id,`${c.title} ${result.achievement.toFixed(4)}%${result.combo==='AP'?' AP':''}！今天推上去了！`,{performance:{key:G.key(c),ds:c.ds,achievement:result.achievement,combo:result.combo}});
+        const other=s.npcs.find(x=>x.id!==n.id&&x.tendency===n.tendency)||s.npcs.find(x=>x!==n);
+        message(s,other.id,praise[Math.floor(rand(s)*praise.length)]);
+      }
+    }
+  }
+  function watch(s){if(s.ending||s.phase!=='home'||s.school.pending||s.event!==null||s.videoEvent)throw Error('先完成当前事件，再刷视频。');G.advance(s,30);if(s.ending)return;s.mood=clamp(s.mood+7,0,100);const candidates=pool.filter(c=>tag(c)==='ghost'&&!G.isUtage(c)&&Math.abs(c.ds-G.ability(s,c))<=1);if(candidates.length&&rand(s)<.65){const c=candidates[Math.floor(rand(s)*candidates.length)],clear=rand(s)<clamp(.25+(s.skills.reading-c.ds)*.08,.12,.75);s.videoEvent={key:G.key(c),outcome:clear?'clear':'partial'};G.log(s,`刷到 ${c.title} ${G.displayLevel(c.ds)} 的鬼歌手元，停下来研究了一会儿。`,'event');}else G.log(s,'刷视频 30 分钟，心情 +7；这次没有刷到适合自己的手元。','heart');G.check(s);}
+  function learn(s){if(!s.videoEvent||s.ending)throw Error('当前没有待观看的手元。');const {key,outcome}=s.videoEvent;if(s.learning[key]!=='clear')s.learning[key]=outcome;s.videoEvent=null;G.log(s,`${outcome==='clear'?'大彻大悟':'似懂非懂'}：记住了这张谱面的处理方法。`,'event');}
+  function snapshot(s){const b=G.best(s),compact=r=>({id:r.id,index:r.index,title:r.title,type:r.type,ds:r.ds,achievement:r.achievement,ra:r.ra,combo:r.bestCombo||r.combo||'',isNew:r.isNew});return {name:s.profile.id,rating:s.rating,day:s.day,old:b.old.map(compact),fresh:b.fresh.map(compact)};}
+  function bot(s,text){const q=text.trim().toLowerCase().replace(/^@bot\s*/,''),isBot=/^@bot/i.test(text);if(!isBot&&!['b50','jk','几卡','f8fq'].includes(q))return false;message(s,s.profile.id,text,{self:true});if(q==='f8fq'){message(s,'bot','不要念辣个');}else if(q==='b50'){s.chat.forEach(m=>{if(m.b50){delete m.b50;m.text='之前的 B50 图片已归档，输入 B50 查看最新成绩。';}});message(s,'bot','你的 B50 成绩图',{b50:snapshot(s)});}else if(['jk','几卡'].includes(q)){message(s,'bot',['星光游艺','街角电玩','次元空间'].map((n,i)=>`${n}：${G.peopleAt(s,i)} 人 / ${i===2?4:2} 台机组`).join('\n'));}else message(s,'bot','快捷指令：B50 → 生成成绩图片；jk / 几卡 → 查看三家机厅人数。指令不消耗时间。');return true;}
+  function valid(s){const segmentValid=r=>!r.segmentEvent||(typeof r.segmentEvent.tag==='string'&&typeof r.segmentEvent.scene==='string'&&r.segmentEvent.scene.length<100&&typeof r.segmentEvent.passed==='boolean'&&Number.isFinite(r.segmentEvent.loss)&&r.segmentEvent.loss>=0&&r.segmentEvent.loss<=101&&Number.isInteger(r.segmentEvent.misses)&&r.segmentEvent.misses>=0&&r.segmentEvent.misses<=100000);const chartKey=k=>typeof k==='string'&&/^\d+:\d$/.test(k)&&(!pool.length||pool.some(c=>G.key(c)===k)),score=r=>r&&/^\d+$/.test(r.id)&&Number.isInteger(r.index)&&r.index>=0&&r.index<=4&&typeof r.title==='string'&&r.title.length<300&&['SD','DX'].includes(r.type)&&Number.isFinite(r.ds)&&r.ds>0&&r.ds<=20&&Number.isFinite(r.ra)&&r.ra>=0&&r.ra<=500&&Number.isFinite(r.achievement)&&r.achievement>=0&&r.achievement<=101;return [...Object.values(s.records),...(s.last?.results||[]),...(s.trip?.played||[])].every(segmentValid)&&Array.isArray(s.crowdAlerts)&&s.crowdAlerts.length===3&&s.crowdAlerts.every(a=>a&&typeof a.high==='boolean'&&Number.isInteger(a.last)&&a.last>=-1&&a.last<=G.DAYS*1440)&&s.npcs.every(n=>Number.isInteger(n.hesitateUntil)&&n.hesitateUntil>=0&&n.hesitateUntil<=(G.DAYS+1)*1440)&&Array.isArray(s.selectedCharts)&&s.selectedCharts.length<=3&&s.selectedCharts.every(chartKey)&&s.npcs.every(n=>genres.includes(n.genre)&&['star','key'].includes(n.tendency)&&Number.isFinite(n.risk)&&n.risk>=0&&n.risk<=1)&&s.npcBoasts&&Number.isInteger(s.npcBoasts.day)&&s.npcBoasts.day>=1&&s.npcBoasts.day<=G.DAYS&&Number.isInteger(s.npcBoasts.count)&&s.npcBoasts.count>=0&&s.npcBoasts.count<=2&&(!s.videoEvent||chartKey(s.videoEvent.key))&&(!s.trip||Number.isFinite(s.trip.staminaSpent)&&s.trip.staminaSpent>=0)&&s.chat.every(m=>(!m.performance||chartKey(m.performance.key)&&Number.isFinite(m.performance.ds)&&m.performance.ds>=12.4&&m.performance.ds<=20&&Number.isFinite(m.performance.achievement)&&m.performance.achievement>=0&&m.performance.achievement<=101&&['','FC','FC+','AP'].includes(m.performance.combo)&&canBoast(m.performance,m.performance))&&(!m.b50||typeof m.b50.name==='string'&&m.b50.name.length<=16&&Number.isFinite(m.b50.rating)&&m.b50.rating>=0&&m.b50.rating<=30000&&Number.isInteger(m.b50.day)&&m.b50.day>=1&&m.b50.day<=G.DAYS&&Array.isArray(m.b50.old)&&m.b50.old.length<=35&&m.b50.old.every(score)&&Array.isArray(m.b50.fresh)&&m.b50.fresh.length<=15&&m.b50.fresh.every(score)));}
+  function install(api){G=api;Object.assign(api,{displayLevel:ds=>String(Math.floor(ds))+(Math.round(ds*10)%10>=5?'+':''),effectiveDifficulty:effective,scoreAdjustment:score,growthMultiplier:growth,staminaCost,canSkipMeal,watchVideos:watch,learnVideo:learn,b50Snapshot:snapshot});}
+  const api={ensure,valid,tag,effective,score,growth,recover,staminaCost,canSkipMeal,npcTick,crowdChat,canBoast,choose,bot,install,setPool:p=>{pool=p;}};if(typeof module!=='undefined')module.exports=api;else root.Gameplay=api;
+})(globalThis);

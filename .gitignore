@@ -1,0 +1,24 @@
+node_modules/
+artifacts/
+
+# Build artifacts we can regenerate locally
+dist/app.js.map
+
+# Logs and temp files
+*.log
+*.tmp
+*.temp
+
+# Local env / secrets
+.env
+.env.*
+*.local
+*.key
+*.pem
+credentials*
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
