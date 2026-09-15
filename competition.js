@@ -39,7 +39,7 @@
   function courseCharts(level,pool){if(!Number.isInteger(level)||level<1||level>10)throw Error('请选择段位。');const ds=courseLevels[level-1];return pool.filter(c=>!G.isUtage(c)&&c.ds>=ds&&c.ds<=ds+.3).sort((a,b)=>Number(a.id)-Number(b.id)||a.index-b.index).filter((c,i,a)=>a.findIndex(x=>x.id===c.id)===i).slice(0,4);}
   function courseReason(s){
     if(s.mode!=='solo')return '段位挑战需要单开。';
-    return G.playReason(s)||(s.money<12?'段位挑战需要 ¥12。':s.clock+20>G.availableUntil(s)?'剩余时间不足以完成 20 分钟挑战。':s.gloves.durability<4*1.75*s.gloves.wear?'手套耐久不足四首，请更换手套。':'');
+    return G.playReason(s)||(s.money<G.pcPrice(s)*2?`段位挑战需要 ¥${G.pcPrice(s)*2}。`:s.clock+20>G.availableUntil(s)?'剩余时间不足以完成 20 分钟挑战。':s.gloves.durability<4*1.75*s.gloves.wear?'手套耐久不足四首，请更换手套。':'');
   }
   function course(s,level,pool){
     const reason=courseReason(s);if(reason)throw Error(reason);const charts=courseCharts(level,pool);if(charts.length!==4)throw Error('该段位曲目尚未齐备。');

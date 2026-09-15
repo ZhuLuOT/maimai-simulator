@@ -19,7 +19,7 @@ test('fortune is stable per day, lookup counters share aliases, tarot advances t
  const s=G.create('grinder',42),start=s.clock;G.chatSend(s,'运势');const text=s.chat.at(-1).text;G.chatSend(s,'jrrp');assert.equal(s.chat.at(-1).text,text);
  G.chatSend(s,'B50');G.chatSend(s,'jk');assert.equal(s.clock,start);G.chatSend(s,'几卡');G.chatSend(s,'b50');assert.equal(s.clock,start+4);
  G.chatSend(s,'@bot tarot');assert.ok([start+6,start+7].includes(s.clock));assert.ok(s.chat.at(-1).text.includes('耗时 '+(s.clock-start-4)+' 分钟'));assert.equal(s.chatCount,0);assert.ok(G.validate(G.migrate(JSON.parse(JSON.stringify(s)))));
- G.sleep(s);const morning=s.clock;G.chatSend(s,'jk');G.chatSend(s,'B50');assert.equal(s.clock,morning);assert.equal(s.botUsage.tarot,0);
+ s.clock=1380;G.sleep(s);const morning=s.clock;G.chatSend(s,'jk');G.chatSend(s,'B50');assert.equal(s.clock,morning);assert.equal(s.botUsage.tarot,0);
  const school=G.create('student');school.day=2;school.clock=539;const count=school.chat.length;assert.throws(()=>G.chatSend(school,'塔罗'));assert.equal(school.clock,539);assert.equal(school.chat.length,count);
 });
 test('Guangzhou outings discover persistent venues, restaurants and an actionable encounter',()=>{
@@ -105,7 +105,7 @@ test('slightly harder charts grant extra growth without rewarding extreme overre
 test('meal can return to arcade, preserving the visit and supplies while charging food and requeueing',()=>{
  const s=ready(true);G.play(s,G.recommend(s,pool),pool);s.city.restaurants.push('wonton');G.finishPlay(s);
  const before={money:s.money,clock:s.clock,visits:s.visits,km:s.collection.distanceKm,rounds:s.trip.rounds,liquid:s.liquid,gloves:s.gloves.durability,stamina:s.stamina};
- G.meal(s,'wonton','arcade');assert.equal(s.phase,'play');assert.equal(s.money,before.money-24);assert.equal(s.clock,before.clock+45);assert.equal(s.visits,before.visits);assert.equal(s.collection.distanceKm,before.km);assert.equal(s.trip.rounds,before.rounds);assert.equal(s.liquid,before.liquid);assert.equal(s.gloves.durability,before.gloves);assert.equal(s.stamina,Math.min(100,before.stamina+50));assert.equal(G.foodBonus(s),.08);assert.equal(s.queueUntil,s.clock+G.roundInfo(s).queue);assert.ok(G.validate(G.migrate(JSON.parse(JSON.stringify(s)))));
+ G.meal(s,'wonton','arcade');assert.equal(s.phase,'play');assert.equal(s.money,before.money-24);assert.equal(s.clock,before.clock+30);assert.equal(s.visits,before.visits);assert.equal(s.collection.distanceKm,before.km);assert.equal(s.trip.rounds,before.rounds);assert.equal(s.liquid,before.liquid);assert.equal(s.gloves.durability,before.gloves);assert.equal(s.stamina,Math.min(100,before.stamina+50));assert.equal(G.foodBonus(s),.08);assert.equal(s.queueUntil,s.clock+G.roundInfo(s).queue);assert.ok(G.validate(G.migrate(JSON.parse(JSON.stringify(s)))));
  if(s.queueUntil>s.clock)G.waitQueue(s);G.play(s,G.recommend(s,pool),pool);assert.equal(s.trip.rounds,before.rounds+1);
 });
 test('returning without food restores no stamina, supports empty arcades, and final home return counts distance once',()=>{

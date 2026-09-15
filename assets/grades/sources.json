@@ -1,0 +1,89 @@
+{
+  "source": "华立舞萌 DX 国服官网，原图未改绘",
+  "files": [
+    {
+      "rank": "d",
+      "file": "music_icon_d.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/music_icon_d.png",
+      "sha256": "b636fa46659755cdbe0e56d6cc9d776a5572cdf4c61728f17a461dce0030a06b"
+    },
+    {
+      "rank": "c",
+      "file": "music_icon_c.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/music_icon_c.png",
+      "sha256": "3d5f2c23d176687b91b07b02714fd374c303565df266fbe20d31fbaf3ac22301"
+    },
+    {
+      "rank": "b",
+      "file": "music_icon_b.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/music_icon_b.png",
+      "sha256": "c5d57ba61298f658c637c1f9a81b8dbef8d171d0bbb90e83b9282bfdeeff4d1e"
+    },
+    {
+      "rank": "bb",
+      "file": "music_icon_bb.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/music_icon_bb.png",
+      "sha256": "d6af93407d3066514739495a10240cb01df3674caecb4fcf4b6c47e10e3a85c4"
+    },
+    {
+      "rank": "bbb",
+      "file": "music_icon_bbb.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/music_icon_bbb.png",
+      "sha256": "760540054376b597c3b1e9065d108b6256a51ac2a8b0c134e92298f61edb9091"
+    },
+    {
+      "rank": "a",
+      "file": "music_icon_a.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/music_icon_a.png",
+      "sha256": "40de76c918153905ad2707292f3130647c656ed852fbb3d612b16f8ff5a7bf5c"
+    },
+    {
+      "rank": "aa",
+      "file": "music_icon_aa.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/music_icon_aa.png",
+      "sha256": "96f116915d802bc8687c7ac0f97ff5bbf245b5943782cd9e3471a605e31bab44"
+    },
+    {
+      "rank": "aaa",
+      "file": "music_icon_aaa.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/music_icon_aaa.png",
+      "sha256": "9ed63b48280666f0a23a300d9b66fa8ed16c542adb2f5b59462c96a6bf7343b6"
+    },
+    {
+      "rank": "s",
+      "file": "music_icon_s.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/music_icon_s.png",
+      "sha256": "65e8255dd0afb360c9df6df7281657e072751acc5e6c0c1217466ac20b222bcf"
+    },
+    {
+      "rank": "sp",
+      "file": "music_icon_sp.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/music_icon_sp.png",
+      "sha256": "b56b8a0e881d0e7955d07550ea40d3e1ec21979667745df71c7a2e9c84be66b4"
+    },
+    {
+      "rank": "ss",
+      "file": "music_icon_ss.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/music_icon_ss.png",
+      "sha256": "4fa0282995d7993933853be790e1fb892eb130b6bca10a92cefc7c4d4b2b2f42"
+    },
+    {
+      "rank": "ssp",
+      "file": "music_icon_ssp.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/music_icon_ssp.png",
+      "sha256": "fe9ec4d31b8934c7a4bc042623b11b0f6b8c6b28c43426a3c3444d0f7c356635"
+    },
+    {
+      "rank": "sss",
+      "file": "music_icon_sss.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/music_icon_sss.png",
+      "sha256": "9b3c5cd424f7214450b0a732857b52e98814b34af9793ed3d638e91158d98e0a"
+    },
+    {
+      "rank": "sssp",
+      "file": "music_icon_sssp.png",
+      "url": "https://maimai.wahlap.com/maimai-mobile/img/music_icon_sssp.png",
+      "sha256": "f0f5bb278911672456c7092c593bb375a35d1fe01486f993460cde24d28e9cef"
+    }
+  ]
+}

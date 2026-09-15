@@ -2,7 +2,7 @@
   'use strict';
   const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
   const rand=s=>{s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296;};
-  const IDS=['凌晨四点','青柠苏打','捞月','阿澈','今天不推分','星轨','小盐','404NOTFOUND','八分音符','纸飞机','折返跑','凛冬','橘子汽水','月读','栗子','白昼梦','NekoDX','竹间雨','北纬31','千层雪','再来一把','空白键','mikan','摇光','未完成','七海','镜花','下次一定','微光','晚风'];
+  const IDS=['逃遁','鲁米诺','捞月','阿澈','今天不推分','星轨','小盐','404NOTFOUND','八分音符','纸飞机','折返跑','凛冬','橘子汽水','月读','栗子','白昼梦','NekoDX','竹间雨','北纬31','千层雪','再来一把','空白键','mikan','摇光','未完成','七海','镜花','下次一定','微光','晚风'];
   const CONDITIONS=[{name:'极差',score:-.65},{name:'还行',score:-.25},{name:'普通',score:0},{name:'不错',score:.13},{name:'完美',score:.26}];
   const GLOVES=[{id:'cotton',name:'棉线手套',cost:8,durability:100,wear:1},{id:'sport',name:'耐磨手套',cost:25,durability:240,wear:.85}];
   const TALENTS=[
@@ -21,7 +21,13 @@
     s.condition??=2;s.queueUntil??=0;s.consecutive??=0;s.partner??=null;s.friendship??=false;s.instinct??=false;
     s.metrics??={star:0,key:0,challenge:0,crowd:0,classic:0,vocal:0,touhou:0,ghost:0};
     s.npcs??=IDS.map((id,i)=>({id,rating:7800+Math.floor(rand(s)*8000),familiarity:0,activity:1+i%4}));
-    s.socialTick??=(s.day-1)*1440+s.clock;s.crowdTick??=Math.floor(s.clock/30);s.crowdShift??=0;
+    const renamed={'凌晨四点':'逃遁','青柠苏打':'鲁米诺'},rename=id=>renamed[id]||id;
+    s.npcs.forEach(n=>{n.id=rename(n.id);});
+    s.chat?.forEach(m=>{if(!m.self)m.id=rename(m.id);});
+    for(const r of [...Object.values(s.records),...(s.last?.results||[]),...(s.trip?.played||[])])if(r.opponent)r.opponent.id=rename(r.opponent.id);
+    if(s.last?.partnerName)s.last.partnerName=rename(s.last.partnerName);
+    for(const battle of [s.competition?.last,s.last?.battle])if(battle?.opponent)battle.opponent=rename(battle.opponent);
+    s.crowdSeen??={arcade:s.arcade,count:G.peopleAt(s)};s.socialTick??=(s.day-1)*1440+s.clock;s.crowdTick??=Math.floor(s.clock/30);s.crowdShift??=0;
     s.chat??=[];s.chatDay??=s.day;s.chatCount??=0;s.chatRefresh??=-1;
     s.completedRun??=false;s.setupDone??=s.started||Object.keys(s.records).length>0;
     for(const r of Object.values(s.records))r.bestCombo??=r.combo||'';
@@ -32,8 +38,9 @@
   function tick(s){
     const now=(s.day-1)*1440+s.clock,blocks=Math.floor((now-s.socialTick)/60);
     if(blocks>0){M.npcTick(s,blocks);s.socialTick+=blocks*60;}
-    const bucket=Math.floor(s.clock/30);if(s.crowdTick!==bucket){s.crowdTick=bucket;s.crowdShift=Math.floor(rand(s)*5)-2;}M.crowdChat(s);if(['drink','play'].includes(s.phase)&&s.mode==='pair'){if(G.peopleAt(s)===0){s.partner=null;s.partnerSongs=null;s.friendship=false;}else if(s.partner===null)choosePartner(s);}
+    const bucket=(s.day-1)*48+Math.floor(s.clock/30);if(s.crowdTick!==bucket){s.crowdTick=bucket;s.crowdShift=Math.floor(rand(s)*5)-2;}reportCrowd(s);M.crowdChat(s);if(['drink','play'].includes(s.phase)&&s.mode==='pair'){if(G.peopleAt(s)===0){s.partner=null;s.partnerSongs=null;s.friendship=false;}else if(s.partner===null)choosePartner(s);}
   }
+  function reportCrowd(s){const current=G.peopleAt(s),last=s.crowdSeen;if(last&&last.arcade===s.arcade&&last.count!==current&&['drink','play','meal'].includes(s.phase)){const delta=current-last.count;G.log(s,`${G.ARCADES[s.arcade].name}：${Math.abs(delta)} 位玩家${delta>0?'到店':'离店'}，当前 ${current} 人。`,'crowd');}s.crowdSeen={arcade:s.arcade,count:current};}
   function addSkills(s,n,skill){for(const k of skill?[skill]:['star','key','reading'])s.skills[k]=clamp(s.skills[k]+n,1,22);}
   function grant(s,id){if(has(s,id))return;const t=TALENTS.find(x=>x.id===id);if(!t)throw Error('未知词条。');s.talents.push(id);
     if(['transfer','musician','dragon','foundation','expert'].includes(id))addSkills(s,id==='transfer'?3:id==='dragon'?4:2);
@@ -43,7 +50,7 @@
     G.log(s,`获得词条「${t.name}」：${t.description}`,'talent');
   }
   function draw(s,run=1){const a=TALENTS.filter(t=>t.initial&&(t.id!=='dragon'||run>=2));for(let i=a.length-1;i>0;i--){const j=Math.floor(rand(s)*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a.slice(0,3).map(t=>t.id);}
-  function setup(s,{name,id,talent,offers}){if(s.setupDone||s.started)throw Error('角色已经创建。');name=String(name??'').trim()||'神秘人';id=String(id??'').trim()||'Maimai';if(name.length>16||id.length>16)throw Error('姓名和舞萌 ID 请填写 1–16 个字符。');if(!offers?.includes(talent))throw Error('请在本次三个词条中选择一个。');s.profile={name,id,plate:'default',title:'title-1',avatar:null};s.setupDone=true;grant(s,talent);rollCondition(s);}
+  function setup(s,{name,id,talent,offers,playStyle='outer'}){if(s.setupDone||s.started)throw Error('角色已经创建。');name=String(name??'').trim()||'神秘人';id=String(id??'').trim()||'Maimai';if(name.length>16||id.length>16)throw Error('姓名和舞萌 ID 请填写 1–16 个字符。');if(!offers?.includes(talent))throw Error('请在本次三个词条中选择一个。');if(!G.PLAY_STYLES[playStyle])throw Error('请选择外键或内屏。');G.startGuide(s,playStyle);s.profile={name,id,plate:'default',title:'title-1',avatar:null};s.setupDone=true;grant(s,talent);rollCondition(s);}
   function crowdOffset(s){const h=s.clock/60;return h<12?-5:h>=12&&h<14?-6:h>=17&&h<19?-3:h>=19&&h<22?3:h>=22?-2:0;}
   function choosePartner(s){if(s.mode!=='pair'||G.peopleAt(s)===0){s.partner=null;s.partnerSongs=null;s.friendship=false;return;}s.partner=Math.floor(rand(s)*s.npcs.length);s.partnerSongs=null;const n=s.npcs[s.partner];s.friendship=n.familiarity>=40&&rand(s)<.35;if(s.friendship)G.log(s,`${n.id}：今天你多选一首吧！本轮可自选 3 首。`,'heart');}
   function selectCount(s){return s.mode==='pair'?(s.friendship?3:2):3;}
@@ -54,8 +61,8 @@
     if(has(s,'classic')&&classic(c))b+=.5;if(has(s,'vocal')&&/VOCALOID/i.test(c.genre))b+=.5;if(has(s,'touhou')&&/東方|东方/.test(c.genre))b+=.5;if(has(s,'ghost')&&c.tag==='ghost')b+=.5;
     if(s.instinct&&has(s,'instinct'))b+=.3;return b;
   }
-  function scoreBonus(s,c){const plays=s.practice[G.key(c)]||0,reading=clamp((s.skills.reading-9.8)*.065,-.4,.65);return CONDITIONS[s.condition].score-(s.sleepDebt||0)*.04-Math.max(0,55-s.stamina)*.025-(s.liquid<=0?.3:0)+reading*(plays? .6:1)+(has(s,'stage')?Math.min(.2,G.peopleAt(s)*.007):0);}
-  function consume(s,c){const loss=M.staminaCost(s,c);if(s.trip)s.trip.staminaSpent=(s.trip.staminaSpent||0)+loss;s.stamina=clamp(s.stamina-loss,0,s.maxStamina);s.liquid=Math.max(0,s.liquid-60);s.gloves.durability=Math.max(0,s.gloves.durability-s.gloves.wear*(1+c.ds/30));}
+  function scoreBonus(s,c){const plays=s.practice[G.key(c)]||0,reading=clamp((s.skills.reading-8)*.065,-.4,.65);return CONDITIONS[s.condition].score-G.sleepPenalty(s)-Math.max(0,55-s.stamina)*.025-(s.liquid<=0?.3:0)+reading*(plays? .6:1)+(has(s,'stage')?Math.min(.2,G.peopleAt(s)*.007):0);}
+  function consume(s,c){const loss=M.staminaCost(s,c);if(s.trip)s.trip.staminaSpent=(s.trip.staminaSpent||0)+loss;s.stamina=clamp(s.stamina-loss,0,s.maxStamina);G.consumeDrink(s,60);s.gloves.durability=Math.max(0,s.gloves.durability-s.gloves.wear*(1+c.ds/30));}
   function classic(c){return ['maimai','maimai PLUS','maimai GreeN'].includes(c.originalVersion||c.version);}
   function progress(s,results){for(const c of results){s.metrics[c.tendency]++;if(c.overreach??G.isOverreach(c.ratingBefore??s.rating,c))s.metrics.challenge++;if(G.peopleAt(s)>=12)s.metrics.crowd++;if(classic(c))s.metrics.classic++;if(/VOCALOID/i.test(c.genre))s.metrics.vocal++;if(/東方|东方/.test(c.genre))s.metrics.touhou++;if(c.tag==='ghost'){s.metrics.ghost++;if(has(s,'ghost')&&s.mode==='pair'&&s.partner!==null)s.npcs[s.partner].familiarity=Math.max(0,s.npcs[s.partner].familiarity-2);}}
     const records=Object.values(s.records),b=G.best(s),b50=[...b.old,...b.fresh];
@@ -66,16 +73,16 @@
     if(bad){const e=Math.floor(rand(s)*3);if(e===0){s.mood=clamp(s.mood-4,0,100);G.log(s,'随机事件：一直抢拍，越打越急，心情 -4。','event');}if(e===1){s.gloves.durability=Math.max(0,s.gloves.durability-4);G.log(s,'随机事件：手套线头开了，耐久 -4。','event');}if(e===2){s.stamina=Math.max(0,s.stamina-6);G.log(s,'随机事件：肩膀发酸，体力 -6。','event');}}
     else{s.mood=clamp(s.mood+4,0,100);G.log(s,'随机事件：旁边的玩家为你刚才的发挥点赞，心情 +4。','event');}
   }
-  function afterPlay(s,results){s.consecutive++;if(s.mode==='pair'&&s.partner!==null)s.npcs[s.partner].familiarity=clamp(s.npcs[s.partner].familiarity+2,0,100);progress(s,results);randomEvent(s);if(rand(s)<.35){const leaving=1+Math.floor(rand(s)*3);s.crowdShift-=leaving;G.log(s,`${leaving} 位玩家离开，队伍变短了。`,'crowd');}s.queueUntil=s.clock+G.roundInfo(s).queue;choosePartner(s);}
+  function afterPlay(s,results){s.consecutive++;if(s.mode==='pair'&&s.partner!==null)s.npcs[s.partner].familiarity=clamp(s.npcs[s.partner].familiarity+2,0,100);progress(s,results);randomEvent(s);if(rand(s)<.35){const leaving=Math.min(G.peopleAt(s),1+Math.floor(rand(s)*3));s.crowdShift-=leaving;reportCrowd(s);}s.queueUntil=s.clock+G.roundInfo(s).queue;choosePartner(s);}
   function assertActive(s){if(s.ending||s.school.pending||s.event!==null||s.videoEvent||s.city.encounter)throw Error('请先处理当前事件。');}
   function spend(s,minutes){if(!G.canSpendTime(s,minutes))throw Error('时间不足或与固定日程冲突。');if(s.phase==='play'&&s.clock+minutes>G.availableUntil(s))throw Error('接近闭店或回程时间，请先下机。');G.advance(s,minutes);}
-  function waitQueue(s){assertActive(s);if(s.phase!=='play')throw Error('当前不在排队。');const minutes=Math.max(0,s.queueUntil-s.clock)||15;spend(s,minutes);M.recover(s,minutes);G.log(s,`等待 ${minutes} 分钟，体力逐渐恢复。`,'rest');}
+  function waitQueue(s){assertActive(s);if(s.phase!=='play')throw Error('当前不在排队。');const minutes=Math.max(0,s.queueUntil-s.clock)||15;spend(s,minutes);M.recover(s,minutes);if(s.queueUntil<=s.clock)s.roundReview=false;G.log(s,`等待 ${minutes} 分钟，体力逐渐恢复。`,'rest');}
   function rest(){throw Error('休息选项已移除，请等待或下机吃饭。');}
   function buyGloves(s,id){assertActive(s);if(!['home','travel','drink','play'].includes(s.phase))throw Error('现在不能买手套。');const g=GLOVES.find(g=>g.id===id);if(!g||s.money<g.cost)throw Error('购买手套余额不足。');s.money-=g.cost;s.gloves={...g};if(s.trip)s.trip.cost+=g.cost;G.log(s,`购买${g.name}，花费 ¥${g.cost}，耐久 ${g.durability}。`,'money');G.check(s);}
-  function refill(s,id){assertActive(s);if(s.phase!=='play')throw Error('当前不在机厅。');const d=G.DRINKS.find(x=>x.id===id);if(!d||s.money<d.cost)throw Error('余额不足。');spend(s,5);s.money-=d.cost;s.trip.cost+=d.cost;s.drink=id;s.liquid=600;s.mood=clamp(s.mood+d.mood,0,100);G.log(s,`${d.name}补满 600 ml，花费 ¥${d.cost}。`,'rest');G.check(s);}
+  function refill(s,id){assertActive(s);if(s.phase!=='play')throw Error('当前不在机厅。');G.packDrink(s,id);G.check(s);}
   function chatOpen(s){const bucket=(s.day-1)*48+Math.floor(s.clock/30);if(bucket===s.chatRefresh){M.crowdChat(s);return;}s.chatRefresh=bucket;const conversations=CONVERSATIONS.filter((_,i)=>i!==7||s.clock>=600&&s.clock<720&&G.unlockedArcades(s).every(a=>G.peopleAt(s,a.id)<=10));const lines=conversations[Math.floor(rand(s)*conversations.length)];for(const text of lines){const n=s.npcs[Math.floor(rand(s)*s.npcs.length)];s.chat.push({id:n.id,text,day:s.day,time:s.clock});}s.chat=s.chat.slice(-60);M.crowdChat(s);}
-  function chatSend(s,text){assertActive(s);if(!['home','play','travel'].includes(s.phase))throw Error('先完成当前阶段再聊天。');text=String(text).trim();if(!text||text.length>100)throw Error('消息请输入 1–100 个字符。');if(M.bot(s,text))return;spend(s,5);if(s.ending)return;if(s.chatDay!==s.day){s.chatDay=s.day;s.chatCount=0;}s.chat.push({id:s.profile.id,text,day:s.day,time:s.clock,self:true});if(s.chatCount<5){s.npcs.forEach(n=>n.familiarity=clamp(n.familiarity+3,0,100));s.mood=clamp(s.mood+1,0,100);}s.chatCount++;const n=s.npcs[Math.floor(rand(s)*s.npcs.length)];s.chat.push({id:n.id,text:['好耶，机厅见。','收到，记得带水和手套。','等轮到我们一起拼。'][Math.floor(rand(s)*3)],day:s.day,time:s.clock});s.chat=s.chat.slice(-60);G.log(s,'在舞萌群聊了 5 分钟。','heart');}
-  function newDay(s){s.stamina=s.maxStamina;s.consecutive=0;s.queueUntil=0;s.liquid=0;s.partner=null;s.partnerSongs=null;s.friendship=false;rollCondition(s);tick(s);}
+  function chatSend(s,text){assertActive(s);if(!['home','play','travel'].includes(s.phase))throw Error('先完成当前阶段再聊天。');text=String(text).trim();if(!text||text.length>100)throw Error('消息请输入 1–100 个字符。');if(M.bot(s,text))return;spend(s,5);if(s.ending)return;if(s.chatDay!==s.day){s.chatDay=s.day;s.chatCount=0;}s.chat.push({id:s.profile.id,text,day:s.day,time:s.clock,self:true});if(s.chatCount<5){s.npcs.forEach(n=>n.familiarity=clamp(n.familiarity+3,0,100));s.mood=clamp(s.mood+1,0,100);}s.chatCount++;const n=s.npcs[Math.floor(rand(s)*s.npcs.length)];s.chat.push({id:n.id,text:['好耶，机厅见。','收到，记得带水和手套。','等轮到我们一起拼。'][Math.floor(rand(s)*3)],day:s.day,time:s.clock});s.chat=s.chat.slice(-60);s.guide.chatted=true;G.log(s,'在舞萌群聊了 5 分钟。','heart');}
+  function newDay(s){s.stamina=s.maxStamina;s.consecutive=0;s.queueUntil=0;s.partner=null;s.partnerSongs=null;s.friendship=false;rollCondition(s);tick(s);}
   function plates(s,pool){const groups=[['真',['maimai','maimai PLUS']],['超',['maimai GreeN']],['檄',['maimai GreeN PLUS']],['橙',['maimai ORANGE']],['晓',['maimai ORANGE PLUS']]];const out=[{id:'default',name:'初来乍到',text:'初始名牌',unlocked:true,done:0,total:0}];for(const [name,versions]of groups){const charts=pool.filter(c=>versions.includes(c.version)&&c.index<4&&c.type==='SD'&&c.title!=='ジングルベル');for(const kind of name==='真'?['极','神']:['极','将','神']){const done=charts.filter(c=>{const r=s.records[G.key(c)];return kind==='极'?!!r?.bestCombo:kind==='将'?(r?.achievement||0)>=100:r?.bestCombo==='AP';}).length;out.push({id:name+kind,name:name+kind,text:`${versions.join(' / ')} 全 BASIC–MASTER ${kind==='极'?'FC':kind==='将'?'SSS':'AP'}`,done,total:charts.length,unlocked:charts.length>0&&done===charts.length});}}return out;}
   function install(api){G=api;Object.assign(api,{TALENTS,CONDITIONS,GLOVES,drawTalents:draw,setup,grantTalent:grant,selectCount,waitQueue,arcadeRest:rest,buyGloves,refill,chatOpen,chatSend,plates});}
   const api={ensure,rollCondition,tick,abilityBonus,scoreBonus,consume,afterPlay,choosePartner,selectCount,partnerCharts,newDay,install,has,crowdOffset};

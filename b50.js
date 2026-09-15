@@ -11,22 +11,25 @@
   }
   async function header(ctx,s,text){
     const frames=['normal','blue','green','orange','red','purple','bronze','silver','gold','platinum','rainbow'];
-    const plateId=root.Game.collectionItem(s.plate)?.kind==='plate'?s.plate:'default';
-    const keys=['plate-'+plateId,'rating-'+frames[root.Game.ratingTier(s.rating)-1],...String(s.rating).padStart(5,'0').split('').map(d=>'digit-'+d)];
-    const [plate,frame,...digits]=await Promise.all(keys.map(headerImage)),avatar=await dataImage(s.avatar);
-    ctx.fillStyle='#fffef7';ctx.fillRect(35,30,1430,190);
-    if(plate)ctx.drawImage(plate,50,40,920,148.22);
-    if(avatar){ctx.save();ctx.beginPath();ctx.roundRect(74,64,100,100,20);ctx.clip();ctx.drawImage(avatar,74,64,100,100);ctx.restore();}
-    else{ctx.fillStyle='#eaf5f0';ctx.beginPath();ctx.arc(124,114,46,0,Math.PI*2);ctx.fill();text('♪',102,131,54,'#547548',true);}
-    const title=root.Game.collectionItem(s.title)?.name||'新人出道';
-    ctx.font='700 20px "Microsoft YaHei", sans-serif';const titleWidth=Math.min(740,ctx.measureText(title).width+28);
-    ctx.fillStyle='rgba(255,254,247,.94)';ctx.beginPath();ctx.roundRect(194,62,titleWidth,34,17);ctx.fill();
-    ctx.save();ctx.beginPath();ctx.rect(208,62,712,34);ctx.clip();text(title,208,86,20,'#356255',true);ctx.restore();
-    ctx.save();ctx.shadowColor='#fffef7';ctx.shadowBlur=6;ctx.font='700 38px "Microsoft YaHei", sans-serif';ctx.fillStyle='#254946';ctx.fillText(s.name,194,145,738);ctx.restore();
-    text('舞萌 DX · BEST 50',62,210,20,'#356255',true);text('春季出勤 · 第 '+s.day+' 天',730,210,18);
-    const x=1000,y=60,w=440,h=w*86/296;
+    const plateId=root.Game.collectionItem(s.plate)?.kind==='plate'?s.plate:'default',title=root.Game.collectionItem(s.title);
+    const color=['Normal','Bronze','Silver','Gold','Rainbow'].includes(title?.color)?title.color:'Normal';
+    const course=s.courseRank||0,keys=['plate-'+plateId,'rating-'+frames[root.Game.ratingTier(s.rating)-1],'cabinet-Name','cabinet-UI_CMN_Shougou_'+color,'class_rank-'+(s.classRank||0),'course_rank-'+(course?course+11:0),...String(s.rating).padStart(5,'0').split('').map(d=>'digit-'+d)];
+    const [plate,frame,name,trophy,rank,dan,...digits]=await Promise.all(keys.map(headerImage)),avatar=await dataImage(s.avatar);
+    ctx.save();ctx.translate(60,10);ctx.scale(1380/720,1380/720);
+    ctx.fillStyle='#ddf8fc';ctx.fillRect(0,0,720,116);
+    if(plate)ctx.drawImage(plate,0,0,720,116);
+    if(avatar){const size=Math.min(avatar.width,avatar.height);ctx.drawImage(avatar,(avatar.width-size)/2,(avatar.height-size)/2,size,size,8,8,100,100);}
+    else{ctx.fillStyle='#fff';ctx.fillRect(8,8,100,100);text('♪',35,78,52,'#289c93',true);}
+    ctx.strokeStyle='#e8f2f4';ctx.lineWidth=2;ctx.strokeRect(8,8,100,100);
+    const x=118,y=6,h=39,w=h*296/86;
     if(frame){ctx.drawImage(frame,x,y,w,h);digits.forEach((digit,i)=>{if(!digit)return;const slot=w*.541/5,boxW=slot*.85,boxH=h*.5,scale=Math.min(boxW/digit.width,boxH/digit.height),dw=digit.width*scale,dh=digit.height*scale;ctx.drawImage(digit,x+w*.412+slot*i+(slot-dw)/2,y+h*.23+(boxH-dh)/2,dw,dh);});}
-    else text('DX RATING  '+String(s.rating).padStart(5,'0'),1000,125,34,'#547548',true);
+    if(rank){const scale=Math.min(71/rank.width,39/rank.height);ctx.drawImage(rank,118+w+11,6,rank.width*scale,rank.height*scale);}
+    if(name)ctx.drawImage(name,118,45,272,40);
+    ctx.font='700 22px "Microsoft YaHei", sans-serif';ctx.fillStyle='#25353e';ctx.fillText(s.name,126,73,184);
+    if(dan){const scale=Math.min(74/dan.width,32/dan.height);ctx.drawImage(dan,310,49,dan.width*scale,dan.height*scale);}
+    if(trophy)ctx.drawImage(trophy,118,85,272,26);
+    ctx.font='11px "Microsoft YaHei", sans-serif';ctx.fillStyle='#37413c';ctx.textAlign='center';ctx.fillText(title?.name||'新人出道',254,102,250);
+    ctx.restore();
   }
   async function generate(s){const key=JSON.stringify(s);if(cache.has(key))return cache.get(key);const work=(async()=>{const canvas=document.createElement('canvas');canvas.width=1500;canvas.height=2100;const ctx=canvas.getContext('2d');ctx.fillStyle='#eaf5f0';ctx.fillRect(0,0,1500,2100);const text=(v,x,y,size=20,color='#254946',bold=false)=>{ctx.font=`${bold?'700':'400'} ${size}px "Microsoft YaHei", sans-serif`;ctx.fillStyle=color;ctx.fillText(v,x,y);};await header(ctx,s,text);
     const all=[...s.old,...s.fresh],loaded=await Promise.all(all.map(r=>jacket(r.id))),covers=new Map(all.map((r,i)=>[r.id,loaded[i]]));

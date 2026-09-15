@@ -1,5 +1,6 @@
 import {esc,icon} from './src/ui.js';
 import { html, render as mount } from 'lit';
+import {intro,guideSummary,goals as guideGoals} from './src/guide-ui.js';
 (() => {
   'use strict';
 
@@ -14,8 +15,19 @@ import { html, render as mount } from 'lit';
     s.version = pool.find(c => c.id === s.id)?.version || s.version;
   });
   const $ = s => document.querySelector(s);
+  function updateKeyboardViewport(){
+    const viewport=window.visualViewport;
+    document.documentElement.style.setProperty('--keyboard-height',(viewport?.height||window.innerHeight)+'px');
+    document.documentElement.style.setProperty('--keyboard-top',(viewport?.offsetTop||0)+'px');
+  }
+  window.visualViewport?.addEventListener('resize',updateKeyboardViewport);
+  window.visualViewport?.addEventListener('scroll',updateKeyboardViewport);
+  window.addEventListener('resize',updateKeyboardViewport);
+  updateKeyboardViewport();
   const names = ['BASIC', 'ADVANCED', 'EXPERT', 'MASTER', 'Re:MASTER'],
     arcades = G.ARCADES.map(a => a.name);
+  let renderedModal = null, avatarPage = 0, forceModalTop = false, introReplay = false;
+  const modalScroll = new Map();
   let state = G.create(),
     view = 'home',
     modal = null,
@@ -52,13 +64,14 @@ import { html, render as mount } from 'lit';
   } catch {
     saveWarning = true;
   }
+  let seenForcedSleeps=state.forcedSleeps,mealReturn=null;
   picked=(state.selectedCharts||[]).map(k=>catalog.get(k)).filter(Boolean);
   let run = 1,
     draft = {
       name: '',
       id: '',
       job: 'student',
-      talent: ''
+      playStyle: 'outer', talent: ''
     },
     offers = [];
   try {
@@ -138,9 +151,9 @@ import { html, render as mount } from 'lit';
       frame = Math.min(tier, 10),
       labels = ['白', '蓝', '绿', '黄', '红', '紫', '铜', '银', '金', '白金', '虹'];
     mount(html`<header class="topbar"><a class="brand" href="#" data-action="nav" data-value="home"><span class="brand-mark">${icon('disc-3')}</span><span>出勤模拟器<span class="brand-en">MAIMAI LIFE SIMULATOR</span></span></a><nav aria-label="主导航">${[['home', 'house', '日常'], ['library', 'disc-3', '曲库'], ['best', 'trophy', 'B50'], ['journal', 'notebook-pen', '手账']].map(([v, i, n]) => html`<button class="nav-item ${v === view ? 'active' : ''}" aria-label="${n}" title="${n}" data-action="nav" data-value="${v}">${icon(i)}<span>${n}</span></button>`)}</nav><div class="top-tools"><span class="save-state"><span></span>自动存档</span><button class="icon-btn" data-action="sound" title="${sound ? '关闭' : '开启'}音效" aria-label="音效">${icon(sound ? 'volume-2' : 'volume-x')}</button><button class="icon-btn" data-action="settings" title="存档与设置" aria-label="存档与设置">${icon('settings-2')}</button></div></header>
-      <main><div class="date-toolbar"><div class="calendar-date">${icon('calendar-days')}<b>${G.dateLabel(state)}</b><span>第 ${state.day} / ${G.DAYS} 天</span></div><div class="clock-display">${icon('clock-3')}<b class="${state.nightActive ? 'late-hours' : ''}">${G.time(state.clock)}</b><span>${state.nightActive ? '尚未入睡 · 最晚 04:00' : next ? `${next.name} ${G.time(next.start)}` : '今日无剩余日程'}</span></div></div>
+      <main><div class="date-toolbar"><div class="calendar-date">${icon('calendar-days')}<b>${G.dateLabel(state)}</b><span>第 ${state.day} / ${G.DAYS} 天</span></div><div class="clock-display">${icon('clock-3')}<b class="${state.nightActive ? 'late-hours' : ''}">${G.time(state.clock)}</b><span>${state.nightActive ? '尚未充分休息' : next ? `${next.name} ${G.time(next.start)}` : '今日无剩余日程'}</span></div></div>
       ${LifeUI.player(state)}
-      ${view === 'home' ? home() : view === 'library' ? library() : view === 'best' ? bestView() : journal()}
+      ${view === 'home' ? html`${guideSummary(state)}${home()}` : view === 'library' ? library() : view === 'best' ? bestView() : journal()}
       <footer><span>出勤模拟器 · 2026 春季篇</span><button class="text-btn" data-action="about">曲库来源与游戏规则 ${icon('arrow-up-right')}</button></footer></main>`, $('#app'));
     renderModal();
     icons();
@@ -155,11 +168,11 @@ import { html, render as mount } from 'lit';
     <div class="daily-layout"><section class="schedule-panel"><div class="section-heading"><h2>今日${state.job === 'student' ? '课表' : '日程'}</h2>${state.job === 'student' ? html`<button class="text-btn" data-action="timetable">整周课表</button>` : html`<span>${state.job === 'worker' ? '工作日 09:00–18:00' : '自由安排'}</span>`}</div><div class="day-track"><span style="left:${state.clock / 1440 * 100}%"></span>${classes.map(c => html`<i title="${c.name}" class="${c.kind}" style="left:${c.start / 1440 * 100}%;width:${(c.end - c.start) / 1440 * 100}%"></i>`)}</div><div class="track-labels"><span>00:00</span><span>08:00</span><span>16:00</span><span>24:00</span></div>
     <div class="schedule-list">${classes.length ? classes.map(c => {
       const done = state.completed.includes(c.id);
-      return html`<div class="schedule-row ${done ? 'done' : ''}"><span class="schedule-time">${G.time(c.start)}<small>${G.time(c.end)}</small></span><div><b>${c.name}</b><small>${c.kind === 'major' ? '专业课 · 学力 +5 / 心情 -7' : c.kind === 'general' ? '水课 · 学力 +2 / 心情 -3' : '固定工作 · 心情 -15'}${state.absences.includes(c.id) ? (c.kind === 'shift' ? ' · 旷工' : ' · 旷课') : done ? ' · 已处理' : ''}</small></div><div class="schedule-buttons">${!done ? html`<button class="secondary-btn" data-action="class" data-value="${c.id}" ?disabled=${busy || state.nightActive || c.id !== next?.id}>${icon(c.kind === 'shift' ? 'briefcase-business' : 'book-open')}${c.kind === 'shift' ? '上班' : '上课'}</button>${c.kind !== 'shift' ? html`<button class="icon-btn" data-action="skip-dialog" data-value="${c.id}" ?disabled=${busy || state.nightActive || c.id !== next?.id} title="逃课" aria-label="逃课 ${c.name}">${icon('door-open')}</button>` : ''}` : icon('circle-check')}</div></div>`;
+      return html`<div class="schedule-row ${done ? 'done' : ''}"><span class="schedule-time">${G.time(c.start)}<small>${G.time(c.end)}</small></span><div><b>${c.name}</b><small>${c.kind === 'major' ? '专业课 · 学力 +5 / 心情 -7' : c.kind === 'general' ? '水课 · 学力 +2 / 心情 -3' : '固定工作 · 心情 -15'}${state.absences.includes(c.id) ? (c.kind === 'shift' ? ' · 旷工' : ' · 旷课') : done ? ' · 已处理' : ''}</small></div><div class="schedule-buttons">${!done ? html`<button class="secondary-btn" data-action="class" data-value="${c.id}" ?disabled=${busy || c.id !== next?.id}>${icon(c.kind === 'shift' ? 'briefcase-business' : 'book-open')}${c.kind === 'shift' ? '上班' : '上课'}</button>${c.kind !== 'shift' ? html`<button class="icon-btn" data-action="skip-dialog" data-value="${c.id}" ?disabled=${busy || c.id !== next?.id} title="逃课" aria-label="逃课 ${c.name}">${icon('door-open')}</button>` : ''}` : icon('circle-check')}</div></div>`;
     }) : html`<div class="free-day">${icon('sun')}<div><b>${state.job === 'student' ? '今日无课' : '今天没有固定日程'}</b><span>机厅 10:00 开门，23:30 结束游玩</span></div></div>`}</div>
     ${state.job === 'student' ? html`<div class="academic-line ${school.failing ? 'warning' : ''}"><span>${icon('graduation-cap')}学力 <b>${school.academic}/100</b></span><span>约谈 ${school.talks}/3</span><span>${school.failing ? `挂科第 ${state.day - school.since + 1}/10 天` : '学业正常'}</span><button class="text-btn" data-action="daily" data-value="study" ?disabled=${busy}>补习 2 小时 ${icon('book-open')}</button></div>` : html`<div class="rent-line"><span>${icon('house')}每月 25 日房租</span><b>¥${j.rent}</b><span class="${state.money < j.rent ? 'danger-text' : ''}">${state.money >= j.rent ? '余额已足够' : '还差 ¥' + (j.rent - state.money)}</span></div>`}</section>
-    <aside class="life-panel"><div class="section-heading"><h2>本月收支</h2><span>${G.date(state).getUTCMonth() + 1} 月</span></div><div class="ledger"><div><span>${state.job === 'worker' ? '工资 · 每月 1 日发放' : state.job === 'student' ? '生活费 · 每月 1 日发放' : '固定收入'}</span><b>¥${j.monthly}</b></div><div><span>每日基本开销</span><b>-¥${j.daily}</b></div><div><span>25 日房租</span><b>${j.rent ? '-¥' + j.rent : '住宿费已缴'}</b></div></div><div class="goal-inline"><span>W6 进度</span><b>${Math.round(state.rating / 16000 * 100)}%</b></div><div class="meter"><span style="width:${Math.min(100, state.rating / 16000 * 100)}%"></span></div><div class="relationship">${icon('heart-handshake')}<div><b>${state.loveFailed ? '擦肩而过' : state.love === 0 ? '还未相遇' : state.love === 1 ? '认识小凛' : state.love === 2 ? '逐渐熟悉' : state.love === 3 ? '心照不宣' : '一起出勤'}</b><small>${state.visits} 次出勤 · ${state.tracks} 首游玩</small></div></div></aside></div>
-    <section class="actions-section"><div class="section-heading"><h2>安排接下来的时间</h2><span>${G.time(state.clock)} · 最晚 04:00 入睡</span></div><div class="action-grid"><button class="action-card attend" data-action="attend" ?disabled=${state.ending}><span class="action-icon">${icon('disc-3')}</span><div><h3>${state.phase === 'home' ? '出发，打舞萌！' : '继续出勤'}</h3><p>单开 / 拼机 · 每轮 ¥6</p><small>23:30 结束游玩</small></div>${icon('arrow-up-right')}</button>${state.job !== 'worker' ? html`<button class="action-card work" data-action="daily" data-value="work" ?disabled=${busy}><span class="action-icon">${icon('briefcase-business')}</span><div><h3>打工，攒钱</h3><p>4 小时 · +¥${j.wage}</p><small>心情 -12 · 每天最多 2 次</small></div>${icon('arrow-up-right')}</button>` : ''}<button class="action-card fun" data-action="entertain" ?disabled=${busy}><span class="action-icon">${icon('gamepad-2')}</span><div><h3>娱乐</h3><p>给心情充个电</p><small>外出娱乐 · 刷视频</small></div>${icon('arrow-up-right')}</button></div><div class="day-controls"><button class="secondary-btn" data-action="plates" aria-label="名牌与解锁进度">${icon('badge')}名牌与装饰</button><button class="secondary-btn" data-action="chat">${icon('messages-square')}查看舞萌群</button><button class="secondary-btn" data-action="daily" data-value="wait" ?disabled=${busy}>${icon('clock-3')}等待</button><button class="primary-btn" data-action="daily" data-value="sleep" ?disabled=${busy}>${icon('moon')}睡觉</button></div></section>
+    <aside class="life-panel"><div class="section-heading"><h2>本月收支</h2><span>${G.date(state).getUTCMonth() + 1} 月</span></div><div class="ledger"><div><span>${state.job === 'worker' ? '工资 · 每月 1 日发放' : state.job === 'student' ? '生活费 · 每月 1 日发放' : '固定收入'}</span><b>¥${j.monthly}</b></div><div><span>每日基本开销</span><b>-¥${j.daily}</b></div><div><span>25 日房租</span><b>${j.rent ? '-¥' + j.rent : '住宿费已缴'}</b></div></div><div class="goal-inline"><span>W6 进度</span><b>${Math.round(state.rating / 16000 * 100)}%</b></div><div class="meter"><span style="width:${Math.min(100, state.rating / 16000 * 100)}%"></span></div><div class="relationship">${icon('heart-handshake')}<div><b>${G.relationshipLabel(state)}</b><small>${state.visits} 次出勤 · ${state.tracks} 首游玩</small></div></div></aside></div>
+    <section class="actions-section"><div class="section-heading"><h2>安排接下来的时间</h2><span>${G.time(state.clock)} · 困意 ${Math.round(state.drowsiness)}/100</span></div><div class="action-grid"><button class="action-card attend" data-action="attend" ?disabled=${state.ending}><span class="action-icon">${icon('disc-3')}</span><div><h3>${state.phase === 'home' ? '出发，打舞萌！' : '继续出勤'}</h3><p>普通机厅 ¥6 / PC${state.city.denUnlocked?' · 音游窝 ¥30/小时':''}</p><small>${state.city.denUnlocked?'普通店 23:30 停机 · 音游窝全天营业':'23:30 结束游玩'}</small></div>${icon('arrow-up-right')}</button>${state.job !== 'worker' ? html`<button class="action-card work" data-action="daily" data-value="work" ?disabled=${busy}><span class="action-icon">${icon('briefcase-business')}</span><div><h3>打工，攒钱</h3><p>4 小时 · +¥${j.wage}</p><small>心情 -12 · 每天最多 2 次</small></div>${icon('arrow-up-right')}</button>` : ''}<button class="action-card fun" data-action="entertain" ?disabled=${busy}><span class="action-icon">${icon('gamepad-2')}</span><div><h3>娱乐</h3><p>给心情充个电</p><small>外出娱乐 · 刷视频</small></div>${icon('arrow-up-right')}</button></div>${LifeUI.mealStatus(state)}<div class="day-controls"><button class="secondary-btn" data-action="daily-meal" ?disabled=${busy}>${icon('utensils')}一日三餐</button>${state.love ? html`<button class="secondary-btn" data-action="relationship">${icon('heart-handshake')}小凛 · ${G.relationshipLabel(state)}</button>` : ''}<button class="secondary-btn" data-action="plates" aria-label="名牌与解锁进度">${icon('badge')}名牌与装饰</button><button class="secondary-btn" data-action="chat">${icon('messages-square')}查看舞萌群</button><button class="secondary-btn" data-action="daily" data-value="wait" ?disabled=${busy}>${icon('clock-3')}等待</button><button class="primary-btn" data-action="sleep-menu" ?disabled=${busy}>${icon('moon')}睡觉</button></div></section>
     <section class="recent-section"><div class="section-heading"><h2>今日手账</h2><button class="text-btn" data-action="nav" data-value="journal">全部记录 ${icon('arrow-right')}</button></div>${logRows(state.logs.slice(0, 5))}</section>`;
   }
   function logRows(items) {
@@ -236,53 +249,63 @@ import { html, render as mount } from 'lit';
     return html`<section><div class="section-heading"><h2>春季出勤手账</h2><span>${state.visits} 次出勤 · ${state.tracks} 首游玩</span></div><div class="rating-history">${state.history.filter((_, i) => i % Math.max(1, Math.ceil(state.history.length / 32)) === 0).map(h => html`<div title="第 ${h.day} 天 · Rating ${h.rating}"><span style="height:${Math.max(2, h.rating / 16000 * 100)}%"></span><small>${h.day}</small></div>`)}</div>${logRows(state.logs)}</section>`;
   }
   function frame(title, sub, body, wide = false, close = true) {
-    return html`<div class="modal-backdrop"><section class="modal ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1"><div class="modal-heading"><div><span class="eyebrow">${sub}</span><h2 id="modal-title">${title}</h2></div>${close ? html`<button class="icon-btn" data-action="close" title="关闭" aria-label="关闭">${icon('x')}</button>` : ''}</div>${body}</section></div>`;
+    return html`<div class="modal-backdrop"><section class="modal ${wide ? 'wide' : ''}" data-modal=${modal} role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1"><div class="modal-heading"><div><span class="eyebrow">${sub}</span><h2 id="modal-title">${title}</h2></div>${close ? html`<button class="icon-btn" data-action="close" title="关闭" aria-label="关闭">${icon('x')}</button>` : ''}</div>${body}</section></div>`;
   }
   function options(list, action) {
     return html`<div class="option-grid">${list.map(x => {
-      const unavailable = x.cost > state.money || action === 'meal' && (mealDestination==='arcade'?!!G.returnToPlayReason(state,x.id):(!G.canSpendTime(state, x.time + state.trip.returnTime) || state.job === 'student' && state.clock + x.time + state.trip.returnTime > 1440));
-      return html`<button class="option" data-action="${action}" data-value="${x.id}" ?disabled=${unavailable}>${icon(x.icon)}<div><b>${x.name}</b><small>${x.note}</small></div><span>${x.cost ? `¥${x.cost}` : action === 'meal' ? '已含' : '免费'}${x.time ? html`<small>${action === 'travel' ? '往返 ' : ''}${x.time} 分钟</small>` : ''}</span></button>`;
+      const unavailable = x.cost > state.money || action==='eat-home'&&(!G.canEatHome(state,x.id)) || action === 'meal' && (mealDestination==='arcade'?!!G.returnToPlayReason(state,x.id):(!G.canSpendTime(state, x.time + state.trip.returnTime) || state.job === 'student' && state.clock + x.time + state.trip.returnTime > 1440));
+      return html`<button class="option" data-action="${action}" data-value="${x.id}" ?disabled=${unavailable}>${icon(x.icon)}<div><b>${x.name}</b><small>${x.note}</small></div><span>${x.cost ? `¥${x.cost}` : ['meal','eat-home'].includes(action) ? '已含' : '免费'}${x.time ? html`<small>${action === 'travel' ? '往返 ' : ''}${x.time} 分钟</small>` : ''}</span></button>`;
     })}</div>`;
   }
   function steps(n) {
     return html`<div class="trip-steps">${['出门', '上机 / 排队', '下机'].map((t, i) => html`<span class="${i === n ? 'active' : ''}"><b>0${i + 1}</b>${t}</span>`)}</div>`;
   }
   function phone(select = false) {
-    return html`<div class="phone-shell"><div class="phone-status"><b>${G.time(state.clock)}</b><span>${icon('signal')}${icon('wifi')}${icon('battery-full')}</span></div><div class="phone-title"><span class="phone-app-icon">${icon('map-pinned')}</span><div><h3>机厅看看</h3><small>10:00 开门 · 23:30 停机</small></div></div><div class="phone-location">${icon('map-pin')}广州 · 大学城出发 <span>${G.unlockedArcades(state).length} 家机厅</span></div>${G.unlockedArcades(state).map(({name:a, id:i}) => html`<button class="arcade-option ${state.arcade === i ? 'selected' : ''}" aria-pressed=${state.arcade === i} data-action="arcade" data-value="${i}" ?disabled=${!select}><div><b>${a}</b><small>${G.ARCADE_KM[i].toFixed(1)} km 单程 · ${G.ARCADES[i].cabinets} 台双人机组</small></div><span class="crowd-count"><b>${G.peopleAt(state, i)}</b>人在店</span></button>`)}<div class="phone-footer">人数随时段与进出店变化 · ${state.mode === 'pair' ? '全员双人拼机' : '单人排队'}</div></div>`;
+    return html`<div class="phone-shell"><div class="phone-status"><b>${G.time(state.clock)}</b><span>${icon('signal')}${icon('wifi')}${icon('battery-full')}</span></div><div class="phone-title"><span class="phone-app-icon">${icon('map-pinned')}</span><div><h3>机厅看看</h3><small>普通店 10:00–23:30 · 音游窝全天营业</small></div></div><div class="phone-location">${icon('map-pin')}广州 · 大学城出发 <span>已发现 ${state.city.arcades.length} / ${G.ARCADE_LIMIT} 家${state.city.denUnlocked?' · 特殊场所 1 家':''}</span></div>${G.unlockedArcades(state).map(({name:a, id:i}) => html`<button class="arcade-option ${state.arcade === i ? 'selected' : ''}" aria-pressed=${state.arcade === i} data-action="arcade" data-value="${i}" ?disabled=${!select}><div><b>${a}</b><small>${G.ARCADE_KM[i].toFixed(1)} km 单程 · ${G.ARCADES[i].cabinets} 台双人机组</small><small>${G.allNight(state,i)?'24 小时营业 · ¥30 / 小时 · 打歌不另收费':'10:00–23:30 · 每 PC ¥6'}</small></div><span class="crowd-count"><b>${G.peopleAt(state, i)}</b>人在店</span></button>`)}<div class="phone-footer">${state.city.arcades.length===G.ARCADE_LIMIT?'本城机厅已全部发现 · ':''}人数随时段与进出店变化 · ${state.mode === 'pair' ? '全员双人拼机' : '单人排队'}</div></div>`;
   }
   function modeControl() {
     const r = G.roundInfo(state),
       waiting = state.phase === 'play' ? Math.max(0, state.queueUntil - state.clock) : r.queue;
-    return html`<div class="mode-select">${Object.values(G.MODES).map(m => html`<button class="${state.mode === m.id ? 'selected' : ''}" ?disabled=${m.id==='pair'&&G.peopleAt(state)===0} data-action="mode" data-value="${m.id}" aria-pressed="${state.mode === m.id}">${icon(m.icon)}${m.name}<small>${m.count} 首 · 自选 ${m.id === 'pair' && state.mode === 'pair' ? G.selectCount(state) : m.select} 首</small></button>`)}</div><div class="mode-status">${icon('circle-check')}当前模式：${G.MODES[state.mode].name}${state.mode === 'pair' ? ' · 双人同时游玩' : ' · 单人游玩'}</div><div class="queue-info">${icon('users')}${state.phase === 'play' ? '还需等候' : '预计排队'} ${waiting} 分钟 + 游玩 ${r.duration} 分钟<span>每人 ¥6</span></div>`;
+    return html`<div class="mode-select">${Object.values(G.MODES).map(m => html`<button class="${state.mode === m.id ? 'selected' : ''}" ?disabled=${m.id==='pair'&&G.peopleAt(state)===0} data-action="mode" data-value="${m.id}" aria-pressed="${state.mode === m.id}">${icon(m.icon)}${m.name}<small>${m.count} 首 · 自选 ${m.id === 'pair' && state.mode === 'pair' ? G.selectCount(state) : m.select} 首</small></button>`)}</div><div class="mode-status">${icon('circle-check')}当前模式：${G.MODES[state.mode].name}${state.mode === 'pair' ? ' · 双人同时游玩' : ' · 单人游玩'}</div><div class="queue-info">${icon('users')}${state.phase === 'play' ? '还需等候' : '预计排队'} ${waiting} 分钟 · 机厅 ${G.peopleAt(state)} 人<span>${G.allNight(state)?'¥30 / 小时':`每人 ¥${G.pcPrice(state)}`}</span></div>`;
   }
   function results() {
     if (!state.last) return '';
-    return html`${state.last.battle?html`<p class="battle-result">友人对战 · ${state.last.battle.outcome==='wins'?'获胜':state.last.battle.outcome==='losses'?'落败':'平局'} · ${state.last.battle.ours.toFixed(4)} / ${state.last.battle.theirs.toFixed(4)}</p>`:''}<div class="result-banner"><div>${icon('sparkles')}Rating <b>+${state.last.gain}</b></div><span>星星 +${(state.skills.star - state.last.skillsBefore.star).toFixed(3)} · 键盘 +${(state.skills.key - state.last.skillsBefore.key).toFixed(3)} · 读谱 +${(state.skills.reading - (state.last.skillsBefore.reading ?? state.skills.reading)).toFixed(3)}</span></div><div class="performance-results">${state.last.results.map(c => html`<article>${cover(c)}<div><small class="diff-text-${c.index}">${names[c.index]} ${G.displayLevel(c)} · ${state.last.courseLevel ? '段位课题' : c.partner ? '对方选曲' : '自选'}</small><b>${esc(c.title)}</b><div class="performance-score">${c.achievement.toFixed(4)}% <em>${G.rank(c.achievement)}</em><span class="combo-badge">${c.combo || 'CLEAR'}</span></div>${c.opponent?html`<small class="sync-result">${G.syncLabel(c.sync)} · ${esc(c.opponent.id)} ${names[c.opponent.index]} ${c.opponent.achievement.toFixed(4)}% ${c.opponent.combo||'CLEAR'}</small>`:''}<small>${c.overreach ? '越级 · ' : ''}${c.ra} RA · 第 ${c.plays} 次 · ${c.improved ? 'NEW BEST' : ''}</small><div class="judgements">${['critical', 'perfect', 'great', 'good', 'miss'].map((k, i) => html`<span>${['CRITICAL', 'PERFECT', 'GREAT', 'GOOD', 'MISS'][i]} <b>${c.judgements?.[k] ?? 0}</b></span>`)}</div>${c.breakJudgements ? html`<small class="break-details">BREAK 判定 · 基础 ${c.baseScore.toFixed(4)}% + 加分 ${c.extraScore.toFixed(4)}%</small>` : ''}${c.segmentEvent ? html`<p class="segment-outcome ${c.segmentEvent.passed ? 'passed' : 'failed'}">${c.segmentEvent.scene} · ${c.segmentEvent.passed ? '判定通过' : `段落坠机 · +${c.segmentEvent.misses} MISS · -${c.segmentEvent.loss.toFixed(4)}%`}</p>` : ''}</div></article>`)}</div>`;
+    return html`${state.last.battle?html`<p class="battle-result">友人对战 · ${state.last.battle.outcome==='wins'?'获胜':state.last.battle.outcome==='losses'?'落败':'平局'} · ${state.last.battle.ours.toFixed(4)} / ${state.last.battle.theirs.toFixed(4)}</p>`:''}<div class="result-banner"><div>${icon('sparkles')}Rating <b>+${state.last.gain}</b></div><span>星星 +${(state.skills.star - state.last.skillsBefore.star).toFixed(3)} · 键盘 +${(state.skills.key - state.last.skillsBefore.key).toFixed(3)} · 读谱 +${(state.skills.reading - (state.last.skillsBefore.reading ?? state.skills.reading)).toFixed(3)}</span></div><div class="performance-results">${state.last.results.map(c => html`<article>${cover(c)}<div><small class="diff-text-${c.index}">${names[c.index]} ${G.displayLevel(c)} · ${state.last.courseLevel ? '段位课题' : c.partner ? '对方选曲' : '自选'}</small><b>${esc(c.title)}</b><div class="performance-score">${c.achievement.toFixed(4)}% <em class="grade-icon"><img src="assets/grades/music_icon_${G.rank(c.achievement).toLowerCase().replace('+','p')}.png" alt="${G.rank(c.achievement)}"></em><span class="combo-badge">${c.combo || 'CLEAR'}</span></div>${c.opponent?html`<small class="sync-result">${G.syncLabel(c.sync)} · ${esc(c.opponent.id)} ${names[c.opponent.index]} ${c.opponent.achievement.toFixed(4)}% ${c.opponent.combo||'CLEAR'}</small>`:''}<small>${c.overreach ? '越级 · ' : ''}第 ${c.plays} 次 · ${c.improved ? 'NEW BEST' : ''}</small><details class="judgement-fold"><summary>查看判定</summary><div class="judgements">${['critical', 'perfect', 'great', 'good', 'miss'].map((k, i) => html`<span>${['CRITICAL', 'PERFECT', 'GREAT', 'GOOD', 'MISS'][i]} <b>${c.judgements?.[k] ?? 0}</b></span>`)}</div>${c.breakJudgements ? html`<small class="break-details">BREAK 判定 · 基础 ${c.baseScore.toFixed(4)}% + 加分 ${c.extraScore.toFixed(4)}%</small>` : ''}</details>${c.segmentEvent ? html`<p class="segment-outcome ${c.segmentEvent.passed ? 'passed' : 'failed'}">${c.segmentEvent.scene} · ${c.segmentEvent.passed ? '判定通过' : `段落坠机 · +${c.segmentEvent.misses} MISS · -${c.segmentEvent.loss.toFixed(4)}%`}</p>` : ''}</div></article>`)}</div>`;
   }
   function renderModal() {
-    if (state.ending && modal !== 'restart') modal = 'ending';else if (state.school.pending) modal = 'teacher';else if (state.event !== null) modal = 'event';else if (state.city.encounter) modal = 'city-encounter';else if (state.videoEvent) modal = 'video';
+    if (state.ending && modal !== 'restart') modal = 'ending';else if (state.school.pending) modal = 'teacher';else if (state.event !== null) modal = 'event';else if (state.city.encounter) modal = 'city-encounter';else if (state.videoEvent) modal = 'video';else if(state.setupDone&&!state.guide.introDone){modal='chat';if(G.postIntro(state))save();}
+    if(state.forcedSleeps!==seenForcedSleeps){seenForcedSleeps=state.forcedSleeps;modal=null;state.roundReview=false;picked=[];recommendations=[];forceModalTop=true;toast(G.homeText(state,'困意已满，已结束行动并回家睡觉。'));}
+    if(state.ending&&modal!=='restart')modal='ending';else if(!state.ending&&state.school.pending)modal='teacher';
+    if(!state.ending&&!state.school.pending&&state.event===null&&!state.city.encounter&&!state.videoEvent&&state.setupDone&&state.guide.introDone&&(!modal||['trip','chat','entertain'].includes(modal))&&G.mealReminder(state)>=0){mealReturn=modal;modal='daily-meal';forceModalTop=true;}
     const root = $('#modal-root');
     if (!modal) {
+      const dialog=root.querySelector('.modal');
+      if(renderedModal&&dialog) modalScroll.set(renderedModal,dialog.scrollTop);
+      renderedModal=null;
       mount('', root);
       document.body.classList.remove('modal-open');
       return;
     }
     document.body.classList.add('modal-open');
     let content = '';
-    if (modal === 'chat') content = frame('舞萌出勤群', '30 位群友 · ' + G.time(state.clock), LifeUI.chat(state));
+    if(modal==='daily-meal')content=frame(`${G.MEAL_NAMES[G.mealDue(state)]||'用餐'}时间，吃点什么`,`${G.time(state.clock)} · ${state.mealBreak?'午休':G.residence(state)}`,html`${LifeUI.mealStatus(state)}${options(G.homeMeals(state),'eat-home')}<p class="form-note">连续 3 天漏餐开始降低最大体力；连续 3 天规律三餐并出门活动，最大体力 +1。</p><button class="secondary-btn" data-action="meal-later">稍后再吃</button>`,false,false);
+    if(modal==='sleep')content=frame('休息一下',`困意 ${Math.round(state.drowsiness)}/100 · 体力 ${Math.floor(state.stamina)}/${state.maxStamina}`,html`<div class="option-grid"><button class="option" data-action="sleep-now" data-value="nap">${icon('alarm-clock')}<div><b>小睡一会</b><small>30 分钟 · 困意 -15 · 体力 +20</small></div></button><button class="option" data-action="sleep-now" data-value="full">${icon('moon')}<div><b>好好睡一觉</b><small>8 小时 · 困意清零 · 体力恢复满</small></div></button></div><p class="form-note">睡眠覆盖课程或上班时段会记为旷课、旷工。</p>`);
+    if(modal==='guide')content=frame('从今天的一枚游戏币开始','春季小目标',guideGoals(state),true);
+    if (modal === 'chat') {const guided=!state.guide.introDone||introReplay;content = frame('舞萌出勤群', '30 位群友 · ' + G.time(state.clock), html`${LifeUI.chat(introReplay?{...state,chat:G.introMessages(state)}:state,guided)}${guided?intro(state,introReplay):''}`,false,!guided);}
     if (modal?.startsWith('b50chat:')) content = frame('B50 成绩图', '群聊中的成绩记录', html`<div class="b50-image-view"><img data-b50-image="${modal.split(':')[1]}" alt="群聊 B50 完整成绩图片"></div>`, true);
     if (modal === 'supplies') content = frame('手套与补给', '钱包 ¥' + state.money, LifeUI.shop(state));
     if (modal === 'plates') content = frame('我的名牌', '版本成就 · 极 / 将 / 神 / 舞舞', LifeUI.collections(state, pool, collectionTab, collectionSearch, collectionPage, collectionStatus), true);
     if (modal === 'ranks') content = frame('段位与友人对战','友人对战 · 四曲 LIFE 挑战',LifeUI.ranks(state,pool),true);
     if (modal === 'course-preview') {
       const charts=G.courseCharts(courseLevel,pool),reason=G.courseReason(state);
-      content=frame(G.COURSE_NAMES[courseLevel-1]+' · 段位挑战','四曲 · 20 分钟 · ¥12',html`${steps(1)}<div class="trip-info">${icon('wallet')}¥${state.money}<span>LIFE 300</span><span>${G.time(state.clock)}</span></div>${LifeUI.supplies(state)}<div class="small-heading">固定课题 · 按顺序游玩<span>${icon('lock-keyhole')}曲目与难度不可更换</span></div><div class="course-fixed-charts">${charts.map((c,i)=>html`<section data-course-chart="${G.key(c)}"><small class="course-track-number">第 ${i+1} 首</small>${rows([c])}</section>`)}</div><p class="form-note">GREAT -1 / GOOD -2 / MISS -3；完成四曲后 LIFE 大于 0 即合格。</p><div class="modal-actions"><button class="secondary-btn" data-action="ranks">返回段位列表</button><button class="primary-btn" data-action="course-start" ?disabled=${!!reason}>${icon('play')}投币挑战 · ¥12</button></div>${reason?html`<p class="warning">${reason}</p>`:''}`,true);
+      content=frame(G.COURSE_NAMES[courseLevel-1]+' · 段位挑战',`四曲 · 20 分钟 · ${G.allNight(state)?'计入小时费用':`¥${G.pcPrice(state)*2}`}`,html`${steps(1)}<div class="trip-info">${icon('wallet')}¥${state.money}<span>LIFE 300</span><span>${G.time(state.clock)}</span></div>${LifeUI.supplies(state)}<div class="small-heading">固定课题 · 按顺序游玩<span>${icon('lock-keyhole')}曲目与难度不可更换</span></div><div class="course-fixed-charts">${charts.map((c,i)=>html`<section data-course-chart="${G.key(c)}"><small class="course-track-number">第 ${i+1} 首</small>${rows([c])}</section>`)}</div><p class="form-note">GREAT -1 / GOOD -2 / MISS -3；完成四曲后 LIFE 大于 0 即合格。</p><div class="modal-actions"><button class="secondary-btn" data-action="ranks">返回段位列表</button><button class="primary-btn" data-action="course-start" ?disabled=${!!reason}>${icon('play')}${G.allNight(state)?'开始挑战 · 已计时':`投币挑战 · ¥${G.pcPrice(state)*2}`}</button></div>${reason?html`<p class="warning">${reason}</p>`:''}`,true);
     }
     if(modal==='course-result'){
       const r=state.competition.lastCourse;
       content=frame(G.COURSE_NAMES[r.level-1]+' · 挑战结算',r.passed?'合格':'未合格',html`<div class="outing-summary"><div><small>剩余 LIFE</small><b>${r.life}<span> / 300</span></b></div><div><small>固定课题</small><b>4<span> 首</span></b></div></div>${results()}<div class="modal-actions"><button class="secondary-btn" data-action="ranks">查看段位</button><button class="primary-btn" data-action="close">返回上机</button></div>`,true);
     }
-    if (modal === 'avatar') content = frame('自定义头像', '保存在本机存档中', html`<div class="avatar-editor">${state.profile.avatar ? html`<img src="${state.profile.avatar}" alt="当前头像">` : icon('circle-user-round')}<div class="avatar-controls"><label class="secondary-btn">${icon('upload')}选择图片<input id="avatar-upload" type="file" accept="image/png,image/jpeg,image/webp" hidden></label><button class="secondary-btn" data-action="reset-avatar">${icon('rotate-ccw')}恢复默认</button></div></div>`);
+    if (modal === 'avatar') content = frame('头像', '默认 / 原有头像 / 自定义', html`<div class="avatar-editor"><img src="${state.profile.avatar || window.AVATARS[0].src}" alt="当前头像"><div class="avatar-controls"><label class="secondary-btn">${icon('upload')}上传图片<input id="avatar-upload" type="file" accept="image/png,image/jpeg,image/webp" hidden></label><button class="secondary-btn" data-action="reset-avatar">${icon('rotate-ccw')}恢复默认</button></div></div><div class="avatar-gallery">${window.AVATARS.slice(avatarPage*24,(avatarPage+1)*24).map(a=>html`<button class="avatar-choice" data-action="original-avatar" data-value="${a.id}" aria-pressed=${(state.profile.avatar || window.AVATARS[0].src)===a.src} title="${a.name}"><img loading="lazy" src="${a.src}" alt="${a.name}"><span>${a.name}</span></button>`)}</div><div class="modal-actions avatar-pages"><button class="secondary-btn" data-action="avatar-page" data-value="-1" ?disabled=${avatarPage===0}>上一页</button><span>${avatarPage+1} / ${Math.ceil(window.AVATARS.length/24)} · 共 ${window.AVATARS.length} 款</span><button class="secondary-btn" data-action="avatar-page" data-value="1" ?disabled=${(avatarPage+1)*24>=window.AVATARS.length}>下一页</button></div>`);
+    if (modal === 'relationship') content = frame('与小凛的日常',G.relationshipLabel(state),html`<div class="relationship-summary"><span>故事 ${state.love} / ${G.EVENTS.length}</span><span>信任 ${state.romance.trust}/100</span></div><div class="modal-actions"><button class="secondary-btn" data-action="love-contact" data-value="chat" ?disabled=${state.phase!=='home'||state.loveFailed||state.romance.lastContact===state.day}>${icon('messages-square')}聊聊近况 · 15 分钟</button><button class="secondary-btn" data-action="love-contact" data-value="walk" ?disabled=${state.phase!=='home'||state.loveFailed||state.romance.lastContact===state.day||state.stamina<8||state.money<8}>${icon('footprints')}一起散步 · 60 分钟 / ¥8</button></div><div class="relationship-memories">${state.romance.memories.length?state.romance.memories.map(m=>html`<article><small>第 ${m.day} 天 · ${G.EVENTS[m.stage].title}</small><p>${m.text}</p></article>`):html`<p>从下一次见面开始，记下共同的回忆。</p>`}</div>`);
     if (modal === 'talents') content = frame('词条', '已获得 ' + state.talents.length + ' 项', LifeUI.talents(state), true);
     if (modal === 'video') {
       const c = catalog.get(state.videoEvent.key);
@@ -290,19 +313,20 @@ import { html, render as mount } from 'lit';
     }
     if (modal === 'phone') content = frame('机厅看看', 'ARCADE RADAR', phone());
     if (modal === 'trip') {
-      if (state.phase === 'travel') content = frame('选择机厅与出行方式', `${G.dateLabel(state)} · ${G.time(state.clock)}`, html`${steps(0)}<div class="travel-layout">${phone(true)}<div>${modeControl()}<p class="form-note">本次单程 ${G.ARCADE_KM[state.arcade].toFixed(1)} km，往返 ${(G.ARCADE_KM[state.arcade] * 2).toFixed(1)} km；到店与回家时分别累计。</p>${options(G.transportOptions(state.arcade), 'travel')}<button class="finish-btn" data-action="cancel-trip">今天先不出门 ${icon('undo-2')}</button></div></div>`, true);
-      if (state.phase === 'drink') content = frame('上机前，喝点什么', `${G.time(state.clock)} · ${arcades[state.arcade]}`, html`${steps(1)}${options(G.DRINKS, 'drink')}<p class="form-note">购饮 5 分钟 · 600 ml · 每首消耗 60 ml</p>`);
+      if (state.phase === 'travel') content = frame('选择机厅与出行方式', `${G.dateLabel(state)} · ${G.time(state.clock)}`, html`${steps(0)}<div class="travel-layout">${phone(true)}<div>${modeControl()}<p class="form-note">${G.allNight(state)?html`<span class="den-price">音游窝全天营业 · ¥30 / 小时，入场预付首小时，超时按整小时续费。PC / 段位不另收费，离店吃饭暂停计时。困意满会强制回${G.residence(state)}睡觉。</span>`:''}本次单程 ${G.ARCADE_KM[state.arcade].toFixed(1)} km，往返 ${(G.ARCADE_KM[state.arcade] * 2).toFixed(1)} km；到店与回${G.residence(state)}时分别累计。</p>${options(G.transportOptions(state.arcade), 'travel')}<button class="finish-btn" data-action="cancel-trip">今天先不出门 ${icon('undo-2')}</button></div></div>`, true);
+      if (state.phase === 'drink') content = frame('上机前，喝点什么', `${G.time(state.clock)} · ${arcades[state.arcade]}`, html`${steps(1)}${LifeUI.drinkShop(state)}<button class="primary-btn" data-action="drinks-ready">选好了，进入排队</button>`);
       if (state.phase === 'play') {
-        const reason = G.playReason(state);
-        content = frame('上机 / 排队', `${G.time(state.clock)} · 最晚 ${G.time(G.availableUntil(state))} 结束上机`, html`${steps(1)}<div class="trip-info">${icon('wallet')}¥${state.money}<span>${state.trip.rounds} 轮已完成</span><span>机厅 ${G.peopleAt(state)} 人</span></div>${results()}${modeControl()}${LifeUI.supplies(state)}<div class="supply-actions"><button class="secondary-btn" data-action="ranks">${icon('medal')}段位挑战</button></div>${state.last ? html`<div class="round-events">${state.logs.filter(l => l.day === state.day && l.time === state.clock && ['event', 'crowd', 'talent', 'heart'].includes(l.type)).slice(0, 4).map(l => html`<p>${icon('sparkles')}${esc(l.text.replace('的鬼歌手元，','的手元，').replace('；这次没有刷到适合自己的手元。','。'))}</p>`)}</div>` : ''}<div class="small-heading">本轮自选 ${G.selectCount(state)} 首<span>${state.mode === 'pair' ? '拼机伙伴选择剩余曲目，两人同时游玩' : '单人三首'}</span></div><div class="selection-slots">${Array.from({
+        const reason = G.playReason(state), canSelect=state.queueUntil<=state.clock&&!state.roundReview;
+        if(canSelect&&!recommendations.length)recommend();
+        content = frame('上机 / 排队', `${G.time(state.clock)} · ${G.allNight(state)?'音游窝全天营业 · ':''}最晚 ${G.availableUntil(state)>=1440?'次日 ':''}${G.time(G.availableUntil(state)%1440)} 结束上机`, html`${steps(1)}${!canSelect?results():''}${modeControl()}<div class="crowd-broadcast" role="status">${state.logs.filter(l=>l.type==='crowd'&&l.day===state.day&&(l.day>(state.trip.startDay||state.day)||l.time>=state.trip.start)).slice(0,3).map(l=>html`<p>${G.time(l.time)} · ${esc(l.text)}</p>`)}</div>${LifeUI.supplies(state)}${state.mode==='solo'&&canSelect?html`<div class="supply-actions"><button class="secondary-btn" data-action="ranks">${icon('medal')}段位挑战</button></div>`:''}${state.last ? html`<div class="round-events">${state.logs.filter(l => l.day === state.day && l.time === state.clock && ['event', 'crowd', 'talent', 'heart'].includes(l.type)).slice(0, 4).map(l => html`<p>${icon('sparkles')}${esc(l.text.replace('的鬼歌手元，','的手元，').replace('；这次没有刷到适合自己的手元。','。'))}</p>`)}</div>` : ''}${canSelect?html`<div class="small-heading">本轮自选 ${G.selectCount(state)} 首<span>${state.mode === 'pair' ? '拼机伙伴选择剩余曲目，两人同时游玩' : '单人三首'}</span></div><div class="selection-slots">${Array.from({
           length: G.selectCount(state)
-        }, (_, i) => html`<button class="secondary-btn" data-action="picker" data-value="${i}">${icon('disc-3')}第 ${i + 1} 首 · ${esc(picked[i]?.title || recommendations[i]?.title || '选择曲目')}</button>`)}</div>${rows(picked.length ? picked : recommendations)}${LifeUI.partnerChoices(state, pool)}<div class="modal-actions"><button class="secondary-btn" data-action="picker">${icon('list-music')}自选曲目</button><button class="secondary-btn" data-action="reroll" title="换一组">${icon('shuffle')}换一组</button><button class="primary-btn" data-action="play" ?disabled=${reason}>${icon('play')}投币上机 · ¥6</button></div>${reason ? html`<p class="warning">${reason}</p>` : ''}<button class="finish-btn" data-action="finish">结束上机，去吃饭 ${icon('arrow-right')}</button>`, true);
+        }, (_, i) => html`<button class="secondary-btn" data-action="picker" data-value="${i}">${icon('disc-3')}第 ${i + 1} 首 · ${esc(picked[i]?.title || recommendations[i]?.title || '选择曲目')}</button>`)}</div>${rows(picked.length ? picked : recommendations)}${LifeUI.partnerChoices(state, pool)}<div class="modal-actions"><button class="secondary-btn" data-action="picker">${icon('list-music')}自选曲目</button><button class="secondary-btn" data-action="reroll" title="换一组">${icon('shuffle')}换一组</button><button class="primary-btn" data-action="play" ?disabled=${reason}>${icon('play')}${G.allNight(state)?'开始游玩 · 已计时':`投币上机 · ¥${G.pcPrice(state)}`}</button></div>${reason ? html`<p class="warning">${reason}</p>` : ''}`:html`<p class="queue-notice">本轮已结束或正在排队，轮到上机后再选择下一轮曲目。</p>${state.queueUntil<=state.clock?html`<button class="primary-btn" data-action="next-round">下一轮上机 · 开始选曲</button>`:''}`}<button class="finish-btn" data-action="finish">结束上机，去吃饭 ${icon('arrow-right')}</button>`, true);
       }
-      if (state.phase === 'meal') content = frame('下机了，好好吃顿饭', `${G.time(state.clock)} · 回程 ${state.trip.returnTime} 分钟`, html`${steps(2)}<div class="outing-summary"><div><small>本次上机</small><b>${state.trip.rounds}<span> 轮</span></b></div><div><small>Rating 提升</small><b>+${state.rating - state.trip.ratingBefore}</b></div><div><small>已花费</small><b>¥${state.trip.cost}</b></div></div><div class="mode-select" aria-label="饭后去向">${[['home','吃完回家'],['arcade','吃完回机厅继续打']].map(([id,label])=>html`<button class="${mealDestination===id?'selected':''}" aria-pressed=${mealDestination===id} data-action="meal-destination" data-value="${id}">${label}</button>`)}</div>${options(G.mealOptions(state).filter(m=>mealDestination!=='arcade'||m.id!=='home'), 'meal')}<button class="secondary-btn" data-action="resume-play" ?disabled=${!!G.returnToPlayReason(state)}>先不吃，返回机厅继续打</button>${mealDestination==='home'&&G.canSkipMeal(state) ? html`<button class="secondary-btn" data-action="meal" data-value="skip">不吃饭，直接回家</button>` : ''}<p class="form-note">选择回机厅：附近用餐另计往返步行 10 分钟，回店后重新排队；仍须在闭店或固定日程前结束。回家后也可再次出勤。基础餐食包含在每日 ¥${G.JOBS[state.job].daily} 生活开销内。</p>`);
+      if (state.phase === 'meal') content = frame('下机了，好好吃顿饭', `${G.time(state.clock)} · 回程 ${state.trip.returnTime} 分钟`, html`${steps(2)}<div class="outing-summary"><div><small>本次上机</small><b>${state.trip.rounds}<span> 轮</span></b></div><div><small>Rating 提升</small><b>+${state.rating - state.trip.ratingBefore}</b></div><div><small>已花费</small><b>¥${state.trip.cost}</b></div></div><div class="mode-select" aria-label="饭后去向">${[['home',`吃完回${G.residence(state)}`],['arcade','吃完回机厅继续打']].map(([id,label])=>html`<button class="${mealDestination===id?'selected':''}" aria-pressed=${mealDestination===id} data-action="meal-destination" data-value="${id}">${label}</button>`)}</div>${options(G.mealOptions(state).filter(m=>mealDestination!=='arcade'||m.id!=='home'), 'meal')}<button class="secondary-btn" data-action="resume-play" ?disabled=${!!G.returnToPlayReason(state)}>先不吃，返回机厅继续打</button>${mealDestination==='home'&&G.canSkipMeal(state) ? html`<button class="secondary-btn" data-action="meal" data-value="skip">不吃饭，直接回${G.residence(state)}</button>` : ''}<p class="form-note">选择回机厅：附近用餐另计往返步行 10 分钟，回店后重新排队；仍须在闭店或固定日程前结束。回${G.residence(state)}后也可再次出勤。基础餐食包含在每日 ¥${G.JOBS[state.job].daily} 生活开销内。</p>`);
     }
     if (modal === 'picker') content = frame(`自选曲目 · ${G.MODES[state.mode].name}`, `选择第 ${pickSlot + 1} 首 / 共 ${G.selectCount(state)} 首`, html`${filters()}<div class="picker-list" id="song-results">${libraryResults()}</div><div class="modal-actions"><span id="pick-count">${picked[pickSlot] ? esc(picked[pickSlot].title) : '本首尚未选择'}</span><button class="primary-btn" data-action="picked">${icon('check')}确认选曲</button></div>`, true);
     if(modal==='city-encounter') content=frame('街角的偶遇','广州 · 小凛',html`<p class="event-text">小凛拎着舞萌手套朝你挥了挥手：“你也来这边逛呀？”</p><div class="modal-actions"><button class="primary-btn" data-action="city-answer" data-value="0">聊聊舞萌，加个好友</button><button class="secondary-btn" data-action="city-answer" data-value="1">点头招呼，下次再聊</button></div><p class="form-note">交谈 10 分钟</p>`,false,false);
-    if (modal === 'entertain') content = frame('娱乐', `${G.time(state.clock)} · 心情 ${state.mood}/100`, html`<div class="option-grid"><button class="option" data-action="daily" data-value="fun" ?disabled=${state.money < 35}>${icon('popcorn')}<div><b>和朋友出去玩</b><small>2 小时 · 心情 +26</small></div><span>¥35</span></button><button class="option" data-action="watch-videos">${icon('clapperboard')}<div><b>刷视频</b><small>30 分钟 · 心情 +7</small></div><span>免费</span></button>${G.OUTINGS.map(x=>html`<button class="option" data-action="explore" data-value="${x.id}" ?disabled=${state.money<x.cost||state.stamina<x.stamina||!G.canSpendTime(state,x.time)}>${icon(x.icon)}<div><b>${x.name}</b><small>${x.place} · ${x.time} 分钟 · 心情 +${x.mood}${x.stamina?` · 体力 -${x.stamina}`:''}</small></div><span>${x.cost?`¥${x.cost}`:'免费'}</span></button>`)}</div>`);
+    if (modal === 'entertain') content = frame('娱乐', `${G.time(state.clock)} · 心情 ${state.mood}/100`, html`<div class="option-grid"><button class="option" data-action="daily" data-value="fun" ?disabled=${state.money < 35}>${icon('popcorn')}<div><b>和朋友出去玩</b><small>2 小时 · 心情 +26</small></div><span>¥35</span></button><button class="option" data-action="watch-videos">${icon('clapperboard')}<div><b>刷视频</b><small>30 分钟 · 心情 +7</small></div><span>免费</span></button>${G.OUTINGS.map(x=>html`<button class="option" data-action="explore" data-value="${x.id}" ?disabled=${state.money<x.cost||state.stamina<x.stamina||!G.canSpendTime(state,x.time)}>${icon(x.icon)}<div><b>${x.name}</b><small>${G.homeText(state,x.place)} · ${x.time} 分钟 · 心情 +${x.mood}${x.stamina?` · 体力 -${x.stamina}`:''}</small></div><span>${x.cost?`¥${x.cost}`:'免费'}</span></button>`)}</div>`);
     if (modal === 'teacher') content = frame('老师约谈', 'ACADEMIC WARNING', html`<p class="event-text">“你最近的课程已经跟不上了。请尽快把落下的内容补上。”</p><div class="warning">挂科第 ${state.day - state.school.since + 1}/10 天 · 本次是第 ${state.school.talks + 1}/3 次约谈。<br>补习或上课将学力恢复到 20，可解除挂科；连续挂科 10 天或第 3 次约谈将进入肄业结局。</div><div class="modal-actions"><button class="primary-btn" data-action="teacher">${icon('book-open')}回应老师</button></div>`, false, false);
     if (modal === 'skip') {
       const c = G.nextObligation(state),
@@ -312,7 +336,7 @@ import { html, render as mount } from 'lit';
     if (modal === 'timetable') content = frame('本周课表', 'MONDAY — FRIDAY', html`<div class="week-schedule">${[1, 2, 3, 4, 5].map(d => html`<div><b>周${'日一二三四五六'[d]}</b>${G.schedule(state, d).map(c => html`<p><span>${G.time(c.start)}–${G.time(c.end)}</span><b>${c.name}</b><small>${c.kind === 'major' ? '专业课' : '水课'}</small></p>`)}</div>`)}</div>`, true);
     if (modal === 'event') {
       const e = G.EVENTS[state.event];
-      content = frame(e.title, `小凛 · ${state.event + 1}/4`, html`<div class="event-art"><div class="character"><span class="hair"></span><span class="face"></span><span class="eye left"></span><span class="eye right"></span><span class="bow left"></span><span class="bow right"></span><span class="dress"></span></div><div><small>机厅里的另一段旋律</small><b>小凛</b></div></div><p class="event-text">${e.text}</p><div class="event-choices">${e.options.map((o, i) => html`<button class="option" data-action="answer" data-value="${i}"><b>${o}</b>${icon('arrow-right')}</button>`)}</div>`, false, false);
+      content = frame(e.title, `小凛 · ${state.event + 1}/${G.EVENTS.length}`, html`<div class="event-art"><div class="character"><span class="hair"></span><span class="face"></span><span class="eye left"></span><span class="eye right"></span><span class="bow left"></span><span class="bow right"></span><span class="dress"></span></div><div><small>机厅里的另一段旋律</small><b>小凛</b></div></div><p class="event-text">${e.text}</p><div class="event-choices">${e.options.map((o, i) => html`<button class="option" data-action="answer" data-value="${i}"><b>${o}</b>${icon('arrow-right')}</button>`)}</div>`, false, false);
     }
     if (modal === 'ending') {
       const endings = {
@@ -329,14 +353,20 @@ import { html, render as mount } from 'lit';
     }
     if (modal === 'settings') content = frame('存档与设置', `${G.dateLabel(state)} · ${G.time(state.clock)}`, html`<div class="settings-buttons"><button class="secondary-btn" data-action="export">${icon('download')}导出存档</button><label class="secondary-btn">${icon('upload')}导入存档<input id="import-save" type="file" accept=".json,application/json" hidden></label><button class="secondary-btn" data-action="restart">${icon('rotate-ccw')}重新开始</button>${oldAvailable ? html`<button class="secondary-btn" data-action="legacy">迁移旧版存档</button>` : ''}</div><p class="form-note">新版独立保存。旧版存档仍保留，迁移时保留余额、成绩和关系，返回对应日期 08:00。</p>`);
     if (modal === 'restart') content = frame('开始新的故事？', 'NEW STORY', html`<p class="event-text">当前新版进度会被替换，可以先导出存档。</p><div class="modal-actions"><button class="secondary-btn" data-action="export">${icon('download')}导出存档</button><button class="primary-btn" data-action="confirm-restart">${icon('rotate-ccw')}确认重新开始</button></div>`);
-    if (modal === 'about') content = frame('规则与来源', '2026 SPRING', html`<div class="about-copy"><h3>2026 年 3 月 1 日至 6 月 30 日</h3><p>共 122 天，每天 24 小时。正常睡眠后 08:00 起床，行动消耗分钟；机厅 10:00 开门、23:30 结束游玩。吃饭、回程均耗时，午夜结算当天收支。上班日为周一至周五 09:00–18:00；学生按每周课表上课。</p><h3>经济与学业</h3><p>开局资金：学生 ¥1800、挂壁 ¥1800、上班族 ¥6000。每月 1 日学生生活费 ¥1800、上班族工资 ¥6000 入账，开局已含 3 月资金。每日基础开销分别为 ¥35 / ¥25 / ¥65。挂壁房租 ¥600，上班族 ¥1800，25 日零点检查并缴纳。上班族不可打工。</p><p>水课被抓概率 35%，专业课 75%。学力归零进入挂科并触发约谈；恢复到 20 解除。第三次约谈或连续挂科 10 天进入肄业结局。</p><h3>分数与底力</h3><p>达成率上限 101.0000%，Rating 仅计算到 100.5%。旧版本最佳 35 张 + 新版本最佳 15 张。同谱面初见有 -0.55 个百分点的预期修正，重复游玩逐步增加熟练度；实际成绩还受底力、心情、饮品、疲劳与判定波动影响。</p><p>FC：没有 MISS；FC+：没有 GOOD / MISS；AP：没有 GREAT / GOOD / MISS。成绩与徽章由模拟判定统计产生，不是通过百分比直接指定。判定分布是本作模拟，非官方谱面重放。</p><p>星星 / 键盘优先采用 ChiffonMai 同源 DXRating 社区标签，未标注谱面按音符占比估算。海底谭 MASTER 保留人工校正。对应底力影响达成率，也会获得更多成长。单开三首，拼机通常双方各选两首、同步游玩四首；玩家可单独选择拼机伙伴选曲的难度。两人一组计算排队，每人 ¥6。</p><h3>午夜与宴曲</h3><p>午夜自动跨日并结算生活开销、工资和房租。挂壁和上班族可在凌晨回家后继续活动，最晚 04:00 入睡。过零点入睡后按八小时睡眠延迟起床，获得当天熬夜减益；睡眠覆盖课程或班次记为旷课、旷工。00:00–06:00 不能打工，学生仍需午夜前回家。</p><p>名称以方括号标签开头的曲目统一作为宴曲：不自动推荐、不参与 B50，手动游玩保留达成率但 Rating 为 0。</p><h3>体力与成长</h3><p>手套每曲磨损，耐久不足一轮时须更换。每曲消耗体力与 60 ml 饮料；体力低于 55 逐渐减分，饮料耗尽额外减分。难度与物量越高消耗越快。等待每分钟恢复 0.35，吃饭恢复 30–60；小憩和主动休息已移除，普通娱乐不回体。非饭点且本次消耗较少可直接回家。状态每日结合心情随机决定，读谱力修正初见与复打表现。鬼歌以拟合定数计算表现、初见额外 -0.45%，成长 ×1.3；吃分预期 +0.16%，成长 ×0.7。刷视频可能学到鬼歌手元：大彻大悟降低该谱面计算难度，似懂非懂免除额外初见惩罚。词条依据本地 maimai-talent-tags.md。</p><p>推荐会搭配适合当前底力与稍高难度的曲目，“换一组”避开当前歌曲。定数略高于分类底力的谱面获得更多成长，差距过大则降低成长效率。越级按游玩前 Rating、官方标级与成绩不高于 97% 判断：低于 11,000 对应 11+，11,000 对应 12，12,000 对应 13+，13,000 对应 14，14,000 及以上对应 14+。</p><h3>群聊与广州闲逛</h3><p>群聊输入 @bot 查看快捷指令；运势每天固定，塔罗每次 2–3 分钟。B50 与人数查询每天各首次免费，之后每次 2 分钟。闲逛及游览广州景点消耗体力、恢复心情，可能遇到小凛、发现新机厅或餐馆；发现的店铺会永久加入选项。</p><h3>名牌与拟合</h3><p>版本名牌参考公开查分器规则：极为全 BASIC–MASTER FC，将为全 SSS，神为全 AP。曲目范围与难度要求按落雪收藏品 API 核验；舞系包含指定 Re:MASTER。真系没有“真将”。收录 71 块极 / 将 / 神名牌，另有签到、区域装饰和称号。区域装饰以选定区域累计 10 PC 解锁，每日首次上机后自动签到，增加 2 点进度；已移除要求觉醒的称号；移动距离称号按实际往返机厅的公里数累计。舞舞牌按同步最佳成绩逐谱面解锁。收藏与上机页可进入模拟段位及友人对战。</p><p>拟合数据来自水鱼 chart_stats，落雪公开曲库用于交叉核对官方定数。样本至少 100、两站定数一致且拟合差值绝对值 ≥0.3 才打标签。未获得落雪公开拟合数据，因此不是两站拟合共识。数据快照 2026-09-14。</p><h3>素材与数据</h3><p>非官方同人游戏。${songs.length} 首曲目与定数来自 <a href="https://www.diving-fish.com/api/maimaidxprober/music_data" target="_blank" rel="noreferrer">水鱼公开曲库</a>（2026-09-14 快照）。版本按落雪国服曲库映射为舞萌DX 2020–2026，B50 按国服引入版本分组，与故事月份独立。</p><p>曲绘来自水鱼 covers 公开图片服务，名牌与分数框来自 <a href="https://github.com/Yuri-YuzuChaN/maimaiDX" target="_blank" rel="noreferrer">maimaiDX</a> 的 CN1.55 公开素材包，本作现用国服“舞萌 DX”标识适配框，非原始官方框截图；扩充的名牌图案与称号条件来自落雪公共服务；社区技术标签来源经 <a href="https://github.com/ChiffonOwO/ChiffonMai" target="_blank" rel="noreferrer">ChiffonMai</a> 核对。相关版权归原权利人。无官方音源。图标使用 Lucide。</p></div>`);
+    if (modal === 'about') content = frame('规则与来源', '2026 SPRING', html`<div class="about-copy"><h3>2026 年 3 月 1 日至 6 月 30 日</h3><p>共 122 天，每天 24 小时。完整睡眠 8 小时，小睡 30 分钟，行动消耗分钟；机厅 10:00 开门、23:30 结束游玩。吃饭、回程均耗时，午夜结算当天收支。上班日为周一至周五 09:00–18:00；学生按每周课表上课。</p><h3>经济与学业</h3><p>开局资金：学生 ¥1800、挂壁 ¥1800、上班族 ¥6000。每月 1 日学生生活费 ¥1800、上班族工资 ¥6000 入账，开局已含 3 月资金。每日基础开销分别为 ¥35 / ¥25 / ¥65。挂壁房租 ¥600，上班族 ¥1800，25 日零点检查并缴纳。上班族不可打工。</p><p>水课被抓概率 35%，专业课 75%。学力归零进入挂科并触发约谈；恢复到 20 解除。第三次约谈或连续挂科 10 天进入肄业结局。</p><h3>分数与底力</h3><p>达成率上限 101.0000%，Rating 仅计算到 100.5%。旧版本最佳 35 张 + 新版本最佳 15 张。同谱面初见有 -0.55 个百分点的预期修正，重复游玩逐步增加熟练度；实际成绩还受底力、心情、饮品、疲劳与判定波动影响。</p><p>FC：没有 MISS；FC+：没有 GOOD / MISS；AP：没有 GREAT / GOOD / MISS。成绩与徽章由模拟判定统计产生，不是通过百分比直接指定。判定分布是本作模拟，非官方谱面重放。</p><p>星星 / 键盘优先采用 ChiffonMai 同源 DXRating 社区标签，未标注谱面按音符占比估算。海底谭 MASTER 保留人工校正。对应底力影响达成率，也会获得更多成长。单开三首，拼机通常双方各选两首、同步游玩四首；玩家可单独选择拼机伙伴选曲的难度。两人一组计算排队，普通机厅每人 ¥6；音游窝每人 ¥30 / 小时，预付首小时，续时按整小时收费，PC 和段位不另计费。</p><h3>午夜与宴曲</h3><p>午夜自动跨日并结算生活开销、工资和房租。挂壁和上班族可在凌晨回家后继续活动，不再限制凌晨 04:00 入睡。清醒行动每小时增加 6.25 点困意，连续清醒 16 小时到满，超过 60 开始影响成绩，达到 100 终止行动并回家睡 8 小时；睡眠覆盖课程或班次记为旷课、旷工。00:00–06:00 不能打工，学生仍需午夜前回宿舍。</p><p>名称以方括号标签开头的曲目统一作为宴曲：不自动推荐、不参与 B50，手动游玩保留达成率但 Rating 为 0。</p><h3>三餐与饮料</h3><p>早餐 06:00–11:00、午餐 11:00–17:00、晚餐 17:00–24:00 各记一次；在住处或准备出门时，08:00 / 12:00 / 18:00 后首次操作提醒选饭。上班、长课程中途可午休吃饭。学生回宿舍，可选美团拼好饭 ¥12。基础餐食包含在每日开销中；萨莉亚 ¥25 / 心情 +18，KFC 平日 ¥50、周四 ¥29.9。</p><p>连续漏餐 3 天后，每个漏餐日最大体力 -2，下限 70；连续 3 天吃齐三餐并出门活动，最大体力 +1，上限 120（体力过人为 130）。最多带 3 瓶饮料，大水最多 2 瓶：大水 1L / ¥5，乌龙茶 500ml / ¥5，冰美式 200ml / ¥9.9，魔爪 300ml / ¥10；认识小凛后解锁粉色魔爪 300ml / ¥12，状态与心情加成更高。可以切换正在喝的饮料，喝完自动开下一瓶，剩余饮料会随身保留。</p><h3>体力与成长</h3><p>手套每曲磨损，耐久不足一轮时须更换。每曲消耗体力与 60 ml 饮料；体力低于 55 逐渐减分，饮料耗尽额外减分。难度与物量越高消耗越快。等待每分钟恢复 0.35，吃饭恢复 30–60；家或宿舍内小睡 30 分钟恢复 20 体力、降低 15 困意；普通娱乐不回体。非饭点且本次消耗较少可直接返回住处。状态每日结合心情随机决定，读谱力修正初见与复打表现。鬼歌以拟合定数计算表现、初见额外 -0.45%，成长 ×1.3；吃分预期 +0.16%，成长 ×0.7。刷视频可能学到鬼歌手元：大彻大悟降低该谱面计算难度，似懂非懂免除额外初见惩罚。词条依据本地 maimai-talent-tags.md。</p><p>推荐会搭配适合当前底力与稍高难度的曲目，“换一组”避开当前歌曲。定数略高于分类底力的谱面获得更多成长，差距过大则降低成长效率。越级按游玩前 Rating、官方标级与成绩不高于 97% 判断：低于 11,000 对应 11+，11,000 对应 12，12,000 对应 13+，13,000 对应 14，14,000 及以上对应 14+。</p><h3>群聊与广州闲逛</h3><p>群聊输入 @bot 查看快捷指令；运势每天固定，塔罗每次 2–3 分钟。B50 与人数查询每天各首次免费，之后每次 2 分钟。闲逛及游览广州景点消耗体力、恢复心情，可能遇到小凛、发现新机厅或餐馆；发现的店铺会永久加入选项。</p><h3>名牌与拟合</h3><p>版本名牌参考公开查分器规则：极为全 BASIC–MASTER FC，将为全 SSS，神为全 AP。曲目范围与难度要求按落雪收藏品 API 核验；舞系包含指定 Re:MASTER。真系没有“真将”。收录 71 块极 / 将 / 神名牌，另有签到、区域装饰和称号。区域装饰以选定区域累计 10 PC 解锁，每日首次上机后自动签到，增加 2 点进度；已移除要求觉醒的称号；移动距离称号按实际往返机厅的公里数累计。舞舞牌按同步最佳成绩逐谱面解锁。收藏与上机页可进入模拟段位及友人对战。</p><p>拟合数据来自水鱼 chart_stats，落雪公开曲库用于交叉核对官方定数。样本至少 100、两站定数一致且拟合差值绝对值 ≥0.3 才打标签。未获得落雪公开拟合数据，因此不是两站拟合共识。数据快照 2026-09-14。</p><h3>素材与数据</h3><p>非官方同人游戏。${songs.length} 首曲目与定数来自 <a href="https://www.diving-fish.com/api/maimaidxprober/music_data" target="_blank" rel="noreferrer">水鱼公开曲库</a>（2026-09-14 快照）。版本按落雪国服曲库映射为舞萌DX 2020–2026，B50 按国服引入版本分组，与故事月份独立。</p><p>曲绘来自水鱼 covers 公开图片服务，名牌与分数框来自 <a href="https://github.com/Yuri-YuzuChaN/maimaiDX" target="_blank" rel="noreferrer">maimaiDX</a> 的 CN1.55 公开素材包，本作现用国服“舞萌 DX”标识适配框，非原始官方框截图；扩充的名牌图案与称号条件来自落雪公共服务；社区技术标签来源经 <a href="https://github.com/ChiffonOwO/ChiffonMai" target="_blank" rel="noreferrer">ChiffonMai</a> 核对。相关版权归原权利人。无官方音源。图标使用 Lucide。</p></div>`);
     if (modal?.startsWith('chart:')) {
       const c = catalog.get(modal.slice(6)),
         r = state.records[G.key(c)];
       content = frame(c.title, `${c.type === 'DX' ? 'DX' : '标准'} · ${c.version}`, html`${rows([c])}<div class="chart-details"><div><b>${names[c.index]} ${c.ds}</b>${badge(c)}</div><p>${esc(c.classification)} · 星星权重 ${Math.round(c.starWeight * 100)}% · 键盘权重 ${Math.round((1 - c.starWeight) * 100)}%</p><p>已游玩 ${state.practice[G.key(c)] || 0} 次 · ${r ? `${r.achievement.toFixed(4)}% ${G.rank(r.achievement)} ${r.combo || ''}` : '暂无成绩'}</p>${Number.isFinite(c.fit) ? html`<p>水鱼拟合 ${c.fit.toFixed(3)} · 官方 ${c.ds} · 差值 ${(c.fit - c.ds).toFixed(3)}<br>样本 ${c.samples} · 落雪定数 ${c.comparison ?? '未收录'}<br>样本 ≥100 且定数一致时，差值 ≥0.3 为鬼歌，≤-0.3 为吃分推荐；BASIC 和定数 <10 不标记，ADVANCED 不标吃分。</p>` : html`<p>暂无拟合数据，不添加难度推荐标签。</p>`}<p>TAP ${c.notes[0]} · HOLD ${c.notes[1]} · SLIDE ${c.notes[2]} · TOUCH ${c.notes[3]} · BREAK ${c.notes[4]}</p></div>`);
     }
     const activeElement = document.activeElement;
+    const modalKey = modal==='trip' ? modal+':'+state.phase : modal;
+    const previousDialog = root.querySelector('.modal');
+    if(renderedModal && previousDialog) modalScroll.set(renderedModal, previousDialog.scrollTop);
     mount(content, root);
+    if(forceModalTop||renderedModal!==modalKey) root.querySelector('.modal')?.scrollTo(0,forceModalTop?0:modalScroll.get(modalKey)||0);
+    forceModalTop=false;
+    renderedModal=modalKey;
     icons();
     // Keep an existing control focused during incremental updates, including IME input.
     if (!root.contains(activeElement) || document.activeElement !== activeElement) {
@@ -348,6 +378,7 @@ import { html, render as mount } from 'lit';
     }
   }
   function recommend(exclude = []) {
+    if(state.phase==='play'&&(state.queueUntil>state.clock||state.roundReview)){recommendations=[];return;}
     recommendations = G.recommend(state, pool, G.selectCount(state), exclude);
     if (state.phase === 'play') G.preparePartner(state, pool);
   }
@@ -366,6 +397,8 @@ import { html, render as mount } from 'lit';
     s = G.migrate(s);
     if (!G.validate(s)) throw Error('这不是有效存档。');
     state = s;
+    seenForcedSleeps=state.forcedSleeps;
+    introReplay=false;
     G.recalculate(state);
     G.check(state);
     modal = null;
@@ -375,6 +408,23 @@ import { html, render as mount } from 'lit';
   }
   function act(a, v) {
     switch (a) {
+      case 'sleep-menu':modal='sleep';break;
+      case 'daily-meal':mealReturn=null;modal='daily-meal';break;
+      case 'eat-home':G.eatHome(state,v);modal=mealReturn;mealReturn=null;break;
+      case 'meal-later':{const i=G.mealDue(state);if(i>=0&&!state.nutrition.dismissed.includes(i))state.nutrition.dismissed.push(i);modal=mealReturn;mealReturn=null;break;}
+      case 'pack-drink':G.packDrink(state,v);break;
+      case 'use-bottle':G.useBottle(state,Number(v));break;
+      case 'drinks-ready':G.finishDrinks(state);recommend();break;
+      case 'sleep-now':G.sleep(state,v);modal=null;break;
+      case 'intro-skip':state.guide.introDone=true;introReplay=false;modal=null;break;
+      case 'intro-next':if(state.guide.step<2)state.guide.step++;else{state.guide.introDone=true;introReplay=false;modal=null;}forceModalTop=true;break;
+      case 'intro-back':state.guide.step=Math.max(0,state.guide.step-1);forceModalTop=true;break;
+      case 'intro-replay':state.guide.step=0;introReplay=true;modal='chat';break;
+      case 'guide':modal='guide';break;
+      case 'goal-claim':G.claimGoal(state,v);break;
+      case 'goal-go':modal=null;act(v);break;
+      case 'avatar-page':avatarPage=Math.max(0,Math.min(Math.ceil(window.AVATARS.length/24)-1,avatarPage+Number(v)));forceModalTop=true;break;
+      case 'next-round':if(state.queueUntil>state.clock)throw Error('请先等待轮到上机。');state.roundReview=false;recommend();forceModalTop=true;break;
       case 'nav':
         view = v;
         modal = null;
@@ -387,6 +437,7 @@ import { html, render as mount } from 'lit';
       case 'plates':
       case 'talents':
       case 'avatar':
+      case 'relationship':
         modal = a;
         break;
       case 'supplies':supplyReturn=modal==='course-preview'?'course-preview':'trip';modal='supplies';break;
@@ -408,6 +459,12 @@ import { html, render as mount } from 'lit';
       case 'equip-collection':
         G.equipCollection(state, v, pool);
         break;
+      case 'original-avatar':
+        state.profile.avatar = window.AVATARS.find(x=>x.id===Number(v))?.src || null;
+        break;
+      case 'love-contact':
+        G.contactLove(state,v);
+        break;
       case 'reset-avatar':
         state.profile.avatar = null;
         break;
@@ -420,6 +477,8 @@ import { html, render as mount } from 'lit';
         }
       case 'queue':
         G.waitQueue(state);
+        if(state.queueUntil<=state.clock)state.roundReview=false;
+        recommend();forceModalTop=true;
         break;
       case 'chat-image':modal='b50chat:'+v;break;
       case 'best-style':
@@ -435,7 +494,7 @@ import { html, render as mount } from 'lit';
         break;
       case 'ranks':modal='ranks';break;
       case 'course':courseLevel=Number(v);G.courseCharts(courseLevel,pool);modal='course-preview';break;
-      case 'course-start':G.runCourse(state,courseLevel,pool);picked=[];recommend();modal='course-result';break;
+      case 'course-start':G.runCourse(state,courseLevel,pool);picked=[];state.roundReview=true;recommend();forceModalTop=true;modal='course-result';break;
       case 'battle':state.competition.battle=!state.competition.battle;break;
       case 'explore':G.explore(state,v);modal=state.city.encounter?'city-encounter':null;break;
       case 'city-answer':G.answerEncounter(state,Number(v));modal=null;break;
@@ -453,7 +512,7 @@ import { html, render as mount } from 'lit';
         break;
       case 'refill':
         G.refill(state, v);
-        modal = supplyReturn;
+        modal = state.phase==='play'?'supplies':null;
         break;
       case 'phone':
       case 'settings':
@@ -466,6 +525,7 @@ import { html, render as mount } from 'lit';
         beep();
         break;
       case 'close':
+        introReplay=false;
         modal = modal==='supplies'&&state.phase==='play'?supplyReturn:modal==='course-preview'?'ranks':modal?.startsWith('b50chat:')?'chat':modal === 'picker' || ['supplies','ranks','course-result'].includes(modal) && state.phase === 'play' ? 'trip' : null;
         break;
       case 'attend':
@@ -497,6 +557,7 @@ import { html, render as mount } from 'lit';
         break;
       case 'play':
         G.play(state, picked.length ? picked : recommendations, pool);
+        state.roundReview=true;forceModalTop=true;
         picked = [];
         recommend();
         break;
@@ -505,6 +566,7 @@ import { html, render as mount } from 'lit';
         picked=[];recommend(previous);break;
       }
       case 'picker':
+        if(state.queueUntil>state.clock||state.roundReview)throw Error('轮到上机后再选曲。');
         pickSlot = Number(v) || 0;
         modal = 'picker';
         page = 0;
@@ -541,7 +603,7 @@ import { html, render as mount } from 'lit';
       case 'meal':
         G.meal(state,v,mealDestination);
         if(state.phase==='play'){recommend();modal='trip';toast('已回到机厅，按当前人数重新排队。');}
-        else{modal=null;if(!state.ending)toast('已经到家，可以继续安排今天。');}
+        else{modal=null;if(!state.ending)toast(G.homeText(state,'已经到家，可以继续安排今天。'));}
         break;
       case 'entertain':
         modal = 'entertain';
@@ -593,7 +655,7 @@ import { html, render as mount } from 'lit';
           name: '',
           id: '',
           job: 'student',
-          talent: ''
+          playStyle: 'outer', talent: ''
         };
         offers = G.drawTalents(state, run);
         saveDraft();
@@ -627,7 +689,8 @@ import { html, render as mount } from 'lit';
           name: draft.name,
           id: draft.id,
           talent: draft.talent,
-          offers
+          offers,
+          playStyle: draft.playStyle||'outer'
         });
       } else {
         G.chatSend(state, $('#chat-message').value);
@@ -698,8 +761,8 @@ import { html, render as mount } from 'lit';
       }
       return;
     }
-    if (e.target.name === 'career' || e.target.name === 'talent') {
-      draft[e.target.name === 'career' ? 'job' : 'talent'] = e.target.value;
+    if (['career','talent','play-style'].includes(e.target.name)) {
+      draft[e.target.name === 'career' ? 'job' : e.target.name==='play-style'?'playStyle':'talent'] = e.target.value;
       saveDraft();
     }
     if (e.target.id === 'instinct') {

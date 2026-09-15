@@ -1,0 +1,11 @@
+import {html} from 'lit';
+import {icon} from './ui.js';
+const G=window.Game;
+export function intro(s,replay=false){
+ return html`<div class="chat-meta">开局群聊 · ${s.guide.step+1}/3 · ${replay?'回看记录':'逃遁、鲁米诺正在和你聊天'}</div><div class="modal-actions"><button class="secondary-btn" data-action="intro-skip">${replay?'结束回看':'跳过引导'}</button>${replay&&s.guide.step?html`<button class="secondary-btn" data-action="intro-back">上一段</button>`:''}<button class="primary-btn" data-action="intro-next">${s.guide.step===2?'聊完了，安排今天':'继续聊聊'} ${icon('arrow-right')}</button></div>`;
+}
+export function guideSummary(s){
+ const goals=G.goals(s),next=goals.find(g=>g.done&&!g.claimed)||goals.find(g=>!g.done);
+ return html`<section class="guide-summary"><div>${icon('flag')}<div><b>${next?next.name:'小目标都已完成'}</b><small>${next?next.done?'目标达成，回家后领取奖励':next.text:'继续向 16,000 前进，也别忘了好好生活。'}</small></div></div><button class="secondary-btn" data-action="guide">小目标 ${goals.filter(g=>g.claimed).length}/${goals.length}</button></section>`;
+}
+export function goals(s){return html`<p class="guide-main-goal">6 月 30 日之前，向 <b>16,000 Rating</b> 前进。小目标奖励每项仅可领取一次。</p><div class="goal-list">${G.goals(s).map(g=>html`<article><div><b>${g.name}</b><span>${g.value}/${g.target}</span></div><p>${g.text}</p><progress max=${g.target} value=${g.value}></progress><div><small>奖励：${g.reward.label}</small>${g.claimed?html`<span>已领取</span>`:g.done?html`<button class="primary-btn" data-action="goal-claim" data-value=${g.id} ?disabled=${s.phase!=='home'||!!s.ending}>${s.phase==='home'?'领取奖励':'回家后领取'}</button>`:html`<button class="secondary-btn" data-action="goal-go" data-value=${g.action}>${g.action==='chat'?'去群聊':g.action==='entertain'?'去娱乐':'去出勤'}</button>`}</div></article>`)}</div><div class="modal-actions"><button class="secondary-btn" data-action="intro-replay">重看开局引导</button><button class="primary-btn" data-action="close">回到日常</button></div>`;}

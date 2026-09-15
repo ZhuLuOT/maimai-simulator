@@ -1,6 +1,13 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),G=require('../engine'),M=require('../gameplay');
 const ctx={window:{}};vm.runInNewContext(fs.readFileSync(require.resolve('../data/music.js'),'utf8'),ctx);const pool=G.charts(ctx.window.MUSIC_DATA);
 function arrive(){const s=G.create('grinder',42);G.startTrip(s);G.travel(s,'bike',0);G.drink(s,'water');if(s.queueUntil>s.clock)G.waitQueue(s);return s;}
+test('B50 stores current cabinet ranks and accepts historical snapshots without rank fields',()=>{
+ const s=G.create();s.competition.wins=45;s.competition.courses=[1,2];const snap=G.b50Snapshot(s);
+ assert.equal(snap.classRank,15);assert.equal(snap.courseRank,2);
+ s.chat.push({id:'bot',text:'B50',day:1,time:480,b50:snap});assert.ok(G.validate(G.migrate(structuredClone(s))));
+ for(const [key,value] of [['classRank',26],['courseRank',11],['classRank',-1],['courseRank',1.5]]){const bad=structuredClone(s);bad.chat.at(-1).b50[key]=value;assert.equal(G.validate(bad),false);}
+ delete snap.classRank;delete snap.courseRank;assert.ok(G.validate(G.migrate(structuredClone(s))));
+});
 test('stamina cost grows with difficulty and note volume; only waiting, meals and sleep recover',()=>{const s=arrive(),c=pool.find(c=>c.ds===12);assert.ok(G.staminaCost(s,{...c,ds:14})>G.staminaCost(s,c));assert.ok(G.staminaCost(s,{...c,notes:c.notes.map(n=>n*2)})>G.staminaCost(s,c));assert.throws(()=>G.arcadeRest(s),/移除/);s.stamina=40;const before=s.clock;G.waitQueue(s);assert.equal(s.clock,before+15);assert.equal(s.stamina,45.25);G.finishPlay(s);assert.ok(!G.canSkipMeal(s));G.meal(s,'home');assert.equal(s.stamina,75.25);G.daily(s,'fun');assert.equal(s.stamina,75.25);G.watchVideos(s);assert.equal(s.stamina,75.25);});
 test('skipping meals requires off-mealtime, little exertion and sufficient remaining stamina',()=>{for(const clock of [630,750,930,1080]){const s=arrive();s.clock=clock;G.finishPlay(s);const eligible=clock===630||clock===930;assert.equal(G.canSkipMeal(s),eligible);if(eligible){const before=s.clock;G.meal(s,'skip');assert.equal(s.clock,before+18);assert.equal(s.stamina,100);}else assert.throws(()=>G.meal(s,'skip'),/饭点/);}const s=arrive();s.trip.staminaSpent=25;G.finishPlay(s);assert.ok(!G.canSkipMeal(s));});
 test('tag restrictions apply to BASIC, ADVANCED and all constants below 10',()=>{assert.ok(pool.filter(c=>c.index===0||c.ds<10).every(c=>!c.tag));assert.ok(pool.filter(c=>c.index===1).every(c=>c.tag!=='easy'));assert.ok(pool.some(c=>c.tag==='ghost'));assert.ok(pool.some(c=>c.tag==='easy'));});
@@ -35,9 +42,9 @@ test('distant bus is faster and cheaper than bike, and quotes equal actual charg
   }
   assert.deepEqual(G.transportOptions(0),G.TRANSPORT);
 });
-test('milder sleep score penalty is 0.04 per level without altering missed-obligation rules',()=>{
-  const s=G.create(),c=pool.find(c=>c.ds===12);s.liquid=600;const score=G.expected(s,c);s.sleepDebt=1;
-  assert.ok(Math.abs(score-G.expected(s,c)-.04)<1e-8);s.sleepDebt=4;assert.ok(Math.abs(score-G.expected(s,c)-.16)<1e-8);
+test('drowsiness above 60 reduces score gradually without relying on old sleep debt',()=>{
+  const s=G.create(),c=pool.find(c=>c.ds===12);s.liquid=600;const score=G.expected(s,c);s.drowsiness=64;
+  assert.ok(Math.abs(score-G.expected(s,c)-.1)<1e-8);s.drowsiness=80;assert.ok(Math.abs(score-G.expected(s,c)-.5)<1e-8);
 });
 test('crowded arcades trigger discussion and hesitation once per rising threshold with cooldown and save persistence',()=>{
   const s=G.create('grinder',42);s.clock=900;s.people=6;s.crowdShift=0;M.crowdChat(s);assert.equal(s.chat.length,0);

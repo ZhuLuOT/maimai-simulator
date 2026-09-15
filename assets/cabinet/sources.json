@@ -1,0 +1,10 @@
+{
+  "reference": "User-supplied mainland cabinet photo, CN1.56-D",
+  "archive": "https://cloud.yuzuchan.moe/f/34s7/Resource%20CN1.55.7z",
+  "documentation": "https://github.com/Yuri-YuzuChaN/maimaiDX",
+  "files": {
+    "Name.png": "Resource CN1.55/static/mai/pic/Name.png",
+    "UI_CMN_Shougou_*.png": "Resource CN1.55/static/mai/shougou/"
+  },
+  "note": "Unmodified name and trophy assets. Rating continues to use the verified mainland Wahlap images; class and course badges use the existing Lxns assets. No travel companions."
+}
