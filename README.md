@@ -2,6 +2,17 @@
 
 打开 `index.html` 即可离线游玩。页面使用 Lit 3 与 esbuild，已附带构建产物 `dist/app.js`，日常游玩不需要安装 Node.js 或启动服务器。所有 1,394 首曲绘和 Rating 分数框已缓存到本地；请保留整个游戏文件夹。
 
+## 构建与部署
+
+执行 `npm run build` 会同时更新本地调试用的 `dist/app.js`，并生成一个干净的 `out/` 发布目录。
+
+如果使用 Cloudflare Pages 连接 GitHub 仓库部署，建议使用以下配置：
+
+- Build command: `npm run build`
+- Build output directory: `out`
+
+`out/` 只包含站点上线需要的文件，不会把 `docs/`、`tests/`、`node_modules/` 这些开发期内容一起公开出去。
+
 ## 开局与词条
 
 首次进入选择职业、玩家姓名、舞萌 ID，以及随机抽出的三个初始词条中的一个。姓名留空默认为“神秘人”，舞萌 ID 留空默认为“Maimai”。职业在本周目固定。已有春季存档自动补齐新系统并继续原进度，设置中的“重新开始”可进入角色创建。

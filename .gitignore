@@ -2,6 +2,7 @@ node_modules/
 artifacts/
 
 # Build artifacts we can regenerate locally
+out/
 dist/app.js.map
 
 # Logs and temp files
