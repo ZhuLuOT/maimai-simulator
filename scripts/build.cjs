@@ -14,6 +14,7 @@ const filesToCopy = [
   'expansion.css',
   'update.css',
   'mobile.css',
+  'precision.js',
   'judgement.js',
   'gameplay.js',
   'city.js',

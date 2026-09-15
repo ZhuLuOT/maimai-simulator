@@ -19,8 +19,8 @@ test('101 is an achievement while Rating caps at 100.5 and combo is independent'
  assert.equal(G.combo({miss:1,good:0,great:0}),'');assert.equal(G.combo({miss:0,good:1,great:0}),'FC');assert.equal(G.combo({miss:0,good:0,great:1}),'FC+');assert.equal(G.combo({miss:0,good:0,great:0}),'AP');
 });
 test('judgements match note totals, scores and logical combos including 101 AP',()=>{
- const s=G.create(),c=pool.find(c=>c.ds<5);s.skills={star:16,key:16,reading:16};s.liquid=600;s.condition=4;s.practice[G.key(c)]=200;s.mood=100;
- const perfect=G.simulate(s,c);assert.equal(perfect.achievement,101);assert.equal(perfect.combo,'AP');
+ const s=G.create('student',42),c=pool.find(c=>c.ds<5);s.skills={star:16,key:16,reading:16};s.liquid=600;s.condition=4;s.practice[G.key(c)]=200;s.mood=100;
+ const perfect=G.calculateJudgements(c.notes.map(critical=>({critical,perfect:0,great:0,good:0,miss:0})),{critical:c.notes[4],perfect50:0,perfect100:0,great80:0,great60:0,great50:0,good:0,miss:0});assert.equal(perfect.achievement,101);assert.equal(perfect.combo,'AP');
  for(const c of pool.filter((_,i)=>i%37===0)){
   const r=G.simulate(s,c),j=r.judgements;assert.equal(Object.values(j).reduce((a,b)=>a+b),c.notes.reduce((a,b)=>a+b));assert.equal(r.combo,G.combo(j));assert.ok(r.achievement<=101&&r.achievement>=0);
  }
@@ -34,6 +34,22 @@ test('first play penalty, repeated practice and category-specific ability/growth
 test('practice count increments even when best score does not improve',()=>{
  const s=G.create();arrive(s);const c=pool.find(c=>c.ds===10);s.records[G.key(c)]={...c,ra:G.chartRating(c.ds,101),achievement:101,combo:'AP'};const before=s.records[G.key(c)];
  G.play(s,[c,c,c],pool);assert.equal(s.practice[G.key(c)],3);assert.equal(s.records[G.key(c)].achievement,101);assert.equal(s.records[G.key(c)],before);
+});
+test('solo repeats settle three tracks independently with lower star/key growth',()=>{
+ const s=G.create('grinder',42);arrive(s);const c=pool.find(c=>c.ds===8&&!c.utage);
+ const before={money:s.money,liquid:s.liquid,gloves:s.gloves.durability,precision:s.precision.base,skills:{...s.skills},clock:s.clock};
+ const multiplier=G.growthMultiplier(c,s),skills={...s.skills};
+ for(let i=0;i<3;i++){
+  const shadow={...s,skills},gain=.004*multiplier*G.growthFactor(shadow,c);
+  skills.star+=gain*.9*(.2+1.6*c.starWeight);skills.key+=gain*.9*(.2+1.6*(1-c.starWeight));skills.reading+=gain*(i?.65:1.2);
+ }
+ const result=G.play(s,[c,c,c],pool);
+ assert.deepEqual(result.results.map(r=>r.plays),[1,2,3]);assert.equal(s.practice[G.key(c)],3);
+ assert.equal(s.records[G.key(c)].achievement,Math.max(...result.results.map(r=>r.achievement)));
+ assert.equal(s.money,before.money-6);assert.equal(s.clock,before.clock+12);assert.equal(s.liquid,before.liquid-180);
+ assert.ok(s.gloves.durability<before.gloves);assert.ok(Math.abs(s.precision.base-before.precision-.036)<1e-8);
+ for(const k of ['star','key','reading'])assert.ok(Math.abs(s.skills[k]-skills[k])<1e-9,k);
+ assert.ok(G.validate(G.migrate(JSON.parse(JSON.stringify(s)))));
 });
 test('B35 + B15 retains separate records per chart and version',()=>{
  const s=G.create();for(let i=0;i<50;i++)s.records['old'+i]={ds:(300.5+i)/21.6,ra:300+i,isNew:false,achievement:100};for(let i=0;i<25;i++)s.records['new'+i]={ds:(300.5+i)/21.6,ra:300+i,isNew:true,achievement:100};G.recalculate(s);
@@ -84,7 +100,17 @@ test('old saves migrate with finances, chart records and relationships intact',(
 test('save validation handles all live phases and rejects corrupted saves',()=>{
  const s=G.create();assert.ok(G.validate(s));arrive(s);assert.ok(G.validate(s));G.play(s,G.recommend(s,pool),pool);assert.ok(G.validate(s));G.finishPlay(s);assert.ok(G.validate(s));G.meal(s,'home');assert.ok(G.validate(s));s.clock=1500;assert.ok(!G.validate(s));assert.ok(!G.validate({version:2}));
 });
-test('new economic/schedule system allows each career to reach W6',()=>{
+// Near the goal, practice a chart that can improve B50 instead of only sampling new recommendations.
+function seasonSelection(s){
+ if(s.rating<15000)return G.recommend(s,pool);
+ const best=G.best(s),targets=pool.filter(c=>!G.isUtage(c)&&c.ds<=G.ability(s,c)+.3).map(c=>{
+  const expected=G.expected(s,c),group=c.isNew?best.fresh:best.old,limit=c.isNew?15:35;
+  const floor=Math.max(s.records[G.key(c)]?.ra||0,group.length<limit?0:group.at(-1).ra);
+  return {c,gain:G.chartRating(c.ds,Math.min(101,expected+.2))-floor};
+ }).filter(x=>x.gain>0).sort((a,b)=>b.gain-a.gain);
+ return targets.length?Array(G.selectCount(s)).fill(targets[0].c):G.recommend(s,pool);
+}
+test('regular play and targeted practice allow each career to reach W6',()=>{
  for(const job of Object.keys(G.JOBS)){
   const s=G.create(job,42);G.setup(s,{name:'测试玩家',id:'Maimai',talent:'gifted',offers:['gifted'],playStyle:'outer'});s.loveFailed=true;
   while(!s.ending){
@@ -96,7 +122,7 @@ test('new economic/schedule system allows each career to reach W6',()=>{
     try{arrive(s,'pair');}catch{if(s.phase==='travel')s.phase='home';}
     if(s.phase==='play'){
      while(s.phase==='play'&&s.mood>25&&s.money>G.JOBS[job].rent+80&&s.drowsiness<87){
-      try{if(s.gloves.durability<10)G.buyGloves(s,'sport');if(s.stamina<45)G.waitQueue(s);if(s.liquid<240)G.refill(s,'water');if(s.queueUntil>s.clock)G.waitQueue(s);if(G.playReason(s))break;G.play(s,G.recommend(s,pool),pool);}catch{break;}if(s.ending)break;
+      try{if(s.gloves.durability<10)G.buyGloves(s,'sport');if(s.stamina<45)G.waitQueue(s);if(s.liquid<240)G.refill(s,'water');if(s.queueUntil>s.clock)G.waitQueue(s);if(G.playReason(s))break;G.play(s,seasonSelection(s),pool);}catch{break;}if(s.ending)break;
      }
      if(s.ending)break;if(s.phase==='play'){G.finishPlay(s);G.meal(s,s.money>G.JOBS[job].rent+300&&G.canSpendTime(s,30+s.trip.returnTime)?'noodles':'home');}
     }

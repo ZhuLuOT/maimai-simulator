@@ -10,10 +10,12 @@
     ['foundation','基本功扎实','B50 满 50 张且均为 12+ / 13 红谱，全底力 +2'],['adapt','快适应体质','同谱累计游玩 10 次；复打有效底力 +0.3'],['key','键盘B','累计 500 首键盘谱；键盘力 +5'],['star','星星B','累计 500 首星星谱；星星力 +5'],['slide','一眼会划','100 张 12+ 以上星星谱达到鸟；星星力 +4'],['reading','见招拆招','初见 150 张谱面；读谱力 +2'],['speed','天生的手速','100 张 12+ 以上键盘谱达到鸟；键盘力 +4'],['instinct','手比脑快','累计游玩 250 首；可开启凭手感模式'],['streak','越打越有','累计 50 PC；每段连续第 5 PC 全底力临时 +2'],['challenge','就爱越级','越级谱游玩 30 首；越级有效底力 +0.3'],['stage','舞台型选手','人多时累计游玩 40 首；人越多分数略有加成'],['expert','精于此道','累计 1000 首；全底力 +2'],['classic','吃屎大王','真超檄世代游玩 50 首；对应曲有效底力 +0.5'],['vocal','V家爱好者','V 家分区游玩 80 首；对应曲有效底力 +0.5'],['touhou','东方痴','东方分区游玩 80 首；对应曲有效底力 +0.5'],['ghost','鬼歌王','鬼歌游玩 50 首；对应曲有效底力 +0.5，但拼机伙伴眼熟度 -2']
   ].map(([id,name,description,initial=false])=>({id,name,description,initial}));
   const CONVERSATIONS=[['今晚谁出勤？','我下班就来，先帮我看看人数。','晚饭后人应该会多一点。'],['手套又打破了。','我包里有备用的，店里也能买。','别忘了带水！'],['刚刚差一点鸟。','先休息一轮，别一直硬推。','换首熟歌找找感觉。'],['有谁拼机吗？','我想开两首星星。','可以，轮到我们叫一声。'],['饭点先撤了。','我也去吃面，晚点回来。','现在队伍短了。'],['海底谭的星星终于划明白了。','跟着节奏走，别抢拍。','今天试试。'],['今天状态不错！','推分还是看 B50 缺哪一边。','慢慢来，别忘了末班车。'],['早上人好少。','刚开门，几乎不用排队。','我上完课过来。']];
+  const P=typeof module!=='undefined'?require('./precision'):root.Precision;
   const M=typeof module!=='undefined'?require('./gameplay'):root.Gameplay;
   let G;
   const has=(s,id)=>s.talents.includes(id);
   function ensure(s){
+    P.ensure(s);
     s.skills.reading??=(s.skills.star+s.skills.key)/2;
     s.profile??={name:'玩家',id:'初来乍到',plate:'default'};
     s.talents??=[];s.maxStamina??=100;s.stamina??=s.maxStamina;
@@ -36,6 +38,7 @@
   }
   function rollCondition(s){let n=Math.floor(clamp(s.mood/25+(rand(s)-.5)*2,0,4.99));if(has(s,'steady'))n=Math.max(1,n);s.condition=n;}
   function tick(s){
+    P.tick(s);
     const now=(s.day-1)*1440+s.clock,blocks=Math.floor((now-s.socialTick)/60);
     if(blocks>0){M.npcTick(s,blocks);s.socialTick+=blocks*60;}
     const bucket=(s.day-1)*48+Math.floor(s.clock/30);if(s.crowdTick!==bucket){s.crowdTick=bucket;s.crowdShift=Math.floor(rand(s)*5)-2;}reportCrowd(s);M.crowdChat(s);if(['drink','play'].includes(s.phase)&&s.mode==='pair'){if(G.peopleAt(s)===0){s.partner=null;s.partnerSongs=null;s.friendship=false;}else if(s.partner===null)choosePartner(s);}

@@ -29,7 +29,7 @@
       const other=s.competition.battle?charts.find(c=>c.index===result.index):picked?charts.find(c=>c.index===picked.index):charts.slice().sort((a,b)=>Math.abs(a.ds-n.rating/1110)-Math.abs(b.ds-n.rating/1110))[0];
       if(!other)continue;
       const level=n.rating/1110,sim={seed:s.seed,skills:{star:level+(n.tendency==='star'?.2:0),key:level+(n.tendency==='key'?.2:0)},practice:{[G.key(other)]:3},condition:2};
-      const r=J.simulate(sim,other,Math.min(101,100.45-Math.max(0,other.ds-level)*3.7),level);s.seed=sim.seed;
+      const r=J.simulate(sim,other,Math.min(101,100.45-J.difficultyPenalty(other.ds,level)),level);s.seed=sim.seed;
       result.opponent={id:n.id,index:other.index,achievement:r.achievement,combo:r.combo};
       result.sync=sync(result,{...other,...r});
       const record=s.records[G.key(result)];if(record){record.bestSync=syncOrder[Math.max(syncOrder.indexOf(record.bestSync||''),syncOrder.indexOf(result.sync))];result.bestSync=record.bestSync;}

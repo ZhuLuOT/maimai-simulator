@@ -1,5 +1,7 @@
 (function(root){
   'use strict';
+  const P=typeof module!=='undefined'?require('./precision'):root.Precision;
+  const sequences=new WeakMap(),judges=['critical','perfect','great','good','miss'];
   const weights=[500,1000,1500,500,2500],clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const rand=s=>{s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296;};
   const empty=()=>({critical:0,perfect:0,great:0,good:0,miss:0});
@@ -10,13 +12,27 @@
     const baseScore=Number((total?earned/total*100:0).toFixed(4)),extraScore=Number(bonus.toFixed(4));
     return {achievement:Number((baseScore+extraScore).toFixed(4)),baseScore,extraScore,judgements,judgementGroups:groups,breakJudgements:b,combo:judgements.miss?'':judgements.good?'FC':judgements.great?'FC+':'AP'};
   }
+  // Keep small challenges approachable; large skill deficits grow progressively harder.
+  function difficultyPenalty(difficulty,ability){const gap=Math.max(0,difficulty-ability);return gap*3.7+.65*Math.max(0,gap-1)**2;}
+  function noteSequence(s,groups){
+    const sequence=[];groups.forEach((g,i)=>judges.forEach((k,j)=>{for(let n=0;n<g[k];n++)sequence.push(i*5+j);}));
+    // No chart timelines are available: interleave the sampled judgements in a seeded note order.
+    const order={seed:(s.seed^0x9e3779b9)>>>0};for(let i=sequence.length-1;i>0;i--){const j=Math.floor(rand(order)*(i+1));[sequence[i],sequence[j]]=[sequence[j],sequence[i]];}return sequence;
+  }
+  function finish(groups,breaks,sequence){
+    let current=0,maxCombo=0;for(const note of sequence){current=note%5===4?0:current+1;maxCombo=Math.max(maxCombo,current);}
+    const result={...calculate(groups,breaks),maxCombo};sequences.set(result,sequence);return result;
+  }
   function simulate(s,c,expected,ability){const groups=[],b={critical:0,perfect50:0,perfect100:0,great80:0,great60:0,great50:0,good:0,miss:0},margin=ability-c.ds,plays=s.practice[`${c.id}:${c.index}`]||0;
+    const precision=P.lapses(s,margin,plays);
     const loss=Math.max(0,101-clamp(expected,0,101))/100*(.9+rand(s)*.2);
     c.notes.forEach((count,i)=>{const g=empty(),technical=i===2?s.skills.star:s.skills.key,weighted=s.skills.star*c.starWeight+s.skills.key*(1-c.starWeight),factor=clamp(Math.exp((weighted-technical)*.17),.45,2.3);
-      const lapse=.0007*Math.exp(-Math.max(0,margin)*.9)*(plays? .55:1)*(s.condition<2?1.5:1),missP=clamp((loss*.30+lapse)*factor,0,.45),goodP=clamp(loss*.25*factor,0,.3),greatP=clamp(loss*2.5*factor,0,.6),perfectP=clamp(loss*10+(margin<2?.04:0),0,.65);
+      // Once GREAT saturates, further loss must produce misses instead of flattening scores.
+      const overload=Math.max(0,loss-.24)*.65;
+      const missP=clamp((loss*.30+overload+precision.miss)*factor,0,1),goodP=clamp((loss*.25+precision.good)*factor,0,Math.min(.3,1-missP)),greatP=clamp((loss*2.5+precision.great)*factor,0,Math.min(.6,1-missP-goodP)),perfectP=clamp(loss*10+(margin<2?.04:0),0,Math.min(.65,Math.max(0,1-missP-goodP-greatP)));
       for(let n=0;n<count;n++){const r=rand(s);let judge=r<missP?'miss':r<missP+goodP?'good':r<missP+goodP+greatP?'great':r<missP+goodP+greatP+perfectP?'perfect':'critical';g[judge]++;if(i===4){if(judge==='perfect')b[rand(s)<.65?'perfect50':'perfect100']++;else if(judge==='great'){const q=rand(s);b[q<.6?'great80':q<.85?'great60':'great50']++;}else b[judge]++;}}
       groups.push(g);
-    });return calculate(groups,b);
+    });return finish(groups,b,noteSequence(s,groups));
   }
   const segments={
     '拆弹':{skills:{star:.6,reading:.4},groups:[2,0,4],scene:'拆弹段突然展开'},
@@ -48,20 +64,21 @@
     const passed=rand(s)<chance,event={tag,scene:rule.scene,passed,loss:0,misses:0};
     if(passed)return {...result,segmentEvent:event};
     // Convert successful notes into misses, then recompute both base and BREAK bonus scores.
-    const groups=result.judgementGroups.map(g=>({...g})),breaks={...result.breakJudgements};
+    const groups=result.judgementGroups.map(g=>({...g})),breaks={...result.breakJudgements},sequence=(sequences.get(result)||noteSequence(s,groups)).slice();
     let remaining=Math.max(1,Math.ceil(c.notes.reduce((a,b)=>a+b,0)*(.005+rand(s)*.01)));
     const order=[...new Set([...rule.groups,0,2,1,3,4])];
     for(const i of order){
       const g=groups[i];
       for(const k of ['critical','perfect','great','good']){
         const count=Math.min(g[k],remaining);g[k]-=count;g.miss+=count;remaining-=count;event.misses+=count;
+        let toMiss=count;for(let n=0;n<sequence.length&&toMiss;n++)if(sequence[n]===i*5+judges.indexOf(k)){sequence[n]=i*5+4;toMiss--;}
         if(i===4){let left=count;const keys=k==='perfect'?['perfect50','perfect100']:k==='great'?['great80','great60','great50']:[k];for(const key of keys){const n=Math.min(breaks[key],left);breaks[key]-=n;breaks.miss+=n;left-=n;}}
         if(!remaining)break;
       }
       if(!remaining)break;
     }
-    const adjusted=calculate(groups,breaks);event.loss=Number((result.achievement-adjusted.achievement).toFixed(4));
+    const adjusted=finish(groups,breaks,sequence);event.loss=Number((result.achievement-adjusted.achievement).toFixed(4));
     return {...adjusted,segmentEvent:event};
   }
-  const api={calculate,simulate,segment};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.Judgement=api;
+  const api={calculate,difficultyPenalty,simulate,segment};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.Judgement=api;
 })(globalThis);
