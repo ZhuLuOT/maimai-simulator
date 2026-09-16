@@ -124,12 +124,12 @@
   function levelValue(c){const level=api.displayLevel(c);return parseInt(level,10)+(level.endsWith('+')?.5:0);}
   function challengeThreshold(rating){return rating>=14000?14.5:rating>=13000?14:rating>=12000?13.5:rating>=11000?12:11.5;}
   function isOverreach(rating,c,achievement=c.achievement){return !isUtage(c)&&levelValue(c)>=challengeThreshold(rating)&&Number.isFinite(achievement)&&achievement<=97;}
-  function growthFactor(s,c){const gap=c.ds-baseAbility(s,c),base=clamp(1-Math.abs(gap)*.18,.2,1),average=(s.skills.star+s.skills.key+s.skills.reading)/3,maturity=1/(1+Math.max(0,average-10)*.5);return base*maturity*(gap>0&&gap<1.5?1+.5*Math.min(1,gap/.4,(1.5-gap)/.5):1);}
+  function growthFactor(s,c){const raw=c.ds-baseAbility(s,c),gap=J.difficultyValue?J.difficultyValue(c.ds)-J.difficultyValue(baseAbility(s,c)):raw,base=clamp(1-Math.abs(gap)*.18,.2,1),average=(s.skills.star+s.skills.key+s.skills.reading)/3,maturity=1/(1+Math.max(0,average-10)*.5);return base*maturity*(gap>0&&gap<1.5?1+.5*Math.min(1,gap/.4,(1.5-gap)/.5):1);}
   function recommend(s,pool,count=X.selectCount(s),exclude=[]){
     const b=best(s),oldFloor=b.old.length<35?0:b.old.at(-1).ra,newFloor=b.fresh.length<15?0:b.fresh.at(-1).ra;
     const excluded=new Set(exclude.map(c=>c.id)),recent=new Set((s.last?.results||[]).map(c=>c.id));
     const all=pool.filter(c=>!isUtage(c)).map(c=>{
-      const gap=c.ds-Math.min(15,baseAbility(s,c)),gain=chartRating(c.ds,expected(s,c))-Math.max(s.records[key(c)]?.ra||0,c.isNew?newFloor:oldFloor);
+      const gap=(J.difficultyValue?J.difficultyValue(c.ds)-J.difficultyValue(Math.min(15,baseAbility(s,c))):c.ds-Math.min(15,baseAbility(s,c))),gain=chartRating(c.ds,expected(s,c))-Math.max(s.records[key(c)]?.ra||0,c.isNew?newFloor:oldFloor);
       return {c,gap,score:clamp(gain,-15,35)*.65-Math.abs(gap-.15)*10-(recent.has(c.id)?18:0)-Math.min(10,(s.practice[key(c)]||0)*.5)};
     });
     const candidates=all.filter(x=>x.gap>=-1.5&&x.gap<=1.2),source=candidates.length>=count?candidates:all;
