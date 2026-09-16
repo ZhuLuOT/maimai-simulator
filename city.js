@@ -8,7 +8,7 @@
     {id:2,name:'次元空间 · 商场店',km:2.4,cabinets:4,offset:4},
     {id:3,name:'珠江游艺 · 海珠店',km:7.6,cabinets:3,offset:-2},
     {id:4,name:'西关电玩 · 荔湾店',km:10.2,cabinets:2,offset:-4},
-    {id:5,name:'不眠音游窝 · 珠江夜舍',km:8.8,cabinets:2,offset:-12,special:true,allNight:true,hourly:30}
+    {id:5,name:'不眠猫窝 · 珠江夜舍',km:8.8,cabinets:2,offset:-12,special:true,allNight:true,hourly:30}
   ];
   const OUTINGS=[
     {id:'stroll',name:'出去闲逛',place:'广州街巷',time:90,cost:0,stamina:10,mood:14,icon:'footprints'},
@@ -31,11 +31,11 @@
   function say(s,id,text){s.chat.push({id,text:text.slice(0,100),day:s.day,time:s.clock});s.chat=s.chat.slice(-60);}
   function spend(s,time){if(s.city.encounter)throw Error('先回应偶遇事件。');if(!G.canSpendTime(s,time)||s.phase==='play'&&s.clock+time>G.availableUntil(s))throw Error('剩余时间不足，或与课表 / 工作冲突。');G.advance(s,time);}
   function explore(s,id){
-    if(s.phase!=='home'||s.ending||s.school.pending||s.event!==null||s.videoEvent||s.city.encounter)throw Error('先完成当前事件或出勤。');
+    if(s.phase!=='home'||s.ending||s.school.pending||s.event!==null||s.videoEvent||s.city.encounter||s.world?.notice||s.world?.mahjong.active)throw Error('先完成当前事件或出勤。');
     const x=OUTINGS.find(x=>x.id===id);if(!x)throw Error('请选择活动。');if(s.money<x.cost||s.stamina<x.stamina)throw Error('金钱或体力不足。');
     spend(s,x.time);if(s.ending)return;s.money-=x.cost;if(x.stamina||id==='movie')s.nutrition.away=true;s.stamina-=x.stamina;s.mood=clamp(s.mood+x.mood,0,100);
     G.log(s,`${x.name} · ${x.place}：${x.time} 分钟，¥${x.cost}，心情 +${x.mood}${x.stamina?`，体力 -${x.stamina}`:''}。`,'heart');
-    if(x.stamina){
+    if(x.stamina&&id==='stroll'){
       s.nutrition.away=true;s.city.walks++;if(!s.city.visited.includes(id))s.city.visited.push(id);
       const roll=rand(s);
       if(roll<.22&&!s.loveFailed&&s.love===0&&G.canSpendTime(s,10)){s.city.encounter=true;G.log(s,'在街角遇到拎着舞萌手套的小凛，她似乎也认出了你。','event');}

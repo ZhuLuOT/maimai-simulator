@@ -1,0 +1,78 @@
+[
+  {
+    "id": "chiffon",
+    "name": "シフォン",
+    "source": "https://maimai.sega.jp/storage/area/region/torikoro2/icon/02.png",
+    "reference": "https://maimai.sega.jp/data/circleplusArea/torikoro2.json",
+    "copyright": "SEGA / original illustrators; unofficial fan-game pixel adaptation",
+    "transformation": "56px downsample, nearest-neighbor enlargement"
+  },
+  {
+    "id": "shama",
+    "name": "しゃま",
+    "source": "https://maimai.sega.jp/storage/area/region/torikoro2/icon/01.png",
+    "reference": "https://maimai.sega.jp/data/circleplusArea/torikoro2.json",
+    "copyright": "SEGA / original illustrators; unofficial fan-game pixel adaptation",
+    "transformation": "56px downsample, nearest-neighbor enlargement"
+  },
+  {
+    "id": "milk",
+    "name": "みるく",
+    "source": "https://maimai.sega.jp/storage/area/region/torikoro2/icon/08.png",
+    "reference": "https://maimai.sega.jp/data/circleplusArea/torikoro2.json",
+    "copyright": "SEGA / original illustrators; unofficial fan-game pixel adaptation",
+    "transformation": "56px downsample, nearest-neighbor enlargement"
+  },
+  {
+    "id": "salt",
+    "name": "ソルト",
+    "source": "https://maimai.sega.jp/storage/area/region/torikoro2/icon/04.png",
+    "reference": "https://maimai.sega.jp/data/circleplusArea/torikoro2.json",
+    "copyright": "SEGA / original illustrators; unofficial fan-game pixel adaptation",
+    "transformation": "56px downsample, nearest-neighbor enlargement"
+  },
+  {
+    "id": "bulbul",
+    "name": "Light-vented bulbul",
+    "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/66/Light-vented_Bulbul2.jpg/330px-Light-vented_Bulbul2.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "file": "Light-vented_Bulbul2.jpg",
+    "artist": "Flickr user <a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/photos/kclama/\">CharlesLam</a> . Photo uploaded to commons by user <a href=\"//commons.wikimedia.org/wiki/User:Ltshears\" title=\"User:Ltshears\">ltshears</a>",
+    "license": "CC BY-SA 2.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0",
+    "reference": "https://en.wikipedia.org/wiki/Light-vented_bulbul",
+    "transformation": "square crop, 64px downsample, nearest-neighbor enlargement"
+  },
+  {
+    "id": "robin",
+    "name": "Oriental magpie-robin",
+    "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2a/Oriental_magpie-robin_%28Copsychus_saularis_ceylonensis%29_male.jpg/330px-Oriental_magpie-robin_%28Copsychus_saularis_ceylonensis%29_male.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "file": "Oriental_magpie-robin_(Copsychus_saularis_ceylonensis)_male.jpg",
+    "artist": "<bdi><a href=\"https://www.wikidata.org/wiki/Q54800218\" class=\"extiw\" title=\"d:Q54800218\"><span title=\"Scottish wildlife photographer\">Charles J. Sharp</span></a></bdi>",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "reference": "https://en.wikipedia.org/wiki/Oriental_magpie-robin",
+    "transformation": "square crop, 64px downsample, nearest-neighbor enlargement"
+  },
+  {
+    "id": "egret",
+    "name": "Little egret",
+    "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f1/Little_egret_%28Egretta_garzetta%29_Photograph_by_Shantanu_Kuveskar.jpg/330px-Little_egret_%28Egretta_garzetta%29_Photograph_by_Shantanu_Kuveskar.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "file": "Little_egret_(Egretta_garzetta)_Photograph_by_Shantanu_Kuveskar.jpg",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Shantanu_Kuveskar\" title=\"User:Shantanu Kuveskar\">Shantanu Kuveskar</a>",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "reference": "https://en.wikipedia.org/wiki/Little_egret",
+    "transformation": "square crop, 64px downsample, nearest-neighbor enlargement"
+  },
+  {
+    "id": "kingfisher",
+    "name": "Common kingfisher",
+    "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bc/Alcedo_atthis_-England-8_%28cropped%29.jpg/330px-Alcedo_atthis_-England-8_%28cropped%29.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "file": "Alcedo_atthis_-England-8_(cropped).jpg",
+    "artist": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/54018857@N05\">Tony Wood</a>",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0",
+    "reference": "https://en.wikipedia.org/wiki/Common_kingfisher",
+    "transformation": "square crop, 64px downsample, nearest-neighbor enlargement"
+  }
+]

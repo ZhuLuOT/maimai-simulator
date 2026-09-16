@@ -14,6 +14,8 @@ const filesToCopy = [
   'expansion.css',
   'update.css',
   'mobile.css',
+  'social.css',
+  'world.js',
   'precision.js',
   'judgement.js',
   'gameplay.js',
@@ -57,7 +59,8 @@ await build({
   plugins: [{name: 'project-files', setup(builder) {
     builder.onResolve({filter: /.*/}, args => {
       const from = args.importer || path.join(rootDir, 'package.json');
-      const resolved = path.isAbsolute(args.path) ? args.path : args.path.startsWith('.') ? path.resolve(path.dirname(from), args.path) : browserModule(args.path);
+      let resolved = path.isAbsolute(args.path) ? args.path : args.path.startsWith('.') ? path.resolve(path.dirname(from), args.path) : browserModule(args.path);
+      if (!path.extname(resolved) && fs.existsSync(resolved + '.js')) resolved += '.js';
       const relative = path.relative(rootDir, resolved);
       if(relative.startsWith('..') || path.isAbsolute(relative)) throw Error('Build input is outside the project: '+args.path);
       return {path:resolved,namespace:'project-files'};

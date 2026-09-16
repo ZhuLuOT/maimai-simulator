@@ -12,15 +12,16 @@ const ctx={window:{}};vm.runInNewContext(fs.readFileSync(require.resolve('../dat
  await page.evaluate(()=>scrollTo(0,400));assert.ok(Math.abs(await page.locator('.date-toolbar').evaluate(el=>el.getBoundingClientRect().top))<2);await page.evaluate(()=>scrollTo(0,0));
  const nav=await page.locator('.nav-item.active').evaluate(el=>({height:el.getBoundingClientRect().height,bottom:getComputedStyle(el,'::after').bottom}));assert.ok(nav.height>50);assert.equal(nav.bottom,'10px');
  assert.equal(await page.locator('.nameplate-top [data-action="plates"]').count(),0);assert.match(await page.locator('.condition').first().innerText(),/今日舞萌状态/);
- await page.getByRole('button',{name:'查看舞萌群'}).click();
+ await page.getByRole('button',{name:'打开聊天软件'}).click();
  async function send(text){await page.getByRole('textbox',{name:'群聊消息'}).fill(text);await page.getByRole('button',{name:'发送消息',exact:true}).click();}
  await send('运势');const fortune=await page.locator('.chat-message p').last().innerText();await send('jrrp');assert.equal(await page.locator('.chat-message p').last().innerText(),fortune);
  await send('jk');await send('几卡');assert.equal(await page.locator('.clock-display>b').innerText(),'08:02');await send('塔罗');assert.ok(['08:04','08:05'].includes(await page.locator('.clock-display>b').innerText()));await shot('city-bot');await close();
- await page.getByRole('button',{name:'娱乐',exact:false}).click();assert.equal(await page.locator('[data-action="explore"]').count(),8);
+ await page.getByRole('button',{name:'娱乐',exact:false}).click();assert.equal(await page.locator('[data-action="explore"]').count(),4);
  for(const width of [320,390,821]){await page.setViewportSize({width,height:698});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
- await page.locator('[data-action="explore"][data-value="shamian"]').scrollIntoViewIfNeeded();await shot('city-entertain');await page.locator('[data-action="explore"][data-value="shamian"]').click();
+ await page.locator('[data-action="explore"][data-value="stroll"]').scrollIntoViewIfNeeded();await shot('city-entertain');await page.locator('[data-action="explore"][data-value="stroll"]').click();
  if(await page.locator('[data-action="city-answer"]').count())await page.locator('[data-action="city-answer"][data-value="0"]').click();
- assert.match(await page.locator('.recent-section').innerText(),/沙面岛/);
+ else if(await page.locator('[data-action="world-ack"]').count())await page.locator('[data-action="world-ack"]').click();
+ assert.match(await page.locator('.recent-section').innerText(),/闲逛/);
  await page.getByRole('button',{name:'名牌与解锁进度'}).click();await page.getByRole('textbox',{name:'搜索收藏品'}).fill('舞舞');assert.ok(await page.locator('.collection-item').count()>0);await shot('city-maimai-plates');
  await page.locator('[data-action="ranks"]').click();assert.equal(await page.locator('.course-list article').count(),10);assert.equal(await page.locator('[data-action="course"]:not([disabled])').count(),0);await close();
  const empty=G.create('grinder',42);G.startTrip(empty);G.travel(empty,'bike',1);G.drink(empty,'water');empty.people=0;empty.crowdShift=0;await load(empty);await page.getByRole('button',{name:'继续出勤',exact:false}).click();assert.ok(await page.locator('[data-action="mode"][data-value="pair"]').isDisabled());assert.equal(await page.locator('.partner-line').count(),0);await shot('city-empty-arcade');await close();

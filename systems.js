@@ -2,7 +2,7 @@
   'use strict';
   const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
   const rand=s=>{s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296;};
-  const IDS=['逃遁','鲁米诺','捞月','阿澈','今天不推分','星轨','小盐','404NOTFOUND','八分音符','纸飞机','折返跑','凛冬','橘子汽水','月读','栗子','白昼梦','NekoDX','竹间雨','北纬31','千层雪','再来一把','空白键','mikan','摇光','未完成','七海','镜花','下次一定','微光','晚风'];
+  const IDS=['逃遁','鲁米诺','电压','Toqin','我要睡觉','星轨','小盐','404NOTFOUND','八分音符','纸飞机','折返跑','凛冬','橘子汽水','月读','栗子','白昼梦','NekoDX','竹间雨','北纬31','千层雪','再来一把','空白键','mikan','摇光','未完成','七海','镜花','下次一定','微光','晚风'];
   const CONDITIONS=[{name:'极差',score:-.65},{name:'还行',score:-.25},{name:'普通',score:0},{name:'不错',score:.13},{name:'完美',score:.26}];
   const GLOVES=[{id:'cotton',name:'棉线手套',cost:8,durability:100,wear:1},{id:'sport',name:'耐磨手套',cost:25,durability:240,wear:.85}];
   const TALENTS=[
@@ -23,7 +23,7 @@
     s.condition??=2;s.queueUntil??=0;s.consecutive??=0;s.partner??=null;s.friendship??=false;s.instinct??=false;
     s.metrics??={star:0,key:0,challenge:0,crowd:0,classic:0,vocal:0,touhou:0,ghost:0};
     s.npcs??=IDS.map((id,i)=>({id,rating:7800+Math.floor(rand(s)*8000),familiarity:0,activity:1+i%4}));
-    const renamed={'凌晨四点':'逃遁','青柠苏打':'鲁米诺'},rename=id=>renamed[id]||id;
+    const renamed={'凌晨四点':'逃遁','青柠苏打':'鲁米诺','捞月':'电压','阿澈':'Toqin','今天不推分':'我要睡觉'},rename=id=>renamed[id]||id;
     s.npcs.forEach(n=>{n.id=rename(n.id);});
     s.chat?.forEach(m=>{if(!m.self)m.id=rename(m.id);});
     for(const r of [...Object.values(s.records),...(s.last?.results||[]),...(s.trip?.played||[])])if(r.opponent)r.opponent.id=rename(r.opponent.id);
@@ -38,7 +38,7 @@
   }
   function rollCondition(s){let n=Math.floor(clamp(s.mood/25+(rand(s)-.5)*2,0,4.99));if(has(s,'steady'))n=Math.max(1,n);s.condition=n;}
   function tick(s){
-    P.tick(s);
+    P.tick(s);G.worldTick?.(s);
     const now=(s.day-1)*1440+s.clock,blocks=Math.floor((now-s.socialTick)/60);
     if(blocks>0){M.npcTick(s,blocks);s.socialTick+=blocks*60;}
     const bucket=(s.day-1)*48+Math.floor(s.clock/30);if(s.crowdTick!==bucket){s.crowdTick=bucket;s.crowdShift=Math.floor(rand(s)*5)-2;}reportCrowd(s);M.crowdChat(s);if(['drink','play'].includes(s.phase)&&s.mode==='pair'){if(G.peopleAt(s)===0){s.partner=null;s.partnerSongs=null;s.friendship=false;}else if(s.partner===null)choosePartner(s);}
@@ -77,7 +77,7 @@
     else{s.mood=clamp(s.mood+4,0,100);G.log(s,'随机事件：旁边的玩家为你刚才的发挥点赞，心情 +4。','event');}
   }
   function afterPlay(s,results){s.consecutive++;if(s.mode==='pair'&&s.partner!==null)s.npcs[s.partner].familiarity=clamp(s.npcs[s.partner].familiarity+2,0,100);progress(s,results);randomEvent(s);if(rand(s)<.35){const leaving=Math.min(G.peopleAt(s),1+Math.floor(rand(s)*3));s.crowdShift-=leaving;reportCrowd(s);}s.queueUntil=s.clock+G.roundInfo(s).queue;choosePartner(s);}
-  function assertActive(s){if(s.ending||s.school.pending||s.event!==null||s.videoEvent||s.city.encounter)throw Error('请先处理当前事件。');}
+  function assertActive(s){if(s.ending||s.school.pending||s.event!==null||s.videoEvent||s.city.encounter||s.world?.notice||s.world?.mahjong.active)throw Error('请先处理当前事件。');}
   function spend(s,minutes){if(!G.canSpendTime(s,minutes))throw Error('时间不足或与固定日程冲突。');if(s.phase==='play'&&s.clock+minutes>G.availableUntil(s))throw Error('接近闭店或回程时间，请先下机。');G.advance(s,minutes);}
   function waitQueue(s){assertActive(s);if(s.phase!=='play')throw Error('当前不在排队。');const minutes=Math.max(0,s.queueUntil-s.clock)||15;spend(s,minutes);M.recover(s,minutes);if(s.queueUntil<=s.clock)s.roundReview=false;G.log(s,`等待 ${minutes} 分钟，体力逐渐恢复。`,'rest');}
   function rest(){throw Error('休息选项已移除，请等待或下机吃饭。');}

@@ -28,6 +28,6 @@ test('legacy relationship chapters migrate once without resetting existing endin
 });
 test('exploration stops discovering arcades after five distinct locations',()=>{
  const s=G.create('grinder',42);s.city.arcades=[0,1,2,3,4];s.loveFailed=true;s.money=10000;
- for(let i=0;i<100;i++){s.clock=480;s.stamina=100;G.explore(s,'stroll');assert.equal(s.city.arcades.length,G.ARCADE_LIMIT);}
+ for(let i=0;i<100;i++){s.clock=480;s.stamina=100;s.world.notice=null;G.explore(s,'stroll');assert.equal(s.city.arcades.length,G.ARCADE_LIMIT);}
  assert.equal(G.unlockedArcades(s).length,5);assert.ok(!s.logs.some(l=>l.text.includes('发现新机厅')));assert.ok(!s.chat.some(m=>m.text.includes('散步发现了')));s.city.arcades.push(5);assert.equal(G.validate(s),false);
 });

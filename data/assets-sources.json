@@ -74,5 +74,11 @@
       "https://github.com/Yuri-YuzuChaN/maimaiDX/blob/main/core/image/best50.py"
     ],
     "note": "Original canvas renderer, five columns, B35/B15, local jackets and existing simulator palette. Offline data-URL jacket resources support PNG export from file URLs."
+  },
+  "worldEncyclopedia": {
+    "manifest": "assets/world/sources.json",
+    "generator": "scripts/cache-world-assets.py",
+    "partners": "Four official SEGA area character icons transformed into pixel art for this unofficial fan game.",
+    "birds": "Four Wikimedia Commons photographs, cropped and transformed into pixel art; per-file author and Creative Commons license are recorded in the manifest."
   }
 }

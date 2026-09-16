@@ -22,7 +22,7 @@
     return '';
   }
   function pack(s,id){
-    if(!['drink','play'].includes(s.phase)||s.ending||s.event!==null||s.school.pending||s.videoEvent||s.city.encounter)throw Error('先完成当前事件，再购买饮料。');
+    if(!['drink','play'].includes(s.phase)||s.ending||s.event!==null||s.school.pending||s.videoEvent||s.city.encounter||s.world?.notice||s.world?.mahjong.active)throw Error('先完成当前事件，再购买饮料。');
     const reason=bottleReason(s,id);if(reason)throw Error(reason);
     if(s.phase==='play'&&s.clock+5>G.availableUntil(s))throw Error('接近闭店或回程时间，请先下机。');
     const d=drinks(s).find(d=>d.id===id);G.advance(s,5);s.money=cents(s.money-d.cost);s.trip.cost=cents(s.trip.cost+d.cost);s.bottles.push({id,ml:d.ml});sync(s);s.mood=clamp(s.mood+d.mood,0,100);
@@ -40,7 +40,7 @@
   function canEat(s,id){const m=homeMeals(s).find(x=>x.id===id);if(!m||s.money<m.cost||due(s)<0)return false;const c=G.nextObligation(s);return G.canSpendTime(s,m.time)||!!(c&&s.mealBreak===c.id&&s.clock>=720&&s.clock+m.time<=c.end);}
   function ready(s){if(s.phase!=='drink'||s.ending)throw Error('当前不能进入排队。');if(s.money<G.pcPrice(s))throw Error('余额不足以上机。');s.phase='play';}
   function eat(s,id){
-    if(!['home','travel'].includes(s.phase)||s.ending||s.school.pending||s.event!==null||s.videoEvent||s.city.encounter)throw Error(`先回${residence(s)}并处理当前事件。`);
+    if(!['home','travel'].includes(s.phase)||s.ending||s.school.pending||s.event!==null||s.videoEvent||s.city.encounter||s.world?.notice||s.world?.mahjong.active)throw Error(`先回${residence(s)}并处理当前事件。`);
     const m=homeMeals(s).find(m=>m.id===id),i=slot(s),day=s.day;if(!canEat(s,id))throw Error('本餐已吃过，或用餐时间 / 余额不足。');
     G.advanceMeal(s,m.time);s.money=cents(s.money-m.cost);s.mood=clamp(s.mood+m.mood,0,100);s.stamina=clamp(s.stamina+(m.stamina||{home:30,noodles:40,burger:45,saizeriya:40,hotpot:60}[id]||30),0,s.maxStamina);
     if(day===s.day)mark(s,i);if(!['home','delivery'].includes(id))s.nutrition.away=true;G.applyFoodBuff(s,m);G.log(s,`${m.name} · ${i<0?'加餐':labels[i]}，${m.time} 分钟，¥${m.cost}。`,'meal');G.check(s);

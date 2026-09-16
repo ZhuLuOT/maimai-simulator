@@ -16,7 +16,7 @@ const {chromium}=runtime('playwright'),G=require('../engine');
  await page.waitForFunction(()=>document.querySelector('[data-b50-image="current"]')?.naturalWidth===1500);
  const png=await page.locator('[data-b50-image="current"]').getAttribute('src');fs.writeFileSync(path.resolve(__dirname,'../artifacts/b50-player-header.png'),Buffer.from(png.split(',')[1],'base64'));
  assert.ok(await page.evaluate(()=>window.headerDraws.some(d=>d.src===window.B50_HEADERS['plate-真极'])&&window.headerDraws.some(d=>d.src===window.B50_HEADERS['rating-normal'])));
- await page.getByRole('button',{name:'日常',exact:true}).click();await page.getByRole('button',{name:'查看舞萌群'}).click();
+ await page.getByRole('button',{name:'日常',exact:true}).click();await page.getByRole('button',{name:'打开聊天软件'}).click();
  await page.getByRole('textbox',{name:'群聊消息'}).fill('B50');await page.getByRole('button',{name:'发送消息',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.chat-b50')?.naturalWidth===1500);
  assert.equal(await page.locator('.chat-b50').getAttribute('src'),png,'chat and current view share the same header');
  const report=await page.evaluate(async()=>{

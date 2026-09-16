@@ -26,10 +26,10 @@ test('Guangzhou outings discover persistent venues, restaurants and an actionabl
  const kinds=new Set();let discovered;
  for(let seed=1;seed<160&&kinds.size<3;seed++){const s=G.create('grinder',seed);G.explore(s,'stroll');assert.equal(s.clock,570);assert.equal(s.stamina,90);
  if(s.city.encounter){kinds.add('love');assert.throws(()=>G.explore(s,'movie'));G.answerEncounter(s,0);assert.equal(s.love,1);assert.equal(s.clock,580);}
- if(s.city.arcades.length===4){kinds.add('arcade');assert.ok(s.chat.some(m=>m.text.includes('新店')));const saved=G.migrate(JSON.parse(JSON.stringify(s)));assert.equal(G.unlockedArcades(saved).length,4);G.startTrip(saved);G.travel(saved,'bus',3);assert.equal(saved.arcade,3);assert.equal(saved.collection.distanceKm,7.6);}
+ if(s.city.arcades.length===4){kinds.add('arcade');assert.ok(s.chat.some(m=>m.text.includes('新店')));const saved=G.migrate(JSON.parse(JSON.stringify(s)));assert.equal(G.unlockedArcades(saved).length,4);saved.world.notice=null;G.startTrip(saved);G.travel(saved,'bus',3);assert.equal(saved.arcade,3);assert.equal(saved.collection.distanceKm,7.6);}
  if(s.city.restaurants.length){kinds.add('food');discovered=s;}assert.ok(G.validate(G.migrate(JSON.parse(JSON.stringify(s)))));
  }
- assert.equal(kinds.size,3);const s=discovered;G.startTrip(s);G.travel(s,'bike',0);G.drink(s,'water');G.finishPlay(s);const food=G.mealOptions(s).find(m=>m.id===s.city.restaurants[0]);const money=s.money;G.meal(s,food.id);assert.equal(s.money,money-food.cost);assert.equal(G.foodBonus(s),food.buff);s.clock+=241;assert.equal(G.foodBonus(s),0);
+ assert.equal(kinds.size,3);const s=discovered;s.world.notice=null;G.startTrip(s);G.travel(s,'bike',0);G.drink(s,'water');G.finishPlay(s);const food=G.mealOptions(s).find(m=>m.id===s.city.restaurants[0]);const money=s.money;G.meal(s,food.id);assert.equal(s.money,money-food.cost);assert.equal(G.foodBonus(s),food.buff);s.clock+=241;assert.equal(G.foodBonus(s),0);
  const locked=G.create();G.startTrip(locked);assert.throws(()=>G.travel(locked,'bus',3));
 });
 test('nonwalking entertainment does not restore stamina; outings respect money, time and endings',()=>{

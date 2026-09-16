@@ -29,7 +29,7 @@
     G.log(s,ok?e.reply:e.fail,'heart');if(s.love===EVENTS.length&&s.rating>13000){s.ending='love';s.phase='ending';G.log(s,'结局：love','ending');}
   }
   function contact(s,id){
-    if(s.phase!=='home'||s.ending||s.school.pending||s.event!==null||s.videoEvent||s.city.encounter)throw Error('先完成当前行动。');
+    if(s.phase!=='home'||s.ending||s.school.pending||s.event!==null||s.videoEvent||s.city.encounter||s.world?.notice||s.world?.mahjong.active)throw Error('先完成当前行动。');
     if(!s.love||s.loveFailed||s.love>=EVENTS.length)throw Error('现在无法邀约。');
     if(s.romance.lastContact===s.day)throw Error('今天已经联系过了，给彼此留些时间。');
     const options={chat:{time:15,cost:0,mood:4,trust:3,text:'你们聊了今天的小事，小凛也发来了她的近况。'},walk:{time:60,cost:8,mood:14,trust:5,text:'你们沿着广州街巷走了一段路，聊起游戏之外的生活。'}};
