@@ -13,8 +13,8 @@
   function recover(s,minutes){s.stamina=clamp(s.stamina+minutes*.35,0,s.maxStamina);if(minutes>=15)s.consecutive=0;}
   function mealTime(s){return s.clock>=660&&s.clock<840||s.clock>=1020&&s.clock<1200;}
   function canSkipMeal(s){return s.phase==='meal'&&!mealTime(s)&&(s.trip?.staminaSpent||0)<25&&s.stamina>=60;}
-  function choose(n,s,count=1){const level=clamp(n.rating/1110,5,15.1),candidates=pool.filter(c=>!G.isUtage(c)&&c.ds>=level-.65&&c.ds<=level+.5+n.risk);let remaining=candidates.length?candidates:pool.filter(c=>!G.isUtage(c));const out=[];for(let i=0;i<count&&remaining.length;i++){const weights=remaining.map(c=>1+(c.genre===n.genre?3:0)+(c.tendency===n.tendency?2:0)+(c.ds>level?1:0)),total=weights.reduce((a,b)=>a+b,0);let x=rand(s)*total,index=weights.length-1;for(let j=0;j<weights.length;j++){x-=weights[j];if(x<=0){index=j;break;}}out.push(remaining[index]);remaining=remaining.filter((_,j)=>j!==index);}return out;}
-  function message(s,id,text,extra={}){s.chat.push({id,text:String(text).slice(0,100),day:s.day,time:s.clock,...extra});s.chat=s.chat.slice(-60);}
+  function choose(n,s,count=1){const level=clamp(n.rating/1110,5,15.1),candidates=pool.filter(c=>!G.isUtage(c)&&c.ds>=level-.65&&c.ds<=level+.5+n.risk);let remaining=candidates.length?candidates:pool.filter(c=>!G.isUtage(c));if(n.id==='小凛'){const vocal=remaining.filter(c=>c.genre==='niconico & VOCALOID');remaining=vocal.length?vocal:pool.filter(c=>!G.isUtage(c)&&c.genre==='niconico & VOCALOID').sort((a,b)=>Math.abs(a.ds-level)-Math.abs(b.ds-level)).slice(0,12);}const out=[];const signature=n.id==='Toqin'?pool.filter(c=>c.title==='TiamaT:F minor'&&!G.isUtage(c)).sort((a,b)=>Math.abs(a.ds-level)-Math.abs(b.ds-level)).slice(0,1):n.id==='鲁米诺'?remaining.filter(c=>tag(c)==='ghost'):[];if(signature.length&&count>0){out.push(signature[Math.floor(rand(s)*signature.length)]);remaining=remaining.filter(c=>c.id!==out[0].id);}for(let i=out.length;i<count&&remaining.length;i++){const weights=remaining.map(c=>1+(c.genre===n.genre?3:0)+(c.tendency===n.tendency?2:0)+(c.ds>level?1:0)),total=weights.reduce((a,b)=>a+b,0);let x=rand(s)*total,index=weights.length-1;for(let j=0;j<weights.length;j++){x-=weights[j];if(x<=0){index=j;break;}}out.push(remaining[index]);remaining=remaining.filter((_,j)=>j!==index);}return out;}
+  function message(s,id,text,extra={}){const n=s.npcs.find(n=>n.id===id);if(n&&!extra.self){G.postNPCMessage(s,n,text,extra);return;}s.chat.push({id,text:String(text).slice(0,100),day:s.day,time:s.clock,...extra});s.chat=s.chat.slice(-60);}
   const J=typeof module!=='undefined'?require('./judgement'):root.Judgement;
   const praise=['这么强！？','龙B来了','太强了！这段我还在练。','好成绩！下次教教我。','恭喜推分，今天状态真好。','这就是你的实力吗！','恭喜拿下！','我先抄作业了。','手元交一下！','这也能推，厉害。'];
   const canBoast=(c,r)=>c.ds>=12.4&&(r.achievement>100.5||r.combo==='AP');
@@ -39,7 +39,7 @@
     if(s.npcBoasts.day!==s.day)s.npcBoasts={day:s.day,count:0};
     const now=(s.day-1)*1440+s.clock;
     for(const n of s.npcs){
-      if(now<n.hesitateUntil||rand(s)>Math.min(.8,blocks*.08*n.activity))continue;
+      if(n.id==='小凛'&&G.linArcade(s)===null||/上班中|上课中|休息中|准备上班/.test(G.npcStatus(s,n))||(s.clock<G.OPEN||s.clock>=G.CLOSE)&&!G.denVisitors(s).some(x=>x.id===n.id)||now<n.hesitateUntil||rand(s)>Math.min(.8,blocks*.08*n.activity))continue;
       const c=choose(n,s)[0];if(!c)continue;
       const level=n.rating/1110,expected=clamp(99.4-(c.ds-level)*1.3+(rand(s)-.5)*2,85,100.95);
       const simulated={seed:s.seed,skills:{star:level+(n.tendency==='star'?.2:0),key:level+(n.tendency==='key'?.2:0)},practice:{},condition:2};
@@ -50,7 +50,7 @@
         message(s,n.id,`${c.title} ${result.achievement.toFixed(4)}%${result.combo==='AP'?' AP':''}！今天推上去了！`,{performance:{key:G.key(c),ds:c.ds,achievement:result.achievement,combo:result.combo}});
         const other=s.npcs.find(x=>x.id!==n.id&&x.tendency===n.tendency)||s.npcs.find(x=>x!==n);
         message(s,other.id,praise[Math.floor(rand(s)*praise.length)]);
-      }
+      }else G.npcAfterPlay(s,n);
     }
   }
   function watch(s){if(s.ending||s.phase!=='home'||s.school.pending||s.event!==null||s.videoEvent||s.city.encounter||s.world?.notice||s.world?.mahjong.active)throw Error('先完成当前事件，再刷视频。');G.advance(s,30);if(s.ending)return;s.mood=clamp(s.mood+7,0,100);const candidates=pool.filter(c=>tag(c)==='ghost'&&!G.isUtage(c)&&Math.abs(c.ds-G.ability(s,c))<=1);if(candidates.length&&rand(s)<.65){const c=candidates[Math.floor(rand(s)*candidates.length)],clear=rand(s)<clamp(.25+(s.skills.reading-c.ds)*.08,.12,.75);s.videoEvent={key:G.key(c),outcome:clear?'clear':'partial'};G.log(s,`刷到 ${c.title} ${G.displayLevel(c)} 的手元，停下来研究了一会儿。`,'event');}else G.log(s,'刷视频 30 分钟，心情 +7。','heart');G.check(s);}

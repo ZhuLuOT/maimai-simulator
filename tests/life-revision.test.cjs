@@ -12,17 +12,19 @@ test('custom sleep previews actual recovery and midnight without mutating the sa
   }
 });
 
-test('work experience grows across days and eight hours never exceeds 200',()=>{
-  const s=G.create('grinder',42);s.money=10000;let previous=0;
+test('work experience grows across days with student 200 and grinder 300 eight-hour caps',()=>{
+ for(const [job,cap] of [['student',200],['grinder',300]]){
+  const s=G.create(job,42);s.money=10000;let previous=0;
   for(let day=1;day<=15;day++){
-    s.day=day;s.clock=480;s.drowsiness=0;s.workCount=0;s.mood=100;const before=s.money,quote=G.workIncome(s);
+    s.day=day;s.completed=G.schedule(s).map(c=>c.id);s.clock=480;s.drowsiness=0;s.workCount=0;s.mood=100;const before=s.money,quote=G.workIncome(s);
     G.daily(s,'work');assert.equal(s.money-before,quote);assert.ok(quote>=previous);previous=quote;
-    G.daily(s,'work');assert.ok(s.money-before<=200);assert.equal(s.totalWorkCount,day*2);assert.throws(()=>G.daily(s,'work'),/两次/);
+    G.daily(s,'work');assert.ok(s.money-before<=cap);assert.equal(s.totalWorkCount,day*2);assert.throws(()=>G.daily(s,'work'),/两次/);
     assert.ok(G.validate(G.migrate(JSON.parse(JSON.stringify(s)))));
   }
-  assert.equal(G.workIncome(s),100);
+  assert.equal(G.workIncome(s),cap/2);
   s.clock=1200;s.workCount=0;s.drowsiness=0;G.daily(s,'work');assert.equal(s.workCount,0);assert.equal(s.totalWorkCount,31);
-  s.clock=480;s.drowsiness=99.99;const count=s.totalWorkCount;G.daily(s,'work');assert.equal(s.totalWorkCount,count);
+  s.completed=G.schedule(s).map(c=>c.id);s.clock=480;s.drowsiness=99.99;const count=s.totalWorkCount;G.daily(s,'work');assert.equal(s.totalWorkCount,count);
+ }
 });
 
 test('03:00 is free for all careers; only actual obligations block time',()=>{
@@ -57,7 +59,7 @@ test('only story NPCs become friends and old COLDDD duplicates merge with their 
 test('new releases notify once, recover after network failure and ignore malformed responses',async()=>{
   const source=fs.readFileSync(require.resolve('../src/update-notice.js'),'utf8');
   const code=require('esbuild').transformSync(source,{format:'cjs'}).code;
-  const context={module:{exports:{}},globalThis:{}};vm.runInNewContext(code,context);
+  const context={module:{exports:{}},globalThis:{},require:require('node:module').createRequire(require.resolve('../src/update-notice.js'))};vm.runInNewContext(code,context);
   const {watchRelease}=context.module.exports,seen=[];let response={version:'one'},poll;
   const watcher=watchRelease({current:'one',notify:r=>seen.push(r.version),setInterval:fn=>{poll=fn;return 1;},fetchRelease:async()=>{if(response instanceof Error)throw response;return response;}});
   await new Promise(resolve=>setImmediate(resolve));assert.deepEqual(seen,[]);

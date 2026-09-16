@@ -5,11 +5,11 @@ test('eight romance events require separate days, real visits, trust and final R
  for(let stage=0;stage<8;stage++){
   s.day=Math.max(s.day,s.romance.nextDay);s.clock=600;
   if(stage===7){s.rating=13000;outing(s);assert.equal(s.event,null);s.rating=13001;}
-  outing(s);assert.equal(s.event,stage);G.answer(s,G.EVENTS[stage].correct);
+  outing(s);if(stage>0){assert.equal(s.event,null);assert.equal(s.romance.pendingStory,stage);G.openLinStory(s);}assert.equal(s.event,stage);G.answer(s,G.EVENTS[stage].correct);
   assert.equal(s.love,stage+1);assert.equal(s.romance.memories.length,stage+1);
-  if(stage<7){outing(s);assert.equal(s.event,null);}
+  if(stage<7){outing(s);assert.equal(s.event,null);s.phase='home';G.contactLove(s,'chat');}
  }
- assert.ok(s.day>=30);assert.equal(s.ending,'love');
+ assert.ok(s.day>=40);assert.equal(s.ending,'love');
 });
 test('one poor response is recoverable but repeated disrespect ends the route',()=>{
  const s=G.create('grinder');outing(s);G.answer(s,1);assert.equal(s.loveFailed,false);assert.equal(s.love,0);
@@ -18,7 +18,7 @@ test('one poor response is recoverable but repeated disrespect ends the route',(
 });
 test('daily contact consumes resources, observes obligations and cannot rush the next story event',()=>{
  const s=G.create('grinder');s.love=1;s.romance.nextDay=5;const before=s.clock;G.contactLove(s,'walk');
- assert.equal(s.clock,before+60);assert.equal(s.money,1792);assert.equal(s.stamina,92);assert.equal(s.romance.nextDay,5);assert.equal(s.chat.at(-1).id,'小凛');assert.throws(()=>G.contactLove(s,'chat'));
+ assert.equal(s.clock,before+60);assert.equal(s.money,1792);assert.equal(s.stamina,92);assert.equal(s.romance.nextDay,5);assert.equal(s.world.dm['小凛'].at(-1).id,'小凛');assert.equal(s.romance.trust,2);assert.ok(!s.chat.some(m=>m.id==='小凛'));assert.throws(()=>G.contactLove(s,'chat'));
  assert.ok(G.validate(G.migrate(JSON.parse(JSON.stringify(s)))));
  const student=G.create();student.love=1;student.day=2;student.clock=535;const saved=JSON.stringify(student);assert.throws(()=>G.contactLove(student,'chat'));assert.equal(JSON.stringify(student),saved);
 });

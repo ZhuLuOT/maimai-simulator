@@ -26,7 +26,7 @@ test('den prepays the first hour and includes PC and courses, with renewal money
 });
 test('late den travel and PC cross midnight, preserve queue and settle daily costs exactly once',()=>{
  const s=unlocked('worker');s.clock=1435;G.startTrip(s);const cash=s.money,taxi=G.transportOptions(5).find(t=>t.id==='taxi');G.travel(s,'taxi',5);assert.equal(s.day,2);assert.equal(s.nightActive,undefined);assert.equal(s.money,cash-taxi.cost-30-65);assert.equal(s.clock,11);G.drink(s,'water');if(s.queueUntil>s.clock)G.waitQueue(s);const before=s.money;G.play(s,pool.slice(0,3),pool);assert.equal(s.money,before);assert.ok(G.validate(s));
- G.finishPlay(s);G.meal(s,'home');s.clock=180;G.sleep(s);assert.equal(s.day,2);assert.equal(s.clock,660);assert.ok(s.workAbsences===1);assert.equal(s.drowsiness,0);
+ G.finishPlay(s);G.meal(s,'home');s.clock=180;G.sleep(s);assert.equal(s.day,2);assert.equal(s.clock,780);assert.ok(s.workAbsences===1);assert.equal(s.drowsiness,0);
  const pc=ready();pc.clock=1435;pc.queueUntil=1435;const cashBefore=pc.money;G.play(pc,pool.slice(0,3),pool);assert.equal(pc.day,2);assert.equal(pc.clock,7);assert.equal(pc.money,cashBefore-25);assert.ok(G.validate(pc));
  const q=ready();q.clock=1435;q.queueUntil=1470;const money=q.money;G.advance(q,10);assert.equal(q.day,2);assert.equal(q.queueUntil,30);assert.equal(q.clock,5);G.waitQueue(q);assert.equal(q.clock,30);assert.equal(q.money,money-25);G.play(q,pool.slice(0,3),pool);assert.ok(G.validate(q));
 });

@@ -25,7 +25,7 @@
   tick(s);
  }
  function sleepPlan(s,kind='full'){
-  const duration=kind==='full'?480:kind==='nap'?30:Number(kind);
+  const duration=kind==='full'?600:kind==='nap'?30:Number(kind);
   if(!Number.isInteger(duration)||duration<30||duration>720||duration%30)throw Error('请选择 30 分钟至 12 小时的睡眠时长（每档 30 分钟）。');
   const end=s.clock+duration,dayOffset=Math.floor(end/1440),clock=end%1440,conflicts=[];
   for(let offset=0;offset<=dayOffset;offset++){
@@ -50,7 +50,7 @@
   if(movement?.direction==='out'){back=Math.min(movement.oneWay,movement.elapsed);distance=2*G.ARCADE_KM[arcade]*back/movement.oneWay;}
   if(movement?.direction==='home')back=Math.max(0,back-Math.max(0,movement.elapsed-movement.meal));route=null;
   if(s.world){s.world.notice=null;s.world.mahjong.active=null;}s.event=null;s.videoEvent=null;s.city.encounter=false;s.phase='home';s.trip=null;s.last=null;s.roundReview=false;s.selectedCharts=[];s.partnerSongs=null;s.partner=null;s.queueUntil=0;
-  elapse(s,back,{sleeping:true,bypass:true,charge:false});if(distance)G.addTravelDistance(s,distance);if(!s.ending)sleep(s,'full',true);
+  elapse(s,back,{sleeping:true,bypass:true,charge:false});if(distance)G.addTravelDistance(s,distance);if(!s.ending)sleep(s,480,true);
  }
  function advance(s,minutes,movement=null){if(!G.canSpendTime(s,minutes))throw Error('时间不足或与课程 / 工作冲突。');const reason=timeReason(s,minutes);if(reason)throw Error(reason);s.started=true;route=movement?{...movement,elapsed:0}:null;try{elapse(s,minutes);}finally{route=null;}}
  function attend(s,c){const lunch=720;if(!s.nutrition.meals[1]&&s.clock<lunch&&c.end>lunch){elapse(s,lunch-s.clock,{charge:false});s.mealBreak=c.start<lunch?c.id:null;G.log(s,c.start<lunch?`${c.name}暂告一段落，午休时间，先吃午饭。`:`距离${c.name}还有一会儿，先吃午饭。`,'meal');return false;}s.mealBreak=null;const duration=Math.max(0,c.end-s.clock);elapse(s,duration,{charge:false});return true;}

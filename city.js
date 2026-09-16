@@ -8,7 +8,7 @@
     {id:2,name:'次元空间 · 商场店',km:2.4,cabinets:4,offset:4},
     {id:3,name:'珠江游艺 · 海珠店',km:7.6,cabinets:3,offset:-2},
     {id:4,name:'西关电玩 · 荔湾店',km:10.2,cabinets:2,offset:-4},
-    {id:5,name:'不眠猫窝 · 珠江夜舍',km:8.8,cabinets:2,offset:-12,special:true,allNight:true,hourly:30}
+    {id:5,name:'不眠猫窝 · 珠江夜舍',km:8.8,cabinets:3,offset:-12,special:true,allNight:true,hourly:30}
   ];
   const OUTINGS=[
     {id:'stroll',name:'出去闲逛',place:'广州街巷',time:90,cost:0,stamina:10,mood:14,icon:'footprints'},
@@ -46,7 +46,7 @@
     }else if(id==='games')s.npcs.forEach(n=>n.familiarity=clamp(n.familiarity+1,0,100));
     G.check(s);
   }
-  function encounter(s,choice){if(!s.city.encounter||s.ending)throw Error('没有待回应的偶遇。');if(![0,1].includes(choice))throw Error('请选择回应。');s.city.encounter=false;try{spend(s,10);}catch(e){s.city.encounter=true;throw e;}if(s.ending)return;if(choice===0){s.love=1;s.romance.trust=10;s.romance.nextDay=s.day+3;s.nextLoveVisit=s.visits+2;s.mood=clamp(s.mood+8,0,100);G.log(s,'你和小凛聊起舞萌，互加了好友，约好下次机厅见。','heart');}else G.log(s,'你们点头打了招呼，各自继续散步。','heart');}
+  function encounter(s,choice){if(!s.city.encounter||s.ending)throw Error('没有待回应的偶遇。');if(![0,1].includes(choice))throw Error('请选择回应。');s.city.encounter=false;try{spend(s,10);}catch(e){s.city.encounter=true;throw e;}if(s.ending)return;if(choice===0){s.love=1;s.romance.trust=6;s.romance.nextDay=s.day+4;s.nextLoveVisit=s.visits+2;s.mood=clamp(s.mood+8,0,100);G.ensureLin(s);G.syncFriends(s);G.log(s,'你和小凛聊起舞萌，互加了好友，约好下次机厅见。','heart');}else G.log(s,'你们点头打了招呼，各自继续散步。','heart');}
   function meals(s){return [...G.MEALS,...RESTAURANTS.filter(r=>s.city.restaurants.includes(r.id))];}
   function food(s,m){if(m.buff){s.city.foodBuff=m.buff;s.city.foodUntil=now(s)+240;G.log(s,`吃得很满足，接下来 4 小时预期达成率 +${m.buff.toFixed(2)}%。`,'heart');}}
   function bot(s,q){

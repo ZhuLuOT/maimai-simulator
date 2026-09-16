@@ -12,32 +12,32 @@
   ];
   const STAGES=['还未相遇','初次相识','交换歌单','一起练习','聊起日常','彼此体谅','相互陪伴','心意渐明','一起出勤'];
   function ensure(s){
-    if(s.romance)return;
+    if(s.romance){G.ensureLin(s);return;}
     const map=[0,1,3,5,8];s.love=map[s.love]??s.love;
     if(s.event!==null)s.event=map[s.event]??s.event;
-    s.romance={nextDay:s.day,lastContact:0,trust:Math.min(100,s.love*10),mistakes:0,memories:[]};
+    s.romance={nextDay:s.day,lastContact:0,trust:Math.min(100,s.love*10),mistakes:0,memories:[]};G.ensureLin(s);
   }
-  function offer(s){return !s.loveFailed&&s.love<EVENTS.length&&s.visits>=s.nextLoveVisit&&s.day>=s.romance.nextDay&&(s.love<EVENTS.length-1||s.rating>13000&&s.romance.trust>=45);}
+  function offer(s){return s.romance.pendingStory===null&&!s.loveFailed&&s.love<EVENTS.length&&s.visits>=s.nextLoveVisit&&s.day>=s.romance.nextDay&&(s.love<EVENTS.length-1||s.rating>13000&&s.romance.trust>=45);}
   function answer(s,choice){
     if(s.event===null||s.event!==s.love||![0,1].includes(choice)||s.ending||s.day<s.romance.nextDay)throw Error('没有待回应的事件。');
     G.advance(s,15);if(s.ending)return;
     const stage=s.event,e=EVENTS[stage],ok=choice===e.correct;s.event=null;
     s.romance.memories.push({stage,day:s.day,ok,text:ok?e.reply:e.fail});
-    s.romance.nextDay=s.day+(stage>=3?5:3);s.nextLoveVisit=s.visits+2;
-    if(ok){s.love++;s.romance.trust=Math.min(100,s.romance.trust+10);s.mood=Math.min(100,s.mood+8);}
+    s.romance.nextDay=s.day+(stage>=3?7:4);s.nextLoveVisit=s.visits+2;
+    if(ok){s.love++;s.romance.trust=Math.min(100,s.romance.trust+6);s.mood=Math.min(100,s.mood+8);}
     else{s.romance.mistakes++;s.romance.trust=Math.max(0,s.romance.trust-10);if(stage===EVENTS.length-1||s.romance.mistakes>=3)s.loveFailed=true;}
-    G.log(s,ok?e.reply:e.fail,'heart');if(s.love===EVENTS.length&&s.rating>13000){s.ending='love';s.phase='ending';G.log(s,'结局：love','ending');}
+    s.romance.pendingStory=null;G.ensureLin(s);G.syncFriends(s);G.linMessage(s,ok?e.reply:e.fail);G.log(s,ok?e.reply:e.fail,'heart');if(s.love===EVENTS.length&&s.rating>13000){s.ending='love';s.phase='ending';G.log(s,'结局：love','ending');}
   }
   function contact(s,id){
     if(s.phase!=='home'||s.ending||s.school.pending||s.event!==null||s.videoEvent||s.city.encounter||s.world?.notice||s.world?.mahjong.active)throw Error('先完成当前行动。');
     if(!s.love||s.loveFailed||s.love>=EVENTS.length)throw Error('现在无法邀约。');
     if(s.romance.lastContact===s.day)throw Error('今天已经联系过了，给彼此留些时间。');
-    const options={chat:{time:15,cost:0,mood:4,trust:3,text:'你们聊了今天的小事，小凛也发来了她的近况。'},walk:{time:60,cost:8,mood:14,trust:5,text:'你们沿着广州街巷走了一段路，聊起游戏之外的生活。'}};
+    const options={chat:{time:15,cost:0,mood:4,trust:1,text:'你们聊了今天的小事，小凛也发来了她的近况。'},walk:{time:60,cost:8,mood:14,trust:2,text:'你们沿着广州街巷走了一段路，聊起游戏之外的生活。'}};
     const x=options[id];if(!x||s.money<x.cost||id==='walk'&&s.stamina<8)throw Error('金钱或体力不足。');
     G.advance(s,x.time);if(s.ending)return;s.money-=x.cost;if(id==='walk')s.stamina-=8;s.mood=Math.min(100,s.mood+x.mood);s.romance.trust=Math.min(100,s.romance.trust+x.trust);s.romance.lastContact=s.day;
-    G.log(s,x.text,'heart');s.chat.push({id:'小凛',text:id==='walk'?'今天散步很开心，下次也记得留点时间吃饭。':'看到你的消息啦。今天也照顾好自己，改天机厅见。',day:s.day,time:s.clock});s.chat=s.chat.slice(-60);G.check(s);
+    G.log(s,x.text,'heart');G.ensureLin(s);G.syncFriends(s);G.linMessage(s,id==='walk'?'今天散步很开心，下次也记得留点时间吃饭。':'看到你的消息啦。今天也照顾好自己，改天机厅见。');G.check(s);
   }
-  function valid(s){const r=s.romance,int=(n,max)=>Number.isInteger(n)&&n>=0&&n<=max;return !!r&&int(r.nextDay,G.DAYS+5)&&int(r.lastContact,s.day)&&int(r.trust,100)&&int(r.mistakes,3)&&Array.isArray(r.memories)&&r.memories.length<=10&&r.memories.every(m=>int(m.stage,7)&&int(m.day,s.day)&&typeof m.ok==='boolean'&&typeof m.text==='string'&&m.text.length<200);}
+  function valid(s){const r=s.romance,int=(n,max)=>Number.isInteger(n)&&n>=0&&n<=max;return !!r&&int(r.nextDay,G.DAYS+7)&&int(r.lastContact,s.day)&&int(r.trust,100)&&int(r.mistakes,3)&&Array.isArray(r.memories)&&r.memories.length<=10&&r.memories.every(m=>int(m.stage,7)&&int(m.day,s.day)&&typeof m.ok==='boolean'&&typeof m.text==='string'&&m.text.length<200);}
   function install(api){G=api;Object.assign(api,{relationshipLabel:s=>s.loveFailed?'保持距离':STAGES[s.love],contactLove:contact});}
   const api={EVENTS,ensure,offer,answer,valid,install};if(typeof module!=='undefined')module.exports=api;else root.Romance=api;
 })(globalThis);

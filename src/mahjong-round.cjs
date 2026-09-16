@@ -1,27 +1,59 @@
-// A short narrative round: ordinary draws are skipped; the player's choices
-// change hand progress, value and exposure to an opponent's riichi.
-const OPENINGS=[
- {name:'两面较多的平顺手',text:'两组顺子已经成形，留下两面搭子有机会尽快听牌。',tiles:'m2 m3 m4 p3 p4 p5 s4 s5 s7 s8 z1 z1 z3',speed:.14,value:2000,draw:'六索',drawText:'摸到六索，索子部分连了起来。现在可以争取速度，也可以保留高打点的变化。'},
- {name:'对子较多的一手',text:'起手有四组对子，可以向七对子靠拢；拆掉对子追速度也有机会。',tiles:'m2 m2 m7 m7 p3 p3 s6 s6 p4 s8 z1 z2 z5',speed:.06,value:3200,draw:'四筒',drawText:'摸到四筒，又多了一组对子。七对子的方向更清楚了，但还需要后续进张。'},
- {name:'零散而偏重的起手',text:'字牌和边张偏多，暂时离听牌较远。先整理手牌，留一张安全牌会更稳妥。',tiles:'m1 m4 m8 p1 p5 p9 s2 s6 s9 z1 z3 z5 z5',speed:-.08,value:3900,draw:'白',drawText:'摸到第三张白，终于有了役牌刻子。继续整理有机会成牌，也可以先留住防守余地。'}
-];
-function createRound(random=Math.random){const opening=OPENINGS[Math.floor(random()*OPENINGS.length)];return {opening,stage:0,progress:opening.speed,value:opening.value,reserve:false,fold:false,risk:.2,events:[],result:null};}
-function node(r){if(r.result)return {title:'本局结算',text:r.result.text,options:[]};return [
- {title:'开局 · 看看牌型',text:r.opening.text,options:[{label:'优先牌效',detail:'尽快整理搭子，提高后续成牌机会。'},{label:'留一张安全牌',detail:'进度稍慢，受到立直压力时更好防守。'}]},
- {title:'中盘 · 关键进张：'+r.opening.draw,text:r.opening.drawText,options:[{label:'抓住进张，争取听牌',detail:'提高和牌机会，保留当前打点。'},{label:'再做大一点',detail:'提高可能的打点，但进度与防守都会受影响。'}]},
- {title:'后盘 · COLDDD立直了',text:'她打出一张九筒宣告立直。你手里有同样的九筒可作现物，但维持进攻需要切出没有安全依据的中张。',options:[{label:'切现物，转为防守',detail:'放弃本轮和牌机会，避开这次放铳风险。'},{label:'继续进攻',detail:'保留和牌机会，也可能把点数送给她。'}]}
- ][r.stage];}
-function choose(r,index,random=Math.random){if(r.result||!Number.isInteger(index)||index<0||index>1)return false;const step=node(r);r.events.push(step.title+'：'+step.options[index].label);
- if(r.stage===0){if(index===0)r.progress+=.12;else {r.reserve=true;r.risk-=.06;}}
- if(r.stage===1){if(index===0)r.progress+=.16;else {r.value+=2000;r.progress-=.04;r.risk+=.12;}}
- if(r.stage===2){r.fold=index===0;r.result=settle(r,random);}
- r.stage++;return true;
+const Majiang=require('@kobalab/majiang-core');
+const Player=require('@kobalab/majiang-ai');
+const tileName=p=>p[0]==='z'?['','东','南','西','北','白','发','中'][+p[1]]:(p[1]==='0'?'赤五':'一二三四五六七八九'[+p[1]-1])+({m:'万',p:'筒',s:'索'})[p[0]];
+const meldName=m=>(m.match(/\d/g)||[]).map(n=>tileName(m[0]+n)).join(' ');
+
+class Human extends Player {
+ constructor(round){super();this.round=round;}
+ prompt(title,text,options){this.round.pending={title,text,options,reply:this._callback};this.round.decisions++;}
+ discards(){const out=[];for(const p of this.get_dapai(this.shoupai)||[]){out.push({type:'discard',tile:p.slice(0,2),label:'打 '+tileName(p),reply:{dapai:p}});if(this.allow_lizhi(this.shoupai,p))out.push({type:'riichi',tile:p.slice(0,2),label:'立直 · 打 '+tileName(p),reply:{dapai:p+'*'}});}return out;}
+ action_zimo(data,gangzimo){
+  if(data.l!==this._menfeng)return this._callback();
+  const options=[];
+  if(this.select_hule(null,gangzimo))options.push({type:'win',label:'自摸',reply:{hule:'-'}});
+  for(const m of this.get_gang_mianzi(this.shoupai)||[])options.push({type:'kan',label:(/^[mpsz]\d{4}$/.test(m)?'暗杠 ':'加杠 ')+meldName(m),reply:{gang:m}});
+  if(this.allow_pingju(this.shoupai))options.push({type:'draw',label:'九种九牌 · 流局',reply:{daopai:'-'}});
+  options.push(...this.discards());
+  this.prompt(gangzimo?'岭上摸牌':'轮到你出牌','摸到'+tileName(data.p)+(this.shoupai.lizhi?' · 已立直':''),options);
+ }
+ action_dapai(data){
+  if(data.l===this._menfeng)return this._callback();
+  const options=[],direction=['','+','=','-'][(4+data.l-this._menfeng)%4],p=data.p.slice(0,2)+direction;
+  if(this.select_hule(data))options.push({type:'win',label:'荣和',reply:{hule:'-'}});
+  for(const [type,list]of [['chi',this.get_chi_mianzi(this.shoupai,p)],['pon',this.get_peng_mianzi(this.shoupai,p)],['kan',this.get_gang_mianzi(this.shoupai,p)]])for(const m of list||[])options.push({type,label:({chi:'吃 ',pon:'碰 ',kan:'明杠 '})[type]+meldName(m),reply:{fulou:m}});
+  if(!options.length)return this._callback();
+  options.push({type:'pass',label:'不鸣牌 / 过',reply:{}});
+  this.prompt('回应弃牌',this.model.player[this.model.player_id[data.l]]+'打出'+tileName(data.p)+(data.p.endsWith('*')?'并宣告立直':''),options);
+ }
+ action_fulou(data){if(data.l!==this._menfeng||/^[mpsz]\d{4}/.test(data.m))return this._callback();this.prompt('副露后出牌',meldName(data.m),this.discards());}
+ action_gang(data){if(data.l===this._menfeng||!this.select_hule(data,true))return this._callback();this.prompt('抢杠机会',this.model.player[this.model.player_id[data.l]]+'宣告加杠',[{type:'win',label:'抢杠荣和',reply:{hule:'-'}},{type:'pass',label:'过',reply:{}}]);}
 }
-function settle(r,random){const scores=[25000,25000,25000,25000],roll=random();let text,outcome;
- if(!r.fold&&roll<r.risk){scores[0]-=5200;scores[1]+=5200;outcome='deal-in';text='进攻牌被COLDDD荣和，放铳 5200 点。她拉着你复盘了刚才的危险信号。';}
- else if(!r.fold&&roll<r.risk+Math.max(.08,Math.min(.6,.18+r.progress))){const payer=1+Math.floor(random()*3);scores[0]+=r.value;scores[payer]-=r.value;outcome='win';text='关键进张接上了，最终和牌，获得 '+r.value+' 点。COLDDD点点头：“这次推进得不错。”';}
- else if(r.fold){outcome='defend';if(random()<.55){scores[2]-=3900;scores[1]+=3900;text='你切出现物后持续防守，避过放铳；随后逃遁放铳，COLDDD收下 3900 点。';}else {text='你切出现物后持续防守，安全走到流局。大家约好再来一局。';}}
- else {outcome='draw';text='继续进攻后没能等到最后的进张，本局流局。大家一起讨论了这手牌的取舍。';}
- return {scores,text,outcome};
+
+function createRound({name='玩家',names=['COLDDD','逃遁','鲁米诺'],dealer=Math.floor(Math.random()*4),wall=null}={}){
+ const r={pending:null,result:null,decisions:0,events:[],wins:[]};
+ r.human=new Human(r);
+ const game=r.game=new Majiang.Game([r.human,new Player(),new Player(),new Player()],null,Majiang.rule({'場数':0,'延長戦方式':0}));
+ game.model.player=[name,...names];game._sync=true;game.speed=0;
+ const add=game.add_paipu.bind(game);game.add_paipu=event=>{
+  add(event);const model=game.model,who=l=>model.player[model.player_id[l]];
+  if(event.dapai){const d=event.dapai;r.events.push(who(d.l)+(d.p.endsWith('*')?'立直，':'')+'打出'+tileName(d.p));}
+  if(event.fulou)r.events.push(who(event.fulou.l)+'副露：'+meldName(event.fulou.m));
+  if(event.gang)r.events.push(who(event.gang.l)+'开杠：'+meldName(event.gang.m));
+  if(event.hule){const h=event.hule;r.wins.push({winner:model.player_id[h.l],from:h.baojia==null?null:model.player_id[h.baojia],yaku:h.hupai.map(y=>({...y})),fu:h.fu||0,han:h.fanshu||0,yakuman:h.damanguan||0,points:h.defen,hand:h.shoupai});}
+  if(event.pingju)r.draw=event.pingju.name;
+ };
+ // Settle the entire hand, including double ron, without starting another hand.
+ game.last=()=>{r.result={scores:[...game.model.defen],wins:r.wins,draw:r.draw||null,lizhiSticks:game.model.lizhibang,text:r.wins.length?r.wins.map(w=>game.model.player[w.winner]+(w.from===null?'自摸':'荣和 '+game.model.player[w.from])+'，'+(w.yakuman?w.yakuman+' 倍役满':w.han+' 番 '+w.fu+' 符')+'，'+w.points+' 点。').join(' '):(r.draw||'流局')+'，按听牌状态结算。'};};
+ if(wall){const qipai=game.qipai.bind(game);game.qipai=()=>qipai(wall);}
+ game.kaiju(dealer);pump(r);return r;
 }
-module.exports={createRound,node,choose};
+function pump(r){let n=0;while(!r.pending&&!r.result&&r.game._reply.filter(Boolean).length===4){if(++n>1000)throw Error('牌局推进异常。');r.game.next();}}
+function node(r){return r.result?{title:'本局结算',text:r.result.text,options:[]}:r.pending||{title:'等待其他玩家',text:'',options:[]};}
+function choose(r,index){const p=r.pending;if(!p||r.result||!Number.isInteger(index)||!p.options[index])return false;r.pending=null;p.reply(p.options[index].reply);pump(r);return true;}
+function recommend(r){const p=r.pending;if(!p)return -1;const win=p.options.findIndex(o=>o.type==='win');if(win>=0)return win;
+ if(p.options.some(o=>o.type==='discard')){const best=r.human.select_dapai(),index=p.options.findIndex(o=>o.reply.dapai===best);return index>=0?index:p.options.findIndex(o=>o.type==='discard');}
+ return p.options.findIndex(o=>o.type==='pass');
+}
+function tiles(hand){const out=[];for(const suit of ['m','p','s','z'])for(let n=1;n<(suit==='z'?8:10);n++){let count=hand._bingpai[suit][n];if(suit!=='z'&&n===5){for(let i=0;i<hand._bingpai[suit][0];i++)out.push(suit+'0');count-=hand._bingpai[suit][0];}for(let i=0;i<count;i++)out.push(suit+n);}return out;}
+function snapshot(r){const m=r.human.model;return {names:m.player,seat:r.human._menfeng,scores:r.result?.scores||m.defen,remaining:m.shan.paishu,dora:[...m.shan.baopai],sticks:m.lizhibang,hand:tiles(r.human.shoupai),seats:m.shoupai.map((h,l)=>({name:m.player[m.player_id[l]],wind:'东南西北'[l],riichi:h.lizhi,river:[...m.he[l]._pai],melds:[...h._fulou]}))};}
+module.exports={createRound,node,choose,recommend,snapshot,tileName,meldName};

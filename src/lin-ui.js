@@ -1,0 +1,10 @@
+import {html} from 'lit';
+import {icon} from './ui.js';
+export function linPanel(s,full=false){const G=window.Game,r=s.romance,q=r.request,canContact=s.phase==='home'&&!s.loveFailed&&s.love<G.EVENTS.length&&r.lastContact!==s.day;
+ return html`<section class="lin-panel ${full?'lin-detail':'quest-panel'}"><div class="relationship-summary"><span>故事 ${s.love} / ${G.EVENTS.length}</span><span>好感 ${r.trust}/100</span><span>${G.relationshipLabel(s)}</span></div>
+ ${full?html`<p class="lin-location">${G.linStatus(s)}</p>`:''}
+ ${q?html`<div class="lin-request"><b>${q.status==='active'?'想请你教的歌':q.status==='completed'?'已经一起攻克':'上次的练习'}</b><p>${q.title} · ${['BASIC','ADVANCED','EXPERT','MASTER','Re:MASTER'][q.index]} · ${G.displayLevel(q.ds)}</p><small>${q.status==='active'?`打到鸟（100%） · ${G.dateISO({day:Math.floor(q.deadline/1440)+1})} ${G.time(q.deadline%1440)} 前 · 好感 +3`:q.status==='completed'?`${q.achievement.toFixed(4)}% · 好感 +3 已领取`:'已到期，等下次再约'}</small></div>`:''}
+ <div class="lin-actions">${r.pendingStory!==null?html`<button class="primary-btn" data-action="lin-story" ?disabled=${!['home','play','meal'].includes(s.phase)||!G.canSpendTime(s,15)}>${icon('book-open')}${G.EVENTS[r.pendingStory].title}</button>`:''}${s.phase==='play'&&G.linArcade(s)===s.arcade?html`<button class="secondary-btn" data-action="lin-pair">${icon('users')}和小凛拼机</button>`:''}
+ ${full?html`<button class="secondary-btn" data-action="love-contact" data-value="chat" ?disabled=${!canContact}>${icon('messages-square')}聊聊近况 · 15 分钟</button><button class="secondary-btn" data-action="love-contact" data-value="walk" ?disabled=${!canContact||s.stamina<8||s.money<8}>${icon('footprints')}一起散步 · 60 分钟 / ¥8</button>`:html`<button class="secondary-btn" data-action="relationship">${icon('heart-handshake')}剧情与日常</button>`}</div>
+ ${full?html`<div class="relationship-memories">${r.memories.length?r.memories.map(m=>html`<article><small>${G.dateISO({day:m.day})} · ${G.EVENTS[m.stage].title}</small><p>${m.text}</p></article>`):html`<p>从下一次见面开始，记下共同的回忆。</p>`}</div>`:''}</section>`;
+}

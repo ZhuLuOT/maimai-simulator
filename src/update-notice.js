@@ -1,3 +1,4 @@
+import releaseNotes from './release-notes.cjs';
 export function watchRelease({current,notify,fetchRelease,setInterval:repeat=globalThis.setInterval}) {
   let checking=false,announced='';
   async function check(){
@@ -29,6 +30,8 @@ export function installUpdateNotice({current,save,hasSave}){
     dialog.replaceChildren();
     const title=document.createElement('h2');title.id='release-title';title.textContent='游戏已更新，请刷新';
     const description=document.createElement('p');description.textContent=release.summary||'新版本已就绪，刷新后继续当前进度。';
+    const changes=document.createElement('ul');changes.className='release-changes';
+    for(const text of (Array.isArray(release.changes)?release.changes:[]).filter(x=>typeof x==='string').slice(0,8)){const item=document.createElement('li');item.textContent=text.slice(0,300);changes.append(item);}
     const status=document.createElement('p');status.setAttribute('role','status');
     const button=document.createElement('button');button.className='primary-btn';button.textContent='保存进度并刷新';
     button.addEventListener('click',()=>{
@@ -36,12 +39,12 @@ export function installUpdateNotice({current,save,hasSave}){
       try{localStorage.setItem(key,release.version);}catch{}
       const url=new URL(location.href);url.searchParams.set('v',release.version);location.replace(url.href);
     });
-    dialog.append(title,description,status,button);
+    dialog.append(title,description,changes,status,button);
     if(!dialog.open)dialog.showModal();
   }
   try{
     const seen=localStorage.getItem(key);
-    if(hasSave&&seen!==current)show({version:current,summary:'修复麻将结算后返回猫窝卡住的问题。新增隐藏猫头鹰与白云山深夜观鸟结局；猫窝改为聊天解锁，12000 Rating 奖励三项底力。高底力成长放缓，新增真实节假日日历，开场对话独立展示。赛季仍于 6 月 30 日结束。'});
+    if(hasSave&&seen!==current)show({version:current,...releaseNotes});
     else if(!seen)localStorage.setItem(key,current);
   }catch{}
   if(!/^https?:$/.test(location.protocol))return;

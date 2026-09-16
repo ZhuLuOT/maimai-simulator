@@ -1,11 +1,19 @@
 (function(root){
   'use strict';
   let G;
+  const YAKU=typeof module!=='undefined'?require('./data/mahjong-yaku'):root.MAHJONG_YAKU;
   const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)), now=s=>(s.day-1)*1440+s.clock;
-  const NAMES=['电压','Toqin','COLDDD'];
+  const NAMES=['电压','Toqin','COLDDD'],friendNames=s=>[...NAMES,...(s.love?['小凛']:[])];
   const DISCOVERABLE=['yuexiu','shamian','canton','yongqing'];
   const LOCATIONS=[...DISCOVERABLE,'baiyun'];
   const CHAT_BIRDS=['bulbul','robin','egret','kingfisher'];
+  const BIRD_TIPS=[
+    '先停下来听鸟鸣，再看树梢和枝叶间的动静，慢慢靠近比追着跑更容易观察。',
+    '认鸟可以先记体型、嘴形、尾巴和明显色块，再对照图鉴，不用一开始就记住所有名字。',
+    '带望远镜能在远处看清特征；游戏里不用另买装备，我们的观鸟记录也不要求拍照。',
+    '观鸟时保持距离，不投喂、不追赶、不用鸟鸣录音引诱；遇到巢和幼鸟时更要退远一点。',
+    '清晨常能听到活跃的鸟鸣。不过夜鹭等鸟也会在黄昏或夜间活动，不同鸟的作息不一样。'
+  ];
   const ENTRIES=[
     {id:'bulbul',kind:'bird',name:'白头鹎',place:'yuexiu',note:'广州公园与街头常见的留鸟。白色后枕和活泼的叫声是辨认线索。'},
     {id:'robin',kind:'bird',name:'鹊鸲',place:'shamian',note:'常在树荫和草地附近活动，黑白羽色鲜明，会翘起长尾。'},
@@ -61,29 +69,54 @@
     s.world??={};const w=s.world;
     w.seed??=(s.seed^0x4abcde)>>>0;w.locations??=(s.city?.visited||[]).filter(id=>LOCATIONS.includes(id));
     w.friends??=[];w.dm??={};w.dmDays??={};w.quests??={};w.entries??=[];w.notice??=null;w.lifeBucket??=-1;w.life??={};w.metSleep??=false;w.mahjong??={rounds:0,wins:0,last:null,active:null};
+    w.mahjong.collection??={};w.mahjong.tutorialDone??=w.mahjong.rounds>0;
+    w.dialogue??={birdGuideSent:(w.dm['电压']||[]).some(m=>!m.self&&/一起出发|整段游览/.test(m.text))};
     for(const id of NAMES){w.quests[id]??={stage:0,lastDay:0,started:false};w.quests[id].rewarded??=w.quests[id].stage>=(id==='电压'?4:QUESTS[id].steps.length);}
-    w.friends=[...new Set(w.friends.filter(id=>NAMES.includes(id)))];
+    w.friends=[...new Set(w.friends.filter(id=>friendNames(s).includes(id)))];
     for(const field of ['dm','dmDays'])for(const id of Object.keys(w[field]))if(!w.friends.includes(id))delete w[field][id];
     syncFriends(s);
+    if(s.love){const history=w.dm['小凛'];for(const m of s.chat.filter(m=>!m.self&&m.id==='小凛'))if(!history.some(x=>x.day===m.day&&x.time===m.time&&x.text===m.text))history.push({...m});w.dm['小凛']=history.sort((a,b)=>a.day-b.day||a.time-b.time).slice(-40);s.chat=s.chat.filter(m=>m.self||m.id!=='小凛');}
     // A reload forfeits the live table; already spent time and fees stay spent.
     if(w.mahjong.active){w.mahjong.active=null;w.mahjong.last={text:'上次对局中途离桌，未计入支线进度。',scores:[]};}
   }
   function rand(s){const w=s.world;w.seed=(Math.imul(w.seed,1664525)+1013904223)>>>0;return w.seed/4294967296;}
-  function message(s,id,text,entry=null){s.chat.push({id,text,day:s.day,time:s.clock,...(entry?{worldEntry:entry}:{})});s.chat=s.chat.slice(-60);}
-  function dm(s,id,text,self=false){const a=s.world.dm[id]??=[];a.push({id:self?s.profile.id:id,text,day:s.day,time:s.clock,self});s.world.dm[id]=a.slice(-40);}
-  function syncFriends(s){if(!s.world||!s.npcs)return;const w=s.world;for(const n of s.npcs){if(!NAMES.includes(n.id)||n.familiarity<30||w.friends.includes(n.id))continue;if(n.id==='COLDDD'&&!w.metSleep)continue;w.friends.push(n.id);dm(s,n.id,NAMES.includes(n.id)?{'电压':'除了舞萌，我还喜欢观鸟。有空一起去广州的公园走走？','Toqin':'最近画画卡住了……你听说街头那些像素搭档了吗？','COLDDD':'猫窝的牌桌一直给你留着位置。陪我练练，目标广州大赛！'}[n.id]:'群里经常见，终于加上好友了！有空一起出勤。');}}
+  function message(s,id,text,entry=null){G.postNPCMessage(s,s.npcs.find(n=>n.id===id),text,entry?{worldEntry:entry}:{});}
+  function dm(s,id,text,self=false){const a=s.world.dm[id]??=[];if(!self&&a.some(m=>!m.self&&m.text===text&&now(s)-((m.day-1)*1440+m.time)<20))return;a.push({id:self?s.profile.id:id,text,day:s.day,time:s.clock,self});s.world.dm[id]=a.slice(-40);}
+  function collectibleBirds(s,place){return ENTRIES.filter(e=>e.kind==='bird'&&!e.hidden&&e.place===place&&!CHAT_BIRDS.includes(e.id)&&!s.world.entries.includes(e.id));}
+  function birdReply(s,text){
+    const p=s.world.quests['电压'],step=QUESTS['电压'].steps[p.stage];
+    const daily='自己观鸟的话，在娱乐里重访越秀公园、沙面岛、花城广场或永庆坊，整段游览都要在 06:00–18:00 内。同一地点还有普通鸟没记录时，每次都会随机发现一种新鸟；收齐后就不会再出新的。';
+    let guide;
+    if(p.stage===0)guide=s.world.locations.includes('yuexiu')?'第一次观鸟我陪你去越秀公园。在我们的私聊或好友支线里点“一起出发”，完成这一轮后，你就能自己去各处记录更多鸟了。':'先从娱乐里的“出门闲逛”发现越秀公园，再到我们的私聊或好友支线里点“一起出发”。第一次观鸟我陪你去，之后你就能自己收集更多鸟了。';
+    else if(step?.night)guide='最后一轮，和我一起去白云山找夜行的朋友吧。22:00–04:00 之间留出完整的 90 分钟，凌晨最晚 02:30 出发；准备 18 体力和 ¥10。在我们的支线里点“一起出发”，完成后还能解锁白云山。';
+    else guide=daily+(step?`我们下一轮去${G.OUTINGS.find(x=>x.id===step.place).name}，在私聊或好友支线里点“一起出发”。`:'我们一起的观鸟故事完成了，还没记全的鸟可以继续慢慢找。');
+    // Hidden birds only enter the conversation's species pool after discovery.
+    const bird=ENTRIES.find(e=>e.kind==='bird'&&(!e.hidden||s.world.entries.includes(e.id))&&(text.includes(e.name)||e.id==='kingfisher'&&text.includes('翠鸟')));
+    const place=G.OUTINGS.find(x=>DISCOVERABLE.includes(x.id)&&text.includes({yuexiu:'越秀',shamian:'沙面',canton:'花城',yongqing:'永庆'}[x.id]));
+    if(p.stage>0&&place){const left=collectibleBirds(s,place.id).length;guide=`${place.name}${s.world.locations.includes(place.id)?'已经找到了':'还没发现，先出门闲逛找一找'}。那里还有 ${left} 种普通鸟没记录。${daily}`;}
+    else if(p.stage>0&&(/自己|白天|随机|概率|重复|没.*鸟|不.*触发/.test(text)||p.stage!==4&&/时间|几点/.test(text)))guide=daily+(step?.night?'不过我们最后一轮的邀约要在深夜 22:00–04:00，留足 90 分钟。':'');
+    if(step&&p.lastDay===s.day)guide+='今天已经一起去过了，下一轮要等明天。';
+    if(step&&s.phase!=='home')guide+='先结束这次出勤，回去后再一起出发。';
+    if(p.stage>0&&p.stage<4&&step&&!s.world.locations.includes(step.place))guide+='下一处地点还没发现的话，先出门闲逛找一找。';
+    const previous=[...(s.world.dm['电压']||[])].reverse().find(m=>!m.self)?.text||'';
+    const tip=bird?`${bird.name}：${bird.note}`:/猫头鹰|领角鸮|白云山|隐藏/.test(text)?'夜间观察要放轻声音，避免用闪光灯或强光直照鸟的眼睛，听到叫声也不要用录音引诱。':/装备|望远镜|相机|拍照/.test(text)?BIRD_TIPS[2]:/投喂|保护|注意|巢|幼鸟/.test(text)?BIRD_TIPS[3]:/辨认|识别|认鸟/.test(text)?BIRD_TIPS[1]:/鸟鸣|叫声|清晨|黄昏/.test(text)?BIRD_TIPS[4]:BIRD_TIPS[(BIRD_TIPS.findIndex(t=>previous.includes(t))+1)%BIRD_TIPS.length];
+    const asked=!!place||/怎么.*观鸟|如何.*观鸟|自己.*观鸟|观鸟.*(时间|触发)|下一轮|出发|几点|随机|概率/.test(text);
+    const explain=!s.world.dialogue.birdGuideSent||asked;s.world.dialogue.birdGuideSent=true;
+    return explain?[guide,tip]:[tip];
+  }
+  function syncFriends(s){if(!s.world||!s.npcs)return;const w=s.world;if(s.love&&!w.friends.includes('小凛')){w.friends.push('小凛');dm(s,'小凛','我是小凛。以后想约打歌、聊近况，都在这里找我吧。');}for(const n of s.npcs){if(!NAMES.includes(n.id)||n.familiarity<30||w.friends.includes(n.id))continue;if(n.id==='COLDDD'&&!w.metSleep)continue;w.friends.push(n.id);dm(s,n.id,NAMES.includes(n.id)?{'电压':'除了舞萌，我还喜欢观鸟。有空一起去广州的公园走走？','Toqin':'最近画画卡住了……你听说街头那些像素搭档了吗？','COLDDD':'猫窝的牌桌一直给你留着位置。陪我练练，目标广州大赛！'}[n.id]:'群里经常见，终于加上好友了！有空一起出勤。');}}
   function tick(s){if(!s.world)return;syncFriends(s);const w=s.world,b=Math.floor(now(s)/240);if(w.lifeBucket===b)return;w.lifeBucket=b;
     for(const [i,id]of NAMES.entries()){
       const night=s.clock<480||s.clock>=1380,places=['yuexiu','shamian','canton','yongqing'],place=places[(Math.floor(rand(s)*4)+i)%4];
-      w.life[id]=id==='电压'&&w.quests[id].stage===4&&(s.clock>=1320||s.clock<240)?'白云山山脚 · 等你一起观鸟':night?'休息中':id==='COLDDD'?'猫窝 · 练习与复盘':G.OUTINGS.find(x=>x.id===place).name+(id==='电压'?' · 观鸟':' · 街头速写');
+      w.life[id]=id==='电压'&&w.quests[id].stage===4&&(s.clock>=1320||s.clock<240)?'白云山山脚 · 等你一起观鸟':night||id==='COLDDD'?G.npcStatus(s,s.npcs.find(n=>n.id===id)):G.OUTINGS.find(x=>x.id===place).name+(id==='电压'?' · 观鸟':' · 街头速写');
       if(!night&&rand(s)<.34){const entry=ENTRIES.find(e=>e.place===place&&(id==='电压'?CHAT_BIRDS.includes(e.id):e.kind==='art'));
-        message(s,id,id==='电压'?`今天在${G.OUTINGS.find(x=>x.id===place).name}记录了${entry.name}，把照片发给大家看看。`:id==='Toqin'?'出门找了找灵感，广州街头好像真的有像素搭档！':'在猫窝摆牌谱，刚才那手还是应该早点防守。',id==='电压'?entry.id:null);}
+        message(s,id,id==='电压'?`今天在${G.OUTINGS.find(x=>x.id===place).name}记录了${entry.name}，把照片发给大家看看。`:id==='Toqin'?'出门找了找灵感，广州街头好像真的有像素搭档！':(G.denVisitors(s).some(n=>n.id===id)?'在猫窝摆牌谱，刚才那手还是应该早点防守。':'在家复盘，刚才那手还是应该早点防守。'),id==='电压'?entry.id:null);}
     }
   }
   function notify(s,title,text,entry=null){s.world.notice={title,text,entry};G.log(s,text,'event');}
   function active(s){if(s.ending||s.school.pending||s.event!==null||s.videoEvent||s.city.encounter||s.world.notice||s.world.mahjong.active)throw Error('请先完成当前事件或对局。');}
   function spend(s,time,stamina,cost=0){active(s);if(s.stamina<stamina||s.money<cost+G.hourlyCost(s,time))throw Error('体力或余额不足。');if(!G.canSpendTime(s,time)||s.phase==='play'&&s.clock+time>G.availableUntil(s))throw Error('时间不足或与固定日程冲突。');G.advance(s,time);if(s.ending)return false;s.stamina-=stamina;s.money-=cost;return true;}
-  function send(s,id,text){syncFriends(s);if(!s.world.friends.includes(id))throw Error('眼熟度达到 30 后可成为好友。');if(!['home','play','travel'].includes(s.phase))throw Error('先完成当前阶段。');text=String(text).trim();if(!text||text.length>100)throw Error('请输入 1–100 个字符。');if(!spend(s,5,0))return;dm(s,id,text,true);const n=s.npcs.find(n=>n.id===id);if(s.world.dmDays[id]!==s.day){n.familiarity=clamp(n.familiarity+4,0,100);s.world.dmDays[id]=s.day;}dm(s,id,NAMES.includes(id)?`${s.world.life[id]||'今天有空'}。${QUESTS[id].steps[s.world.quests[id].stage]?.name||'谢谢你一直陪着我，下次再一起出门。'}`:'收到，今天也记得好好吃饭。机厅见！');G.log(s,`和${id}私聊了 5 分钟。`,'heart');}
+  function send(s,id,text){syncFriends(s);if(!s.world.friends.includes(id))throw Error('眼熟度达到 30 后可成为好友。');if(!['home','play','travel'].includes(s.phase))throw Error('先完成当前阶段。');text=String(text).trim();if(!text||text.length>100)throw Error('请输入 1–100 个字符。');if(!spend(s,5,0))return;if(id==='小凛'){G.chatLin(s,text);G.log(s,'和小凛私聊了 5 分钟。','heart');return;}dm(s,id,text,true);const n=s.npcs.find(n=>n.id===id);if(s.world.dmDays[id]!==s.day){n.familiarity=clamp(n.familiarity+4,0,100);s.world.dmDays[id]=s.day;}if(id==='电压'){if(/谢谢|多谢|累|困|睡|麻将|打歌|舞萌|下班|在干嘛/.test(text))dm(s,id,G.npcReply(s,id,text));else for(const reply of birdReply(s,text))dm(s,id,reply);}else dm(s,id,G.npcReply(s,id,text));G.log(s,`和${id}私聊了 5 分钟。`,'heart');}
   function questReason(s,id){const q=QUESTS[id],p=s.world.quests[id];if(!q)return '没有这条支线';if(!s.world.friends.includes(id))return id==='COLDDD'?'先在猫窝打一局麻将':'眼熟度达到 30 后解锁好友';if(p.stage>=q.steps.length)return '故事已完成';if(p.lastDay===s.day)return '明天再继续';const step=q.steps[p.stage];if(step.place&&!step.unlockPlace&&!s.world.locations.includes(step.place))return `出门闲逛发现${G.OUTINGS.find(x=>x.id===step.place).name}`;if(step.night&&!(s.clock>=1320||s.clock+step.time<=240))return '深夜 22:00–04:00，预留 90 分钟';if(id==='COLDDD'){if(s.phase!=='play'||s.arcade!==5)return '前往猫窝';if(!step.time)return '完成一局麻将以继续';}else if(s.phase!=='home')return '结束出勤后再出门';return '';}
   function complete(s,id){const p=s.world.quests[id],q=QUESTS[id],step=q.steps[p.stage];p.started=true;p.stage++;p.lastDay=s.day;
     if(step.entry&&!s.world.entries.includes(step.entry))s.world.entries.push(step.entry);s.mood=clamp(s.mood+8,0,100);s.money+=20;
@@ -98,7 +131,7 @@
     if(LOCATIONS.includes(id)){
       const place=G.OUTINGS.find(x=>x.id===id);
       const daylight=before.clock>=360&&before.day===s.day&&s.clock<=1080;
-      const birds=daylight&&w.quests['电压'].stage>0?ENTRIES.filter(e=>e.kind==='bird'&&!e.hidden&&e.place===id&&!CHAT_BIRDS.includes(e.id)&&!w.entries.includes(e.id)):[];
+      const birds=daylight&&w.quests['电压'].stage>0?collectibleBirds(s,id):[];
       if(birds.length){const bird=birds[Math.floor(rand(s)*birds.length)];w.entries.push(bird.id);notify(s,'观鸟记录 · '+bird.name,`在${place.name}慢慢走时，你记录到了${bird.name}。${bird.note}`,bird.id);return;}
       notify(s,'来到'+place.name,`${place.place}。${NAMES.filter(n=>w.life[n]?.startsWith(place.name)).map(n=>`${n}也在这里，朝你挥了挥手。`).join('')||'你放慢脚步，看看今天的街景。'}`);return;
     }
@@ -108,17 +141,30 @@
     if(r){notify(s,'发现餐馆',`香味从门口飘出来，你记下了${G.RESTAURANTS.find(x=>x.id===r).name}的地址，下机后可以来吃。`);return;}
     const left=DISCOVERABLE.filter(x=>!w.locations.includes(x));if(left.length){const place=left[Math.floor(rand(s)*left.length)];w.locations.push(place);const x=G.OUTINGS.find(x=>x.id===place);notify(s,'发现新地点 · '+x.name,`闲逛时，你来到${x.name}，${x.place}让你停下脚步。现在可以再次来这里，也许能遇到正在外出的好友。`);message(s,'电压',`你发现了${x.name}？那里很适合慢慢走，下次一起。`);}else notify(s,'熟悉街巷的新风景','广州的几处特别去处都记下了。今天沿着熟悉的街道走了走，也很开心。');
   }
-  function startMahjong(s){active(s);if(s.phase!=='play'||s.arcade!==5)throw Error('请先前往猫窝。');if(!spend(s,25,8))return;
-    const w=s.world;w.metSleep=true;const n=s.npcs.find(n=>n.id==='COLDDD');n.familiarity=Math.max(30,n.familiarity);syncFriends(s);w.mahjong.active={day:s.day,time:s.clock};G.log(s,'在猫窝和COLDDD、逃遁、鲁米诺开了一桌立直麻将。25 分钟，体力 -8，计入小时费用。','heart');
+  function startMahjong(s){active(s);if(s.phase!=='play'||s.arcade!==5)throw Error('请先前往猫窝。');const seats=G.mahjongPlayers(s);if(seats.length<3)throw Error('猫窝还没凑齐三位牌友，晚点再来。');if(!spend(s,25,8))return false;
+    const w=s.world;if(seats.some(n=>n.id==='COLDDD')){w.metSleep=true;const n=s.npcs.find(n=>n.id==='COLDDD');n.familiarity=Math.max(30,n.familiarity);syncFriends(s);}w.mahjong.active={day:s.day,time:s.clock,players:seats.map(n=>n.id)};G.log(s,'在猫窝和'+seats.map(n=>n.id).join('、')+'开了一桌立直麻将。25 分钟，体力 -8，计入小时费用。','heart');return true;
   }
-  function finishMahjong(s,result){const w=s.world,m=w.mahjong;if(!m.active)throw Error('当前没有对局。');if(!result||!Array.isArray(result.scores)||result.scores.length!==4||!result.scores.every(Number.isFinite))throw Error('无效对局结果。');m.active=null;m.rounds++;if(result.scores[0]>result.scores[1])m.wins++;m.last={text:result.text.slice(0,200),scores:result.scores};s.mood=clamp(s.mood+5,0,100);const q=w.quests['COLDDD'];if(q.stage<6&&!QUESTS['COLDDD'].steps[q.stage].time&&q.lastDay!==s.day)complete(s,'COLDDD');else G.log(s,'猫窝麻将结束：'+result.text,'heart');}
+  function finishMahjong(s,result){
+    const w=s.world,m=w.mahjong;if(!m.active)throw Error('当前没有对局。');
+    if(!result||typeof result.text!=='string'||!Array.isArray(result.scores)||result.scores.length!==4||!result.scores.every(Number.isFinite)||result.wins!==undefined&&(!Array.isArray(result.wins)||!result.wins.every(x=>Number.isInteger(x.winner)&&x.winner>=0&&x.winner<4&&Array.isArray(x.yaku)&&x.yaku.every(y=>typeof y.name==='string'))))throw Error('无效对局结果。');
+    const withTeacher=!m.active.players||m.active.players.includes('COLDDD');if(withTeacher)m.tutorialDone=true;const playerWins=result.wins?.filter(x=>x.winner===0)||[];m.active=null;m.rounds++;if(result.wins?playerWins.length:result.scores[0]>25000)m.wins++;
+    const earned=[...new Set(playerWins.flatMap(x=>x.yaku.map(y=>YAKU.find(e=>e.source.includes(y.name))?.id).filter(Boolean)))];
+    for(const id of earned){const record=m.collection[id]??={count:0,firstDay:s.day};record.count++;}
+    m.last={text:result.text.slice(0,200),scores:result.scores,yaku:earned};s.mood=clamp(s.mood+5,0,100);const q=w.quests['COLDDD'];
+    if(withTeacher&&q.stage<6&&!QUESTS['COLDDD'].steps[q.stage].time&&q.lastDay!==s.day)complete(s,'COLDDD');else G.log(s,'猫窝麻将结束：'+result.text,'heart');
+    if(earned.length)G.log(s,'役种记录：'+earned.map(id=>YAKU.find(e=>e.id===id).name).join('、'),'event');
+  }
+  function mahjongPlayers(s){return G.denVisitors(s).sort((a,b)=>Number(b.id==='COLDDD')-Number(a.id==='COLDDD')).slice(0,3);}
   function valid(s){const w=s.world;if(!w||!Number.isInteger(w.seed)||!Array.isArray(w.locations)||new Set(w.locations).size!==w.locations.length||!w.locations.every(x=>LOCATIONS.includes(x)))return false;
-    if(!Array.isArray(w.friends)||w.friends.length>3||new Set(w.friends).size!==w.friends.length||!w.friends.every(x=>NAMES.includes(x)&&s.npcs.some(n=>n.id===x))||!Array.isArray(w.entries)||w.entries.length>ENTRIES.length||new Set(w.entries).size!==w.entries.length||!w.entries.every(x=>ENTRIES.some(e=>e.id===x)))return false;
+    if(typeof w.mahjong?.tutorialDone!=='boolean')return false;
+    if(s.phone&&(!Number.isSafeInteger(s.phone.next)||s.phone.next<0||!s.phone.read||Array.isArray(s.phone.read)||!Object.entries(s.phone.read).every(([id,value])=>['group',...friendNames(s)].includes(id)&&Number.isSafeInteger(value)&&value>=0&&value<=s.phone.next)))return false;
+    if(!w.dialogue||typeof w.dialogue.birdGuideSent!=='boolean'||!w.mahjong?.collection||Array.isArray(w.mahjong.collection)||!Object.entries(w.mahjong.collection).every(([id,v])=>YAKU.some(e=>e.id===id)&&v&&Number.isInteger(v.count)&&v.count>0&&v.count<=w.mahjong.wins&&Number.isInteger(v.firstDay)&&v.firstDay>=1&&v.firstDay<=s.day))return false;
+    if(!Array.isArray(w.friends)||w.friends.length>4||new Set(w.friends).size!==w.friends.length||!w.friends.every(x=>friendNames(s).includes(x)&&s.npcs.some(n=>n.id===x))||!Array.isArray(w.entries)||w.entries.length>ENTRIES.length||new Set(w.entries).size!==w.entries.length||!w.entries.every(x=>ENTRIES.some(e=>e.id===x)))return false;
     if(!w.quests||!NAMES.every(id=>{const p=w.quests[id];return p&&Number.isInteger(p.stage)&&p.stage>=0&&p.stage<=QUESTS[id].steps.length&&Number.isInteger(p.lastDay)&&p.lastDay>=0&&p.lastDay<=s.day&&typeof p.started==='boolean'&&typeof p.rewarded==='boolean';}))return false;
     if(!w.dm||!Object.entries(w.dm).every(([id,a])=>w.friends.includes(id)&&Array.isArray(a)&&a.length<=40&&a.every(m=>typeof m.text==='string'&&m.text.length<=300&&typeof m.id==='string'&&Number.isInteger(m.day)&&Number.isInteger(m.time))))return false;
-    const m=w.mahjong;return typeof w.metSleep==='boolean'&&w.dmDays&&w.life&&Number.isInteger(w.lifeBucket)&&!!m&&['rounds','wins'].every(k=>Number.isInteger(m[k])&&m[k]>=0&&m[k]<=10000)&&m.wins<=m.rounds&&(!w.notice||typeof w.notice.title==='string'&&w.notice.title.length<100&&typeof w.notice.text==='string'&&w.notice.text.length<1000&&(!w.notice.entry||ENTRIES.some(e=>e.id===w.notice.entry)))&&(!m.active||Number.isInteger(m.active.day)&&Number.isInteger(m.active.time));
+    const m=w.mahjong;return typeof w.metSleep==='boolean'&&w.dmDays&&w.life&&Number.isInteger(w.lifeBucket)&&!!m&&['rounds','wins'].every(k=>Number.isInteger(m[k])&&m[k]>=0&&m[k]<=10000)&&m.wins<=m.rounds&&(!w.notice||typeof w.notice.title==='string'&&w.notice.title.length<100&&typeof w.notice.text==='string'&&w.notice.text.length<1000&&(!w.notice.entry||ENTRIES.some(e=>e.id===w.notice.entry)))&&(!m.active||Number.isInteger(m.active.day)&&Number.isInteger(m.active.time)&&Array.isArray(m.active.players)&&m.active.players.length===3&&new Set(m.active.players).size===3&&m.active.players.every(id=>s.npcs.some(n=>n.id===id)));
   }
-  function install(api){G=api;Object.assign(api,{WORLD_ENTRIES:ENTRIES,QUESTS,worldTick:tick,syncFriends,sendDM:send,questReason,doQuest:quest,startMahjong,finishMahjong,worldScoreBonus:bonus,availableOutings:s=>G.OUTINGS.filter(x=>!LOCATIONS.includes(x.id)||s.world.locations.includes(x.id))});
+  function install(api){G=api;Object.assign(api,{WORLD_ENTRIES:ENTRIES,MAHJONG_YAKU:YAKU,QUESTS,worldTick:tick,syncFriends,sendDM:send,questReason,doQuest:quest,mahjongPlayers,startMahjong,finishMahjong,worldScoreBonus:bonus,availableOutings:s=>G.OUTINGS.filter(x=>!LOCATIONS.includes(x.id)||s.world.locations.includes(x.id))});
     const explore=G.explore;G.explore=(s,id)=>{active(s);if(!G.availableOutings(s).some(x=>x.id===id))throw Error('先出门闲逛发现这个地点。');const before={day:s.day,clock:s.clock,arcades:[...s.city.arcades],restaurants:[...s.city.restaurants]};explore(s,id);afterExplore(s,id,before);};
   }
   const api={ensure,valid,install};if(typeof module!=='undefined')module.exports=api;else root.World=api;

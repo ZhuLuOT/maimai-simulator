@@ -56,8 +56,8 @@ test('B35 + B15 retains separate records per chart and version',()=>{
  assert.equal(G.best(s).old.length,35);assert.equal(G.best(s).fresh.length,15);assert.equal(s.rating,35*(315+349)/2+15*(310+324)/2);
 });
 test('daily actions consume hours without ending the day; sleep charges baseline once',()=>{
- const s=G.create('grinder');G.daily(s,'work');assert.equal(s.clock,720);assert.equal(s.day,1);assert.equal(s.money,1840);G.daily(s,'wait');assert.equal(s.clock,780);G.daily(s,'fun');assert.equal(s.clock,900);
- const before=s.money;G.sleep(s);assert.equal(s.day,1);assert.equal(s.clock,1380);assert.equal(s.money,before);G.daily(s,'wait');assert.equal(s.day,2);assert.equal(s.money,before-25);
+ const s=G.create('grinder');G.daily(s,'work');assert.equal(s.clock,720);assert.equal(s.day,1);assert.equal(s.money,1860);G.daily(s,'wait');assert.equal(s.clock,780);G.daily(s,'fun');assert.equal(s.clock,900);
+ const before=s.money;G.sleep(s);assert.equal(s.day,2);assert.equal(s.clock,60);assert.equal(s.money,before-25);G.daily(s,'wait');assert.equal(s.day,2);assert.equal(s.money,before-25);
 });
 test('worker cannot take side jobs, skip shifts, sleep through work or attend during work',()=>{
  const s=G.create('worker');s.day=2;assert.throws(()=>G.daily(s,'work'));assert.throws(()=>G.resolveClass(s,'shift',false));
@@ -91,7 +91,7 @@ test('arcade closing, return and meal deadlines, and outing does not end the day
  const t=G.create();arrive(t);t.clock=G.availableUntil(t)-G.roundMinutes(t);assert.equal(G.playReason(t),'');G.play(t,G.recommend(t,pool),pool);assert.ok(t.clock<=1410);assert.ok(G.playReason(t));G.finishPlay(t);G.meal(t,'home');assert.equal(t.day,2);assert.ok(t.clock<60);assert.equal(t.phase,'home');
 });
 test('romance final event strictly requires >13000 and correct chain',()=>{
- const s=G.create('grinder');s.phase='meal';for(let i=0;i<G.EVENTS.length-1;i++){s.day=Math.max(s.day,s.romance.nextDay);s.clock=600;s.event=i;G.answer(s,G.EVENTS[i].correct);}s.day=s.romance.nextDay;s.phase='play';s.trip={rounds:1};s.visits=30;s.rating=13000;G.finishPlay(s);assert.equal(s.event,null);s.phase='play';s.rating=13001;G.finishPlay(s);assert.equal(s.event,G.EVENTS.length-1);G.answer(s,0);assert.equal(s.ending,'love');
+ const s=G.create('grinder');s.phase='meal';for(let i=0;i<G.EVENTS.length-1;i++){s.day=Math.max(s.day,s.romance.nextDay);s.clock=600;s.event=i;G.answer(s,G.EVENTS[i].correct);s.phase='home';G.contactLove(s,'chat');}s.day=s.romance.nextDay;s.phase='play';s.trip={rounds:1};s.visits=30;s.rating=13000;G.finishPlay(s);assert.equal(s.event,null);s.phase='play';s.rating=13001;G.finishPlay(s);assert.equal(s.romance.pendingStory,G.EVENTS.length-1);G.openLinStory(s);assert.equal(s.event,G.EVENTS.length-1);G.answer(s,0);assert.equal(s.ending,'love');
 });
 test('old saves migrate with finances, chart records and relationships intact',()=>{
  const c=pool[0],old={version:1,job:'student',seed:42,day:13,money:128,mood:64,skill:11.64,records:{[G.key(c)]:{...c,achievement:100.5,ra:112}},started:true,visits:6,credits:10,love:1,loveFailed:false,nextLoveVisit:8};

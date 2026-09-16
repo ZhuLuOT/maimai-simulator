@@ -29,7 +29,7 @@ test('featured quest stages cost resources, record the encyclopedia and award pe
 });
 
 test('cat den mahjong entry costs real time and stamina, unlocks COLDDD and records a verified result',()=>{
- const s=G.create('grinder',42);s.city.denUnlocked=true;G.startTrip(s);s.arcade=5;G.travel(s,'taxi',5);G.drink(s,'water');
+ const s=G.create('grinder',42);s.city.denUnlocked=true;s.clock=1320;G.startTrip(s);s.arcade=5;G.travel(s,'taxi',5);G.drink(s,'water');
  const before={clock:s.clock,stamina:s.stamina,money:s.money};G.startMahjong(s);assert.equal(s.clock,before.clock+25);assert.ok(s.stamina<before.stamina);assert.ok(s.world.friends.includes('COLDDD'));assert.ok(s.world.mahjong.active);
  G.finishMahjong(s,{scores:[27000,23000,25000,25000],text:'玩家荣和 · 2000 点'});assert.equal(s.world.mahjong.rounds,1);assert.equal(s.world.mahjong.wins,1);assert.equal(s.world.quests['COLDDD'].stage,1);assert.ok(s.world.notice);assert.ok(G.validate(s));
 });
@@ -87,6 +87,6 @@ test('final bird quest enforces the night window, crosses midnight, and migrates
 
 test('Dianya group posts continue to use only the four original photo entries',()=>{
  const s=G.create('grinder',42),posted=new Set();
- for(let i=0;i<150;i++){s.clock=480+(i%3)*240;s.world.lifeBucket=-1;G.worldTick(s);for(const m of s.chat)if(m.id==='电压'&&m.worldEntry)posted.add(m.worldEntry);}
+ for(let i=0;i<150;i++){s.day=1+Math.floor(i/3);s.clock=480+(i%3)*240;s.world.lifeBucket=-1;G.worldTick(s);for(const m of s.chat)if(m.id==='电压'&&m.worldEntry)posted.add(m.worldEntry);}
  assert.deepEqual([...posted].sort(),['bulbul','egret','kingfisher','robin']);
 });

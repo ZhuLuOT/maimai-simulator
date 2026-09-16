@@ -23,12 +23,14 @@ const filesToCopy = [
   'city.js',
   'competition.js',
   'romance.js',
+  'lin-life.js',
   'guidance.js',
   'rest-life.js',
   'needs.js',
   'b50.js',
   'collection.js',
   'systems.js',
+  'social-life.js',
   'engine.js',
 ];
 
@@ -83,7 +85,7 @@ fs.mkdirSync(outDir, { recursive: true });
 for (const file of filesToCopy) {
   fs.copyFileSync(path.join(rootDir, file), path.join(outDir, file));
 }
-const release=JSON.stringify({version,summary:'修复麻将结算后返回猫窝卡住的问题。新增隐藏猫头鹰与白云山深夜观鸟结局；猫窝改为聊天解锁，12000 Rating 奖励三项底力。高底力成长放缓，新增真实节假日日历，开场对话独立展示。赛季仍于 6 月 30 日结束。'});
+const release=JSON.stringify({version,...require('../src/release-notes.cjs')});
 fs.writeFileSync(path.join(rootDir,'version.json'),release);
 fs.writeFileSync(path.join(outDir,'version.json'),release);
 const index=fs.readFileSync(path.join(rootDir,'index.html'),'utf8').replace(/((?:src|href)="[^"?]+\.(?:js|css))"/g,'$1?v='+version+'"');
