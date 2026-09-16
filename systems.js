@@ -2,7 +2,7 @@
   'use strict';
   const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
   const rand=s=>{s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296;};
-  const IDS=['逃遁','鲁米诺','电压','Toqin','我要睡觉','星轨','小盐','404NOTFOUND','八分音符','纸飞机','折返跑','凛冬','橘子汽水','月读','栗子','白昼梦','NekoDX','竹间雨','北纬31','千层雪','再来一把','空白键','mikan','摇光','未完成','七海','镜花','下次一定','微光','晚风'];
+  const IDS=['逃遁','鲁米诺','电压','Toqin','COLDDD','星轨','小盐','404NOTFOUND','八分音符','纸飞机','折返跑','凛冬','橘子汽水','月读','栗子','白昼梦','NekoDX','竹间雨','北纬31','千层雪','再来一把','空白键','mikan','摇光','未完成','七海','镜花','下次一定','微光','晚风'];
   const CONDITIONS=[{name:'极差',score:-.65},{name:'还行',score:-.25},{name:'普通',score:0},{name:'不错',score:.13},{name:'完美',score:.26}];
   const GLOVES=[{id:'cotton',name:'棉线手套',cost:8,durability:100,wear:1},{id:'sport',name:'耐磨手套',cost:25,durability:240,wear:.85}];
   const TALENTS=[
@@ -23,7 +23,7 @@
     s.condition??=2;s.queueUntil??=0;s.consecutive??=0;s.partner??=null;s.friendship??=false;s.instinct??=false;
     s.metrics??={star:0,key:0,challenge:0,crowd:0,classic:0,vocal:0,touhou:0,ghost:0};
     s.npcs??=IDS.map((id,i)=>({id,rating:7800+Math.floor(rand(s)*8000),familiarity:0,activity:1+i%4}));
-    const renamed={'凌晨四点':'逃遁','青柠苏打':'鲁米诺','捞月':'电压','阿澈':'Toqin','今天不推分':'我要睡觉'},rename=id=>renamed[id]||id;
+    const renamed={'凌晨四点':'逃遁','青柠苏打':'鲁米诺','捞月':'电压','阿澈':'Toqin','今天不推分':'COLDDD'},rename=id=>renamed[id]||id;
     s.npcs.forEach(n=>{n.id=rename(n.id);});
     s.chat?.forEach(m=>{if(!m.self)m.id=rename(m.id);});
     for(const r of [...Object.values(s.records),...(s.last?.results||[]),...(s.trip?.played||[])])if(r.opponent)r.opponent.id=rename(r.opponent.id);

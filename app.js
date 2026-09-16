@@ -302,7 +302,7 @@ import {startTable,chooseMahjong,autoMahjong,abandonMahjong,mahjongView} from '.
     if(modal==='atlas')content=frame('城市图鉴','观鸟记录 · 像素画作',atlasView(state,atlasTab),true);
     if(modal==='quests')content=frame('好友支线','他们也有自己的广州生活',questsView(state),true);
     if(modal==='world-event')content=frame(state.world.notice.title,'广州 · 新的相遇',worldNotice(state),false,false);
-    if(modal==='mahjong')content=frame('猫窝麻将','立直麻将一局战 · 我要睡觉 / 逃遁 / 鲁米诺',mahjongView(),true,false);
+    if(modal==='mahjong')content=frame('猫窝麻将','立直麻将一局战 · COLDDD / 逃遁 / 鲁米诺',mahjongView(),true,false);
     if (modal === 'supplies') content = frame('手套与补给', '钱包 ¥' + state.money, LifeUI.shop(state));
     if (modal === 'plates') content = frame('我的名牌', '版本成就 · 极 / 将 / 神 / 舞舞', LifeUI.collections(state, pool, collectionTab, collectionSearch, collectionPage, collectionStatus), true);
     if (modal === 'ranks') content = frame('段位与友人对战','友人对战 · 四曲 LIFE 挑战',LifeUI.ranks(state,pool),true);

@@ -2,7 +2,7 @@
   'use strict';
   let G;
   const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)), now=s=>(s.day-1)*1440+s.clock;
-  const NAMES=['电压','Toqin','我要睡觉'];
+  const NAMES=['电压','Toqin','COLDDD'];
   const LOCATIONS=['yuexiu','shamian','canton','yongqing'];
   const ENTRIES=[
     {id:'bulbul',kind:'bird',name:'白头鹎',place:'yuexiu',note:'广州公园与街头常见的留鸟。白色后枕和活泼的叫声是辨认线索。'},
@@ -25,8 +25,8 @@
       {name:'骑楼里的像素',place:'shamian',time:55,stamina:10,cost:0,entry:'shama',text:'しゃま的身影从骑楼边探出来。你帮 Toqin 选景，他终于画下第一张满意的草稿。'},
       {name:'把晚风画下来',place:'canton',time:60,stamina:12,cost:0,entry:'milk',text:'珠江边的みるく化成了小小光点。Toqin 不再追求完美，而是认真记住这一刻。'},
       {name:'广州像素画展',place:'yongqing',time:75,stamina:14,cost:10,entry:'salt',text:'最后遇见了ソルト。四幅画在西关的小展墙上排开，Toqin 把你的名字写进了创作感谢。'}]},
-    '我要睡觉':{title:'狂赌之渊',buff:'牌桌定心',effect:'键盘力 +0.25，低于普通状态时的状态扣分减少 30%',steps:[
-      {name:'猫窝初对局',time:0,stamina:0,cost:0,text:'“我叫我要睡觉，但今晚还想打一局。”她拉开猫窝牌桌旁的椅子，你们开始了第一场练习。'},
+    'COLDDD':{title:'狂赌之渊',buff:'牌桌定心',effect:'键盘力 +0.25，低于普通状态时的状态扣分减少 30%',steps:[
+      {name:'猫窝初对局',time:0,stamina:0,cost:0,text:'“我叫COLDDD，但今晚还想打一局。”她拉开猫窝牌桌旁的椅子，你们开始了第一场练习。'},
       {name:'复盘与舍牌',time:30,stamina:5,cost:0,text:'你们把牌河重新摆了一遍。她开始记住什么时候该进攻，什么时候该停手。'},
       {name:'赛前练习',time:0,stamina:0,cost:0,text:'“再陪我练一场吧。”这次她不再只盯着自己的手牌，也会观察另外三家的动作。'},
       {name:'广州预选赛',time:0,stamina:0,cost:0,text:'练习终于有了回报。她完成了预选赛，拿着参赛证约你继续准备下一轮。'},
@@ -45,11 +45,11 @@
   function rand(s){const w=s.world;w.seed=(Math.imul(w.seed,1664525)+1013904223)>>>0;return w.seed/4294967296;}
   function message(s,id,text,entry=null){s.chat.push({id,text,day:s.day,time:s.clock,...(entry?{worldEntry:entry}:{})});s.chat=s.chat.slice(-60);}
   function dm(s,id,text,self=false){const a=s.world.dm[id]??=[];a.push({id:self?s.profile.id:id,text,day:s.day,time:s.clock,self});s.world.dm[id]=a.slice(-40);}
-  function syncFriends(s){if(!s.world||!s.npcs)return;const w=s.world;for(const n of s.npcs){if(n.familiarity<30||w.friends.includes(n.id))continue;if(n.id==='我要睡觉'&&!w.metSleep)continue;w.friends.push(n.id);dm(s,n.id,NAMES.includes(n.id)?{'电压':'除了舞萌，我还喜欢观鸟。有空一起去广州的公园走走？','Toqin':'最近画画卡住了……你听说街头那些像素搭档了吗？','我要睡觉':'猫窝的牌桌一直给你留着位置。陪我练练，目标广州大赛！'}[n.id]:'群里经常见，终于加上好友了！有空一起出勤。');}}
+  function syncFriends(s){if(!s.world||!s.npcs)return;const w=s.world;for(const n of s.npcs){if(n.familiarity<30||w.friends.includes(n.id))continue;if(n.id==='COLDDD'&&!w.metSleep)continue;w.friends.push(n.id);dm(s,n.id,NAMES.includes(n.id)?{'电压':'除了舞萌，我还喜欢观鸟。有空一起去广州的公园走走？','Toqin':'最近画画卡住了……你听说街头那些像素搭档了吗？','COLDDD':'猫窝的牌桌一直给你留着位置。陪我练练，目标广州大赛！'}[n.id]:'群里经常见，终于加上好友了！有空一起出勤。');}}
   function tick(s){if(!s.world)return;syncFriends(s);const w=s.world,b=Math.floor(now(s)/240);if(w.lifeBucket===b)return;w.lifeBucket=b;
     for(const [i,id]of NAMES.entries()){
       const night=s.clock<480||s.clock>=1380,places=['yuexiu','shamian','canton','yongqing'],place=places[(Math.floor(rand(s)*4)+i)%4];
-      w.life[id]=night?'休息中':id==='我要睡觉'?'猫窝 · 练习与复盘':G.OUTINGS.find(x=>x.id===place).name+(id==='电压'?' · 观鸟':' · 街头速写');
+      w.life[id]=night?'休息中':id==='COLDDD'?'猫窝 · 练习与复盘':G.OUTINGS.find(x=>x.id===place).name+(id==='电压'?' · 观鸟':' · 街头速写');
       if(!night&&rand(s)<.34){const entry=ENTRIES.find(e=>e.place===place&&e.kind===(id==='电压'?'bird':'art'));
         message(s,id,id==='电压'?`今天在${G.OUTINGS.find(x=>x.id===place).name}记录了${entry.name}，把照片发给大家看看。`:id==='Toqin'?'出门找了找灵感，广州街头好像真的有像素搭档！':'在猫窝摆牌谱，刚才那手还是应该早点防守。',id==='电压'?entry.id:null);}
     }
@@ -58,15 +58,15 @@
   function active(s){if(s.ending||s.school.pending||s.event!==null||s.videoEvent||s.city.encounter||s.world.notice||s.world.mahjong.active)throw Error('请先完成当前事件或对局。');}
   function spend(s,time,stamina,cost=0){active(s);if(s.stamina<stamina||s.money<cost+G.hourlyCost(s,time))throw Error('体力或余额不足。');if(!G.canSpendTime(s,time)||s.phase==='play'&&s.clock+time>G.availableUntil(s))throw Error('时间不足或与固定日程冲突。');G.advance(s,time);if(s.ending)return false;s.stamina-=stamina;s.money-=cost;return true;}
   function send(s,id,text){syncFriends(s);if(!s.world.friends.includes(id))throw Error('眼熟度达到 30 后可成为好友。');if(!['home','play','travel'].includes(s.phase))throw Error('先完成当前阶段。');text=String(text).trim();if(!text||text.length>100)throw Error('请输入 1–100 个字符。');if(!spend(s,5,0))return;dm(s,id,text,true);const n=s.npcs.find(n=>n.id===id);if(s.world.dmDays[id]!==s.day){n.familiarity=clamp(n.familiarity+4,0,100);s.world.dmDays[id]=s.day;}dm(s,id,NAMES.includes(id)?`${s.world.life[id]||'今天有空'}。${QUESTS[id].steps[s.world.quests[id].stage]?.name||'谢谢你一直陪着我，下次再一起出门。'}`:'收到，今天也记得好好吃饭。机厅见！');G.log(s,`和${id}私聊了 5 分钟。`,'heart');}
-  function questReason(s,id){const q=QUESTS[id],p=s.world.quests[id];if(!q)return '没有这条支线';if(!s.world.friends.includes(id))return id==='我要睡觉'?'先在猫窝打一局麻将':'眼熟度达到 30 后解锁好友';if(p.stage>=q.steps.length)return '故事已完成';if(p.lastDay===s.day)return '明天再继续';const step=q.steps[p.stage];if(step.place&&!s.world.locations.includes(step.place))return `出门闲逛发现${G.OUTINGS.find(x=>x.id===step.place).name}`;if(id==='我要睡觉'){if(s.phase!=='play'||s.arcade!==5)return '前往猫窝';if(!step.time)return '完成一局麻将以继续';}else if(s.phase!=='home')return '结束出勤后再出门';return '';}
+  function questReason(s,id){const q=QUESTS[id],p=s.world.quests[id];if(!q)return '没有这条支线';if(!s.world.friends.includes(id))return id==='COLDDD'?'先在猫窝打一局麻将':'眼熟度达到 30 后解锁好友';if(p.stage>=q.steps.length)return '故事已完成';if(p.lastDay===s.day)return '明天再继续';const step=q.steps[p.stage];if(step.place&&!s.world.locations.includes(step.place))return `出门闲逛发现${G.OUTINGS.find(x=>x.id===step.place).name}`;if(id==='COLDDD'){if(s.phase!=='play'||s.arcade!==5)return '前往猫窝';if(!step.time)return '完成一局麻将以继续';}else if(s.phase!=='home')return '结束出勤后再出门';return '';}
   function complete(s,id){const p=s.world.quests[id],q=QUESTS[id],step=q.steps[p.stage];p.started=true;p.stage++;p.lastDay=s.day;
     if(step.entry&&!s.world.entries.includes(step.entry))s.world.entries.push(step.entry);s.mood=clamp(s.mood+8,0,100);s.money+=20;
     const n=s.npcs.find(n=>n.id===id);n.familiarity=clamp(n.familiarity+8,0,100);dm(s,id,step.text);
-    let reward='心情 +8 · 获得 ¥20';if(p.stage===q.steps.length){const key={'电压':'reading','Toqin':'star','我要睡觉':'key'}[id];s.skills[key]=clamp(s.skills[key]+.25,1,22);reward+=` · 获得「${q.buff}」：${q.effect}`;}
+    let reward='心情 +8 · 获得 ¥20';if(p.stage===q.steps.length){const key={'电压':'reading','Toqin':'star','COLDDD':'key'}[id];s.skills[key]=clamp(s.skills[key]+.25,1,22);reward+=` · 获得「${q.buff}」：${q.effect}`;}
     notify(s,q.title+' · '+step.name,step.text+'\n'+reward,step.entry);G.check(s);
   }
   function quest(s,id){const reason=questReason(s,id);if(reason)throw Error(reason);const step=QUESTS[id].steps[s.world.quests[id].stage];if(!spend(s,step.time,step.stamina,step.cost))return;if(step.place)s.nutrition.away=true;complete(s,id);}
-  function bonus(s,c){if(!s.world)return 0;let value=0;if(s.world.quests['电压'].stage===4&&!s.practice[G.key(c)])value+=.08;if(s.world.quests.Toqin.stage===4&&c.tendency==='star')value+=.06;if(s.world.quests['我要睡觉'].stage===6&&s.condition<2)value+=Math.abs(G.CONDITIONS[s.condition].score)*.3;return value;}
+  function bonus(s,c){if(!s.world)return 0;let value=0;if(s.world.quests['电压'].stage===4&&!s.practice[G.key(c)])value+=.08;if(s.world.quests.Toqin.stage===4&&c.tendency==='star')value+=.06;if(s.world.quests['COLDDD'].stage===6&&s.condition<2)value+=Math.abs(G.CONDITIONS[s.condition].score)*.3;return value;}
   function afterExplore(s,id,before){const w=s.world;if(s.ending||s.city.encounter)return;
     if(LOCATIONS.includes(id)){notify(s,'来到'+G.OUTINGS.find(x=>x.id===id).name,`${G.OUTINGS.find(x=>x.id===id).place}。${NAMES.filter(n=>w.life[n]?.startsWith(G.OUTINGS.find(x=>x.id===id).name)).map(n=>`${n}也在这里，朝你挥了挥手。`).join('')||'你放慢脚步，看看今天的街景。'}`);return;}
     if(id!=='stroll')return;
@@ -76,9 +76,9 @@
     const left=LOCATIONS.filter(x=>!w.locations.includes(x));if(left.length){const place=left[Math.floor(rand(s)*left.length)];w.locations.push(place);const x=G.OUTINGS.find(x=>x.id===place);notify(s,'发现新地点 · '+x.name,`闲逛时，你来到${x.name}，${x.place}让你停下脚步。现在可以再次来这里，也许能遇到正在外出的好友。`);message(s,'电压',`你发现了${x.name}？那里很适合慢慢走，下次一起。`);}else notify(s,'熟悉街巷的新风景','广州的几处特别去处都记下了。今天沿着熟悉的街道走了走，也很开心。');
   }
   function startMahjong(s){active(s);if(s.phase!=='play'||s.arcade!==5)throw Error('请先前往猫窝。');if(!spend(s,25,8))return;
-    const w=s.world;w.metSleep=true;const n=s.npcs.find(n=>n.id==='我要睡觉');n.familiarity=Math.max(30,n.familiarity);syncFriends(s);w.mahjong.active={day:s.day,time:s.clock};G.log(s,'在猫窝和我要睡觉、逃遁、鲁米诺开了一桌立直麻将。25 分钟，体力 -8，计入小时费用。','heart');
+    const w=s.world;w.metSleep=true;const n=s.npcs.find(n=>n.id==='COLDDD');n.familiarity=Math.max(30,n.familiarity);syncFriends(s);w.mahjong.active={day:s.day,time:s.clock};G.log(s,'在猫窝和COLDDD、逃遁、鲁米诺开了一桌立直麻将。25 分钟，体力 -8，计入小时费用。','heart');
   }
-  function finishMahjong(s,result){const w=s.world,m=w.mahjong;if(!m.active)throw Error('当前没有对局。');if(!result||!Array.isArray(result.scores)||result.scores.length!==4||!result.scores.every(Number.isFinite))throw Error('无效对局结果。');m.active=null;m.rounds++;if(result.scores[0]>result.scores[1])m.wins++;m.last={text:result.text.slice(0,200),scores:result.scores};s.mood=clamp(s.mood+5,0,100);const q=w.quests['我要睡觉'];if(q.stage<6&&!QUESTS['我要睡觉'].steps[q.stage].time&&q.lastDay!==s.day)complete(s,'我要睡觉');else G.log(s,'猫窝麻将结束：'+result.text,'heart');}
+  function finishMahjong(s,result){const w=s.world,m=w.mahjong;if(!m.active)throw Error('当前没有对局。');if(!result||!Array.isArray(result.scores)||result.scores.length!==4||!result.scores.every(Number.isFinite))throw Error('无效对局结果。');m.active=null;m.rounds++;if(result.scores[0]>result.scores[1])m.wins++;m.last={text:result.text.slice(0,200),scores:result.scores};s.mood=clamp(s.mood+5,0,100);const q=w.quests['COLDDD'];if(q.stage<6&&!QUESTS['COLDDD'].steps[q.stage].time&&q.lastDay!==s.day)complete(s,'COLDDD');else G.log(s,'猫窝麻将结束：'+result.text,'heart');}
   function valid(s){const w=s.world;if(!w||!Number.isInteger(w.seed)||!Array.isArray(w.locations)||new Set(w.locations).size!==w.locations.length||!w.locations.every(x=>LOCATIONS.includes(x)))return false;
     if(!Array.isArray(w.friends)||w.friends.length>30||!w.friends.every(x=>s.npcs.some(n=>n.id===x))||!Array.isArray(w.entries)||w.entries.length>8||!w.entries.every(x=>ENTRIES.some(e=>e.id===x)))return false;
     if(!w.quests||!NAMES.every(id=>{const p=w.quests[id];return p&&Number.isInteger(p.stage)&&p.stage>=0&&p.stage<=QUESTS[id].steps.length&&Number.isInteger(p.lastDay)&&p.lastDay>=0&&p.lastDay<=s.day&&typeof p.started==='boolean';}))return false;

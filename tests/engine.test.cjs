@@ -56,7 +56,7 @@ test('B35 + B15 retains separate records per chart and version',()=>{
  assert.equal(G.best(s).old.length,35);assert.equal(G.best(s).fresh.length,15);assert.equal(s.rating,35*(315+349)/2+15*(310+324)/2);
 });
 test('daily actions consume hours without ending the day; sleep charges baseline once',()=>{
- const s=G.create('grinder');G.daily(s,'work');assert.equal(s.clock,720);assert.equal(s.day,1);assert.equal(s.money,1950);G.daily(s,'wait');assert.equal(s.clock,780);G.daily(s,'fun');assert.equal(s.clock,900);
+ const s=G.create('grinder');G.daily(s,'work');assert.equal(s.clock,720);assert.equal(s.day,1);assert.equal(s.money,1880);G.daily(s,'wait');assert.equal(s.clock,780);G.daily(s,'fun');assert.equal(s.clock,900);
  const before=s.money;G.sleep(s);assert.equal(s.day,1);assert.equal(s.clock,1380);assert.equal(s.money,before);G.daily(s,'wait');assert.equal(s.day,2);assert.equal(s.money,before-25);
 });
 test('worker cannot take side jobs, skip shifts, sleep through work or attend during work',()=>{

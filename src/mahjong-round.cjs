@@ -9,7 +9,7 @@ function createRound(random=Math.random){const opening=OPENINGS[Math.floor(rando
 function node(r){if(r.result)return {title:'本局结算',text:r.result.text,options:[]};return [
  {title:'开局 · 看看牌型',text:r.opening.text,options:[{label:'优先牌效',detail:'尽快整理搭子，提高后续成牌机会。'},{label:'留一张安全牌',detail:'进度稍慢，受到立直压力时更好防守。'}]},
  {title:'中盘 · 关键进张：'+r.opening.draw,text:r.opening.drawText,options:[{label:'抓住进张，争取听牌',detail:'提高和牌机会，保留当前打点。'},{label:'再做大一点',detail:'提高可能的打点，但进度与防守都会受影响。'}]},
- {title:'后盘 · 我要睡觉立直了',text:'她打出一张九筒宣告立直。你手里有同样的九筒可作现物，但维持进攻需要切出没有安全依据的中张。',options:[{label:'切现物，转为防守',detail:'放弃本轮和牌机会，避开这次放铳风险。'},{label:'继续进攻',detail:'保留和牌机会，也可能把点数送给她。'}]}
+ {title:'后盘 · COLDDD立直了',text:'她打出一张九筒宣告立直。你手里有同样的九筒可作现物，但维持进攻需要切出没有安全依据的中张。',options:[{label:'切现物，转为防守',detail:'放弃本轮和牌机会，避开这次放铳风险。'},{label:'继续进攻',detail:'保留和牌机会，也可能把点数送给她。'}]}
  ][r.stage];}
 function choose(r,index,random=Math.random){if(r.result||!Number.isInteger(index)||index<0||index>1)return false;const step=node(r);r.events.push(step.title+'：'+step.options[index].label);
  if(r.stage===0){if(index===0)r.progress+=.12;else {r.reserve=true;r.risk-=.06;}}
@@ -18,9 +18,9 @@ function choose(r,index,random=Math.random){if(r.result||!Number.isInteger(index
  r.stage++;return true;
 }
 function settle(r,random){const scores=[25000,25000,25000,25000],roll=random();let text,outcome;
- if(!r.fold&&roll<r.risk){scores[0]-=5200;scores[1]+=5200;outcome='deal-in';text='进攻牌被我要睡觉荣和，放铳 5200 点。她拉着你复盘了刚才的危险信号。';}
- else if(!r.fold&&roll<r.risk+Math.max(.08,Math.min(.6,.18+r.progress))){const payer=1+Math.floor(random()*3);scores[0]+=r.value;scores[payer]-=r.value;outcome='win';text='关键进张接上了，最终和牌，获得 '+r.value+' 点。我要睡觉点点头：“这次推进得不错。”';}
- else if(r.fold){outcome='defend';if(random()<.55){scores[2]-=3900;scores[1]+=3900;text='你切出现物后持续防守，避过放铳；随后逃遁放铳，我要睡觉收下 3900 点。';}else {text='你切出现物后持续防守，安全走到流局。大家约好再来一局。';}}
+ if(!r.fold&&roll<r.risk){scores[0]-=5200;scores[1]+=5200;outcome='deal-in';text='进攻牌被COLDDD荣和，放铳 5200 点。她拉着你复盘了刚才的危险信号。';}
+ else if(!r.fold&&roll<r.risk+Math.max(.08,Math.min(.6,.18+r.progress))){const payer=1+Math.floor(random()*3);scores[0]+=r.value;scores[payer]-=r.value;outcome='win';text='关键进张接上了，最终和牌，获得 '+r.value+' 点。COLDDD点点头：“这次推进得不错。”';}
+ else if(r.fold){outcome='defend';if(random()<.55){scores[2]-=3900;scores[1]+=3900;text='你切出现物后持续防守，避过放铳；随后逃遁放铳，COLDDD收下 3900 点。';}else {text='你切出现物后持续防守，安全走到流局。大家约好再来一局。';}}
  else {outcome='draw';text='继续进攻后没能等到最后的进张，本局流局。大家一起讨论了这手牌的取舍。';}
  return {scores,text,outcome};
 }

@@ -1,10 +1,10 @@
 const test=require('node:test'),assert=require('node:assert/strict'),G=require('../engine');
 
 test('three featured NPCs migrate in place and become chat friends at familiarity 30',()=>{
- const s=G.create('grinder',42);assert.deepEqual(s.npcs.slice(2,5).map(n=>n.id),['电压','Toqin','我要睡觉']);
+ const s=G.create('grinder',42);assert.deepEqual(s.npcs.slice(2,5).map(n=>n.id),['电压','Toqin','COLDDD']);
  s.npcs[2].familiarity=30;G.syncFriends(s);assert.ok(s.world.friends.includes('电压'));assert.ok(s.world.dm['电压'][0].text.includes('观鸟'));
  const before=s.clock;G.sendDM(s,'电压','周末去看看鸟？');assert.equal(s.clock,before+5);assert.equal(s.npcs[2].familiarity,34);assert.ok(G.validate(s));
- const old=G.create();old.npcs[2].id='捞月';old.npcs[3].id='阿澈';old.npcs[4].id='今天不推分';G.migrate(old);assert.deepEqual(old.npcs.slice(2,5).map(n=>n.id),['电压','Toqin','我要睡觉']);
+ const old=G.create();old.npcs[2].id='捞月';old.npcs[3].id='阿澈';old.npcs[4].id='今天不推分';G.migrate(old);assert.deepEqual(old.npcs.slice(2,5).map(n=>n.id),['电压','Toqin','COLDDD']);
 });
 
 test('Guangzhou places stay hidden until strolling discovers them and entering creates an event',()=>{
@@ -28,10 +28,10 @@ test('featured quest stages cost resources, record the encyclopedia and award pe
  s.world.notice=null;assert.throws(()=>G.doQuest(s,'电压'),/完成/);assert.equal(s.skills.reading,reading+.25);assert.ok(G.validate(s));
 });
 
-test('cat den mahjong entry costs real time and stamina, unlocks 我要睡觉 and records a verified result',()=>{
+test('cat den mahjong entry costs real time and stamina, unlocks COLDDD and records a verified result',()=>{
  const s=G.create('grinder',42);s.city.denUnlocked=true;G.startTrip(s);s.arcade=5;G.travel(s,'taxi',5);G.drink(s,'water');
- const before={clock:s.clock,stamina:s.stamina,money:s.money};G.startMahjong(s);assert.equal(s.clock,before.clock+25);assert.ok(s.stamina<before.stamina);assert.ok(s.world.friends.includes('我要睡觉'));assert.ok(s.world.mahjong.active);
- G.finishMahjong(s,{scores:[27000,23000,25000,25000],text:'玩家荣和 · 2000 点'});assert.equal(s.world.mahjong.rounds,1);assert.equal(s.world.mahjong.wins,1);assert.equal(s.world.quests['我要睡觉'].stage,1);assert.ok(s.world.notice);assert.ok(G.validate(s));
+ const before={clock:s.clock,stamina:s.stamina,money:s.money};G.startMahjong(s);assert.equal(s.clock,before.clock+25);assert.ok(s.stamina<before.stamina);assert.ok(s.world.friends.includes('COLDDD'));assert.ok(s.world.mahjong.active);
+ G.finishMahjong(s,{scores:[27000,23000,25000,25000],text:'玩家荣和 · 2000 点'});assert.equal(s.world.mahjong.rounds,1);assert.equal(s.world.mahjong.wins,1);assert.equal(s.world.quests['COLDDD'].stage,1);assert.ok(s.world.notice);assert.ok(G.validate(s));
 });
 
 test('malformed world state is rejected while legacy saves acquire defaults',()=>{
