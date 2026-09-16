@@ -84,7 +84,7 @@
   const entryPrice=(s,arcade=s.arcade)=>api.ARCADES[arcade]?.allNight?30:0;
   const allNight=(s,arcade=s.arcade)=>!!api.ARCADES[arcade]?.allNight;
   const arcadeIsOpen=(s,arcade=s.arcade)=>allNight(s,arcade)||s.clock>=OPEN&&s.clock<CLOSE;
-  function peopleAt(s,arcade=s.arcade){return Math.max(0,s.people+(api.ARCADES[arcade]?.offset||0)+X.crowdOffset(s)+(s.crowdShift||0));}
+  function peopleAt(s,arcade=s.arcade){if(!arcadeIsOpen(s,arcade))return 0;return Math.max(0,s.people+(api.ARCADES[arcade]?.offset||0)+X.crowdOffset(s)+(s.crowdShift||0));}
   function roundInfo(s,arcade=s.arcade,mode=s.mode){
     const m=MODES[mode];if(!m)throw Error('未知上机模式。');const people=peopleAt(s,arcade),cabinets=api.ARCADES[arcade]?.cabinets||2;
     // Paired sessions serve two people simultaneously, rather than two sequential turns.
