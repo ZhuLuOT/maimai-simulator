@@ -124,7 +124,7 @@
   function levelValue(c){const level=api.displayLevel(c);return parseInt(level,10)+(level.endsWith('+')?.5:0);}
   function challengeThreshold(rating){return rating>=14000?14.5:rating>=13000?14:rating>=12000?13.5:rating>=11000?12:11.5;}
   function isOverreach(rating,c,achievement=c.achievement){return !isUtage(c)&&levelValue(c)>=challengeThreshold(rating)&&Number.isFinite(achievement)&&achievement<=97;}
-  function growthFactor(s,c){const gap=c.ds-baseAbility(s,c),base=clamp(1-Math.abs(gap)*.18,.2,1);return base*(gap>0&&gap<1.5?1+.5*Math.min(1,gap/.4,(1.5-gap)/.5):1);}
+  function growthFactor(s,c){const gap=c.ds-baseAbility(s,c),base=clamp(1-Math.abs(gap)*.18,.2,1),average=(s.skills.star+s.skills.key+s.skills.reading)/3,maturity=1/(1+Math.max(0,average-10)*.5);return base*maturity*(gap>0&&gap<1.5?1+.5*Math.min(1,gap/.4,(1.5-gap)/.5):1);}
   function recommend(s,pool,count=X.selectCount(s),exclude=[]){
     const b=best(s),oldFloor=b.old.length<35?0:b.old.at(-1).ra,newFloor=b.fresh.length<15?0:b.fresh.at(-1).ra;
     const excluded=new Set(exclude.map(c=>c.id)),recent=new Set((s.last?.results||[]).map(c=>c.id));
@@ -156,6 +156,9 @@
     const feeReason=api.timeChargeReason(s,m.duration,m.cost);if(feeReason)throw Error(feeReason);
     const r=roundInfo(s),partnerIndex=s.partner,partnerNpc=s.mode==='pair'?s.npcs[s.partner]:null,partnerSongSnapshot=s.partnerSongs?.map(x=>({...x}))||[],partnerName=partnerNpc?.id||null;advance(s,m.duration);if(s.ending)return;if(partnerNpc)s.partner=partnerIndex;s.money-=m.cost;s.trip.cost+=m.cost;s.trip.rounds++;s.credits++;const before=s.rating,skillsBefore={...s.skills};
     const results=[...chosen,...partner].map((c,i)=>{const k=key(c),n=s.practice[k]||0,result={...c,...simulate(s,c),day:s.day,plays:n+1,partner:i>=m.select};result.overreach=isOverreach(before,c,result.achievement);result.ratingBefore=before;result.ra=isUtage(c)?0:chartRating(c.ds,result.achievement);const old=s.records[k],order=['','FC','FC+','AP'];result.improved=!old||result.achievement>old.achievement;result.bestSync=old?.bestSync||'';result.bestCombo=order[Math.max(order.indexOf(old?.bestCombo||old?.combo||''),order.indexOf(result.combo))];if(result.improved)s.records[k]=result;else old.bestCombo=result.bestCombo;s.practice[k]=n+1;P.afterSong(s);
+      // Skill growth slows as the player becomes stronger. Early sessions still
+      // feel rewarding, while repeated high-level play no longer rockets the
+      // three fundamentals upward in a few days.
       const gain=.004*M.growth(c,s)*growthFactor(s,c)*(s.mood<30?.65:1)*(X.has(s,'gifted')?1.05:1);s.skills.star=clamp(s.skills.star+gain*.9*(.2+1.6*c.starWeight),1,22);s.skills.key=clamp(s.skills.key+gain*.9*(.2+1.6*(1-c.starWeight)),1,22);s.skills.reading=clamp(s.skills.reading+gain*(n? .65:1.2),1,22);X.consume(s,c);if(result.segmentEvent){const e=result.segmentEvent;log(s,`${c.title}：${e.scene}，${e.passed?'判定通过，稳稳接住。':`未通过，段落坠机，新增 ${e.misses} MISS，达成率 -${e.loss.toFixed(4)}%。`}`,'event');}return result;
     });
     if(partnerNpc)COMP.paired(s,results,partnerNpc,partnerSongSnapshot,pool);
