@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "node --test tests/engine.test.cjs tests/life.test.cjs tests/expansion.test.cjs tests/update.test.cjs tests/city.test.cjs tests/social-update.test.cjs tests/guidance.test.cjs tests/den.test.cjs tests/rest.test.cjs tests/needs.test.cjs tests/difficulty.test.cjs tests/precision.test.cjs tests/world.test.cjs",
+    "test": "node --test tests/engine.test.cjs tests/life.test.cjs tests/expansion.test.cjs tests/update.test.cjs tests/city.test.cjs tests/social-update.test.cjs tests/guidance.test.cjs tests/den.test.cjs tests/rest.test.cjs tests/needs.test.cjs tests/difficulty.test.cjs tests/precision.test.cjs tests/world.test.cjs tests/life-revision.test.cjs tests/comment-balance.test.cjs",
     "test:browser": "node tests/browser-check.cjs && node tests/search-input.cjs && node tests/city-browser.cjs && node tests/b50-header.cjs && node tests/cabinet-header.cjs && node tests/mobile-social.cjs && node tests/round-guide.cjs && node tests/den-browser.cjs && node tests/needs-browser.cjs && node tests/world-browser.cjs",
     "refresh-music": "node scripts/import-music.cjs",
     "build": "node scripts/build.cjs",

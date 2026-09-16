@@ -20,6 +20,7 @@ credentials*
 
 # OS / editor noise
 .DS_Store
+version.json
 Thumbs.db
 .idea/
 .vscode/

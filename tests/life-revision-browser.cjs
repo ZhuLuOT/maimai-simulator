@@ -1,0 +1,52 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const runtime=require('node:module').createRequire('C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/browser-runtime.js');
+const {chromium}=runtime('playwright'),G=require('../engine');
+const version=JSON.parse(fs.readFileSync(path.join(__dirname,'../version.json'),'utf8')).version;
+(async()=>{
+ const browser=await chromium.launch({headless:true,channel:'msedge'});
+ try{
+  const page=await browser.newPage({viewport:{width:1280,height:900}}),errors=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  const s=G.create('grinder',42);s.setupDone=true;s.guide.introDone=true;s.day=2;s.clock=180;s.drowsiness=80;s.stamina=25;s.city.denUnlocked=true;
+  s.npcs.forEach(n=>n.familiarity=40);G.syncFriends(s);s.chat=s.npcs.map(n=>({id:n.id,text:'凌晨好',day:s.day,time:s.clock}));
+  await page.addInitScript(({s,version})=>{if(!localStorage.getItem('attendance-simulator-v2'))localStorage.setItem('attendance-simulator-v2',JSON.stringify(s));if(!localStorage.getItem('attendance-release'))localStorage.setItem('attendance-release',version);},{s,version});
+  await page.goto('http://127.0.0.1:4173/');
+  await page.waitForLoadState('networkidle');
+  assert.equal(errors.length,0,errors.join('\n'));
+  assert.ok(await page.locator('[data-action="sleep-menu"]').count(),await page.locator('body').innerText());
+  await page.locator('[data-action="sleep-menu"]').click();assert.equal(await page.locator('#sleep-duration').inputValue(),'480');await page.locator('#sleep-duration').selectOption('120');
+  assert.match(await page.locator('.sleep-preview').innerText(),/消除困意 25.0.*醒后困意 55.0/s);
+  assert.match(await page.locator('.sleep-preview').innerText(),/今天 05:00/);
+  await page.setViewportSize({width:390,height:844});assert.ok(await page.locator('.modal').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
+  await page.screenshot({animations:'disabled',path:path.join(__dirname,'../artifacts/revision-sleep-mobile.png')});
+  await page.locator('[data-action="sleep-now"][data-value="120"]').click();
+  assert.equal(await page.locator('.clock-display>b').innerText(),'05:00');assert.match(await page.locator('.drowsiness-strip').innerText(),/困意 55/);
+  await page.locator('[data-action="chat"]').click();await page.locator('[data-action="conversation"][data-value="group"]').click();
+  assert.ok(await page.locator('.chat-avatar img').count()>=30);
+  assert.equal(await page.locator('.chat-avatar img').evaluateAll(imgs=>new Set(imgs.map(i=>i.src)).size),30);
+  assert.ok(await page.locator('.chat-avatar img').evaluateAll(imgs=>imgs.every(i=>i.complete&&i.naturalWidth>0)));
+  await page.screenshot({animations:'disabled',path:path.join(__dirname,'../artifacts/revision-avatars-mobile.png')});
+  await page.getByRole('button',{name:'关闭',exact:true}).click();
+  await page.locator('[data-action="attend"]').click();
+  assert.equal(await page.locator('.crowd-count').filter({hasText:'已打烊'}).count(),3);
+  await page.getByRole('button',{name:'关闭',exact:true}).click();
+  await page.route('**/version.json?*',route=>route.fulfill({json:{version:'test-release-2',summary:'更新检测测试：保存后刷新。'}}));
+  await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+  await page.locator('.release-dialog').waitFor({state:'visible'});
+  await page.keyboard.press('Escape');assert.ok(await page.locator('.release-dialog').isVisible());
+  await page.keyboard.press('Tab');assert.ok(await page.locator('.release-dialog').evaluate(e=>e.contains(document.activeElement)));
+  assert.ok(await page.locator('.release-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
+  await page.screenshot({animations:'disabled',path:path.join(__dirname,'../artifacts/revision-update-mobile.png')});
+  await page.route('**/version.json?*',route=>route.fulfill({json:{version}}));
+  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('attendance-simulator-v2')));
+  await page.evaluate(()=>{window.originalSetItem=Storage.prototype.setItem;Storage.prototype.setItem=function(key,value){if(key==='attendance-simulator-v2')throw Error('quota');return window.originalSetItem.call(this,key,value);};});
+  await page.getByRole('button',{name:'保存进度并刷新'}).click();assert.match(await page.locator('.release-dialog [role="status"]').innerText(),/保存失败/);
+  await page.evaluate(()=>{Storage.prototype.setItem=window.originalSetItem;});
+  await page.getByRole('button',{name:'保存进度并刷新'}).click();await page.waitForURL('**/?v=test-release-2');
+  // The fixture serves the same bundle; the cold-load prompt confirms the acknowledgement mismatch is noticed.
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('attendance-simulator-v2')).clock),saved.clock);
+  await page.getByRole('button',{name:'保存进度并刷新'}).click();await page.waitForURL('**/?v='+version);
+  await page.waitForSelector('.clock-display');assert.equal(await page.locator('.release-dialog').count(),0);
+  assert.deepEqual(errors,[]);console.log('PASS: custom sleep preview/save, 30 unique avatars, closed arcades, mobile layout and live update/save/reload.');
+ }finally{await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

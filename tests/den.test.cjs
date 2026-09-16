@@ -15,14 +15,14 @@ test('den prepays the first hour and includes PC and courses, with renewal money
  const poor=unlocked();poor.money=G.transportOptions(5).find(t=>t.id==='taxi').cost+29;G.startTrip(poor);const snapshot=JSON.stringify(poor);assert.throws(()=>G.travel(poor,'taxi',5),/30/);assert.equal(JSON.stringify(poor),snapshot);
 });
 test('late den travel and PC cross midnight, preserve queue and settle daily costs exactly once',()=>{
- const s=unlocked('worker');s.clock=1435;G.startTrip(s);const cash=s.money,taxi=G.transportOptions(5).find(t=>t.id==='taxi');G.travel(s,'taxi',5);assert.equal(s.day,2);assert.ok(s.nightActive);assert.equal(s.money,cash-taxi.cost-30-65);assert.equal(s.clock,11);G.drink(s,'water');if(s.queueUntil>s.clock)G.waitQueue(s);const before=s.money;G.play(s,pool.slice(0,3),pool);assert.equal(s.money,before);assert.ok(G.validate(s));
+ const s=unlocked('worker');s.clock=1435;G.startTrip(s);const cash=s.money,taxi=G.transportOptions(5).find(t=>t.id==='taxi');G.travel(s,'taxi',5);assert.equal(s.day,2);assert.equal(s.nightActive,undefined);assert.equal(s.money,cash-taxi.cost-30-65);assert.equal(s.clock,11);G.drink(s,'water');if(s.queueUntil>s.clock)G.waitQueue(s);const before=s.money;G.play(s,pool.slice(0,3),pool);assert.equal(s.money,before);assert.ok(G.validate(s));
  G.finishPlay(s);G.meal(s,'home');s.clock=180;G.sleep(s);assert.equal(s.day,2);assert.equal(s.clock,660);assert.ok(s.workAbsences===1);assert.equal(s.drowsiness,0);
  const pc=ready();pc.clock=1435;pc.queueUntil=1435;const cashBefore=pc.money;G.play(pc,pool.slice(0,3),pool);assert.equal(pc.day,2);assert.equal(pc.clock,7);assert.equal(pc.money,cashBefore-25);assert.ok(G.validate(pc));
  const q=ready();q.clock=1435;q.queueUntil=1470;const money=q.money;G.advance(q,10);assert.equal(q.day,2);assert.equal(q.queueUntil,30);assert.equal(q.clock,5);G.waitQueue(q);assert.equal(q.clock,30);assert.equal(q.money,money-25);G.play(q,pool.slice(0,3),pool);assert.ok(G.validate(q));
 });
-test('ordinary closing, student curfew, obligations constrain visits while 04:00 no longer ends play',()=>{
+test('ordinary closing and real obligations constrain visits without a student curfew',()=>{
  const ordinary=G.create('grinder');ordinary.clock=1415;G.startTrip(ordinary);assert.throws(()=>G.travel(ordinary,'taxi',0),/23:30/);
- const student=unlocked('student');student.clock=1400;G.startTrip(student);assert.throws(()=>G.travel(student,'taxi',5),/午夜/);
+ const student=unlocked('student');student.clock=1400;G.startTrip(student);G.travel(student,'taxi',5);assert.equal(student.phase,'drink');
  const worker=unlocked('worker');worker.day=2;worker.clock=530;G.startTrip(worker);assert.throws(()=>G.travel(worker,'taxi',5),/冲突/);
- const late=ready();late.day=2;late.nightActive=true;late.clock=235;late.queueUntil=235;assert.equal(G.playReason(late),'');G.play(late,pool.slice(0,3),pool);assert.equal(late.clock,247);assert.equal(late.phase,'play');
+ const late=ready();late.day=2;late.clock=235;late.queueUntil=235;assert.equal(G.playReason(late),'');G.play(late,pool.slice(0,3),pool);assert.equal(late.clock,247);assert.equal(late.phase,'play');
 });

@@ -38,6 +38,8 @@
     w.seed??=(s.seed^0x4abcde)>>>0;w.locations??=(s.city?.visited||[]).filter(id=>LOCATIONS.includes(id));
     w.friends??=[];w.dm??={};w.dmDays??={};w.quests??={};w.entries??=[];w.notice??=null;w.lifeBucket??=-1;w.life??={};w.metSleep??=false;w.mahjong??={rounds:0,wins:0,last:null,active:null};
     for(const id of NAMES)w.quests[id]??={stage:0,lastDay:0,started:false};
+    w.friends=[...new Set(w.friends.filter(id=>NAMES.includes(id)))];
+    for(const field of ['dm','dmDays'])for(const id of Object.keys(w[field]))if(!w.friends.includes(id))delete w[field][id];
     syncFriends(s);
     // A reload forfeits the live table; already spent time and fees stay spent.
     if(w.mahjong.active){w.mahjong.active=null;w.mahjong.last={text:'上次对局中途离桌，未计入支线进度。',scores:[]};}
@@ -45,7 +47,7 @@
   function rand(s){const w=s.world;w.seed=(Math.imul(w.seed,1664525)+1013904223)>>>0;return w.seed/4294967296;}
   function message(s,id,text,entry=null){s.chat.push({id,text,day:s.day,time:s.clock,...(entry?{worldEntry:entry}:{})});s.chat=s.chat.slice(-60);}
   function dm(s,id,text,self=false){const a=s.world.dm[id]??=[];a.push({id:self?s.profile.id:id,text,day:s.day,time:s.clock,self});s.world.dm[id]=a.slice(-40);}
-  function syncFriends(s){if(!s.world||!s.npcs)return;const w=s.world;for(const n of s.npcs){if(n.familiarity<30||w.friends.includes(n.id))continue;if(n.id==='COLDDD'&&!w.metSleep)continue;w.friends.push(n.id);dm(s,n.id,NAMES.includes(n.id)?{'电压':'除了舞萌，我还喜欢观鸟。有空一起去广州的公园走走？','Toqin':'最近画画卡住了……你听说街头那些像素搭档了吗？','COLDDD':'猫窝的牌桌一直给你留着位置。陪我练练，目标广州大赛！'}[n.id]:'群里经常见，终于加上好友了！有空一起出勤。');}}
+  function syncFriends(s){if(!s.world||!s.npcs)return;const w=s.world;for(const n of s.npcs){if(!NAMES.includes(n.id)||n.familiarity<30||w.friends.includes(n.id))continue;if(n.id==='COLDDD'&&!w.metSleep)continue;w.friends.push(n.id);dm(s,n.id,NAMES.includes(n.id)?{'电压':'除了舞萌，我还喜欢观鸟。有空一起去广州的公园走走？','Toqin':'最近画画卡住了……你听说街头那些像素搭档了吗？','COLDDD':'猫窝的牌桌一直给你留着位置。陪我练练，目标广州大赛！'}[n.id]:'群里经常见，终于加上好友了！有空一起出勤。');}}
   function tick(s){if(!s.world)return;syncFriends(s);const w=s.world,b=Math.floor(now(s)/240);if(w.lifeBucket===b)return;w.lifeBucket=b;
     for(const [i,id]of NAMES.entries()){
       const night=s.clock<480||s.clock>=1380,places=['yuexiu','shamian','canton','yongqing'],place=places[(Math.floor(rand(s)*4)+i)%4];
@@ -80,7 +82,7 @@
   }
   function finishMahjong(s,result){const w=s.world,m=w.mahjong;if(!m.active)throw Error('当前没有对局。');if(!result||!Array.isArray(result.scores)||result.scores.length!==4||!result.scores.every(Number.isFinite))throw Error('无效对局结果。');m.active=null;m.rounds++;if(result.scores[0]>result.scores[1])m.wins++;m.last={text:result.text.slice(0,200),scores:result.scores};s.mood=clamp(s.mood+5,0,100);const q=w.quests['COLDDD'];if(q.stage<6&&!QUESTS['COLDDD'].steps[q.stage].time&&q.lastDay!==s.day)complete(s,'COLDDD');else G.log(s,'猫窝麻将结束：'+result.text,'heart');}
   function valid(s){const w=s.world;if(!w||!Number.isInteger(w.seed)||!Array.isArray(w.locations)||new Set(w.locations).size!==w.locations.length||!w.locations.every(x=>LOCATIONS.includes(x)))return false;
-    if(!Array.isArray(w.friends)||w.friends.length>30||!w.friends.every(x=>s.npcs.some(n=>n.id===x))||!Array.isArray(w.entries)||w.entries.length>8||!w.entries.every(x=>ENTRIES.some(e=>e.id===x)))return false;
+    if(!Array.isArray(w.friends)||w.friends.length>3||new Set(w.friends).size!==w.friends.length||!w.friends.every(x=>NAMES.includes(x)&&s.npcs.some(n=>n.id===x))||!Array.isArray(w.entries)||w.entries.length>8||!w.entries.every(x=>ENTRIES.some(e=>e.id===x)))return false;
     if(!w.quests||!NAMES.every(id=>{const p=w.quests[id];return p&&Number.isInteger(p.stage)&&p.stage>=0&&p.stage<=QUESTS[id].steps.length&&Number.isInteger(p.lastDay)&&p.lastDay>=0&&p.lastDay<=s.day&&typeof p.started==='boolean';}))return false;
     if(!w.dm||!Object.entries(w.dm).every(([id,a])=>w.friends.includes(id)&&Array.isArray(a)&&a.length<=40&&a.every(m=>typeof m.text==='string'&&m.text.length<=300&&typeof m.id==='string'&&Number.isInteger(m.day)&&Number.isInteger(m.time))))return false;
     const m=w.mahjong;return typeof w.metSleep==='boolean'&&w.dmDays&&w.life&&Number.isInteger(w.lifeBucket)&&!!m&&['rounds','wins'].every(k=>Number.isInteger(m[k])&&m[k]>=0&&m[k]<=10000)&&m.wins<=m.rounds&&(!w.notice||typeof w.notice.title==='string'&&w.notice.title.length<100&&typeof w.notice.text==='string'&&w.notice.text.length<1000&&(!w.notice.entry||ENTRIES.some(e=>e.id===w.notice.entry)))&&(!m.active||Number.isInteger(m.active.day)&&Number.isInteger(m.active.time));

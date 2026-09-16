@@ -17,7 +17,7 @@
   function afterSong(s){tick(s);const p=s.precision;p.base=Math.min(CAP,p.base+GROWTH);p.loss=Math.max(0,p.loss-Math.max(.8,p.loss*.18));p.lastPlay=now(s);p.updatedAt=p.lastPlay;}
   function lapses(s,margin,plays){
     const instability=(100-value(s))/60,unfamiliar=1/(1+plays/3),control=clamp(Math.exp(-Math.max(0,margin)*.18),.4,1);
-    return {miss:(.00015+instability*.0009+unfamiliar*.00085)*control,good:(.0001+instability*.0008+unfamiliar*.0006)*control,great:(.00025+instability*.003+unfamiliar*.003)*control};
+    return {miss:(.00015+instability*.0009+unfamiliar*.00085)*control,good:(.0001+instability*.0008+unfamiliar*.0006)*control,great:(.00025+instability*.003+unfamiliar*.003)*control,perfect:(.02+instability*.14+unfamiliar*.16)*Math.max(.7,control)};
   }
   function valid(s){
     const p=s.precision,n=(x,a,b)=>Number.isFinite(x)&&x>=a&&x<=b,i=(x,a,b)=>Number.isInteger(x)&&n(x,a,b);

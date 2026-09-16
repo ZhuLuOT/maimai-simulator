@@ -2,7 +2,7 @@ const test=require('node:test'),assert=require('node:assert/strict'),G=require('
 function active(){const s=G.create('grinder',42);G.startTrip(s);G.travel(s,'bike',0);G.drink(s,'water');return s;}
 test('16 awake hours trigger sleep; naps remove sleepiness without restoring a full day',()=>{
  const s=G.create('grinder',42);G.advance(s,959);assert.equal(s.forcedSleeps,0);assert.ok(s.drowsiness>99);G.advance(s,1);assert.equal(s.forcedSleeps,1);assert.equal(s.day,2);assert.equal(s.clock,480);assert.equal(s.drowsiness,0);assert.ok(G.validate(s));
- G.advance(s,480);const before=s.drowsiness;G.sleep(s,'nap');assert.equal(s.drowsiness,before-15);assert.equal(s.clock,990);
+ G.advance(s,480);const before=s.drowsiness;G.sleep(s,'nap');assert.equal(s.drowsiness,before-6.25);assert.equal(s.clock,990);
 });
 test('bottles have actual volumes and prices; caps reject without spending; consumption switches buffs',()=>{
  const s=active(),cash=s.money;G.refill(s,'coffee');assert.equal(s.money,Math.round((cash-9.9)*100)/100);G.refill(s,'tea');assert.equal(s.liquid,1700);assert.equal(s.bottles.length,3);const snapshot=JSON.stringify(s);assert.throws(()=>G.refill(s,'energy'),/3 瓶/);assert.equal(JSON.stringify(s),snapshot);

@@ -1,6 +1,7 @@
 const { build } = require('esbuild');
 const fs = require('fs');
 const path = require('path');
+const {createHash}=require('node:crypto');
 
 const rootDir = path.resolve(__dirname, '..');
 const distDir = path.join(rootDir, 'dist');
@@ -44,6 +45,12 @@ function browserModule(specifier) {
 require('./cache-b50-headers.cjs');
 
 async function main() {
+const hash=createHash('sha256');
+function hashFile(file){hash.update(file).update(fs.readFileSync(path.join(rootDir,file)));}
+function hashDirectory(directory){for(const entry of fs.readdirSync(path.join(rootDir,directory),{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name))){const file=directory+'/'+entry.name;entry.isDirectory()?hashDirectory(file):hashFile(file);}}
+for(const file of [...filesToCopy,'app.js','life-ui.js','package.json','package-lock.json','scripts/build.cjs'])hashFile(file);
+for(const directory of ['src',...directoriesToCopy])hashDirectory(directory);
+const version=hash.digest('hex').slice(0,16);
 await build({
   absWorkingDir: rootDir,
   tsconfigRaw: {},
@@ -52,6 +59,7 @@ await build({
   format: 'iife',
   outfile: path.join(distDir, 'app.js'),
   minify: true,
+  define:{__APP_VERSION__:JSON.stringify(version)},
   sourcemap: true,
   target: ['es2022'],
   logLevel: 'info',
@@ -75,6 +83,12 @@ fs.mkdirSync(outDir, { recursive: true });
 for (const file of filesToCopy) {
   fs.copyFileSync(path.join(rootDir, file), path.join(outDir, file));
 }
+const release=JSON.stringify({version,summary:'调整高难成绩、初见准度和临时底力增益；支持自选睡眠、群友头像与支线好友，兼职收入和凌晨出行规则已更新。'});
+fs.writeFileSync(path.join(rootDir,'version.json'),release);
+fs.writeFileSync(path.join(outDir,'version.json'),release);
+const index=fs.readFileSync(path.join(rootDir,'index.html'),'utf8').replace(/((?:src|href)="[^"?]+\.(?:js|css))"/g,'$1?v='+version+'"');
+fs.writeFileSync(path.join(outDir,'index.html'),index);
+fs.writeFileSync(path.join(outDir,'_headers'),'/\n  Cache-Control: no-cache\n/index.html\n  Cache-Control: no-cache\n/version.json\n  Cache-Control: no-store\n');
 
 for (const directory of directoriesToCopy) {
   fs.cpSync(path.join(rootDir, directory), path.join(outDir, directory), {

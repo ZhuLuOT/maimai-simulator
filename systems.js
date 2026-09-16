@@ -23,8 +23,20 @@
     s.condition??=2;s.queueUntil??=0;s.consecutive??=0;s.partner??=null;s.friendship??=false;s.instinct??=false;
     s.metrics??={star:0,key:0,challenge:0,crowd:0,classic:0,vocal:0,touhou:0,ghost:0};
     s.npcs??=IDS.map((id,i)=>({id,rating:7800+Math.floor(rand(s)*8000),familiarity:0,activity:1+i%4}));
-    const renamed={'凌晨四点':'逃遁','青柠苏打':'鲁米诺','捞月':'电压','阿澈':'Toqin','今天不推分':'COLDDD'},rename=id=>renamed[id]||id;
-    s.npcs.forEach(n=>{n.id=rename(n.id);});
+    const renamed={'凌晨四点':'逃遁','青柠苏打':'鲁米诺','捞月':'电压','阿澈':'Toqin','今天不推分':'COLDDD','我要睡觉':'COLDDD'},rename=id=>renamed[id]||id;
+    const partnerId=s.partner===null?null:rename(s.npcs[s.partner]?.id);
+    const merged=new Map();
+    for(const n of s.npcs){n.id=rename(n.id);const existing=merged.get(n.id);if(existing){existing.familiarity=Math.max(existing.familiarity,n.familiarity);existing.rating=Math.max(existing.rating,n.rating);}else merged.set(n.id,n);}
+    s.npcs=[...merged.values()];
+    for(const id of IDS)if(s.npcs.length<30&&!merged.has(id))s.npcs.push({id,rating:7800,familiarity:0,activity:1});
+    if(partnerId){const index=s.npcs.findIndex(n=>n.id===partnerId);s.partner=index<0?null:index;}
+    if(s.world){const w=s.world;w.friends=[...new Set((w.friends||[]).map(rename))];
+      for(const field of ['dm','dmDays','quests','life'])if(w[field])for(const id of Object.keys(w[field])){const canonical=rename(id);if(canonical===id)continue;
+        if(field==='dm')w[field][canonical]=[...(w[field][canonical]||[]),...w[field][id]].sort((a,b)=>a.day-b.day||a.time-b.time).slice(-40);
+        else if(field==='quests'){if(!w[field][canonical]||w[field][id].stage>w[field][canonical].stage)w[field][canonical]=w[field][id];}
+        else w[field][canonical]??=w[field][id];delete w[field][id];}
+      for(const messages of Object.values(w.dm||{}))messages.forEach(m=>{if(!m.self)m.id=rename(m.id);});
+    }
     s.chat?.forEach(m=>{if(!m.self)m.id=rename(m.id);});
     for(const r of [...Object.values(s.records),...(s.last?.results||[]),...(s.trip?.played||[])])if(r.opponent)r.opponent.id=rename(r.opponent.id);
     if(s.last?.partnerName)s.last.partnerName=rename(s.last.partnerName);
@@ -87,7 +99,7 @@
   function chatSend(s,text){assertActive(s);if(!['home','play','travel'].includes(s.phase))throw Error('先完成当前阶段再聊天。');text=String(text).trim();if(!text||text.length>100)throw Error('消息请输入 1–100 个字符。');if(M.bot(s,text))return;spend(s,5);if(s.ending)return;if(s.chatDay!==s.day){s.chatDay=s.day;s.chatCount=0;}s.chat.push({id:s.profile.id,text,day:s.day,time:s.clock,self:true});if(s.chatCount<5){s.npcs.forEach(n=>n.familiarity=clamp(n.familiarity+3,0,100));s.mood=clamp(s.mood+1,0,100);}s.chatCount++;const n=s.npcs[Math.floor(rand(s)*s.npcs.length)];s.chat.push({id:n.id,text:['好耶，机厅见。','收到，记得带水和手套。','等轮到我们一起拼。'][Math.floor(rand(s)*3)],day:s.day,time:s.clock});s.chat=s.chat.slice(-60);s.guide.chatted=true;G.log(s,'在舞萌群聊了 5 分钟。','heart');}
   function newDay(s){s.stamina=s.maxStamina;s.consecutive=0;s.queueUntil=0;s.partner=null;s.partnerSongs=null;s.friendship=false;rollCondition(s);tick(s);}
   function plates(s,pool){const groups=[['真',['maimai','maimai PLUS']],['超',['maimai GreeN']],['檄',['maimai GreeN PLUS']],['橙',['maimai ORANGE']],['晓',['maimai ORANGE PLUS']]];const out=[{id:'default',name:'初来乍到',text:'初始名牌',unlocked:true,done:0,total:0}];for(const [name,versions]of groups){const charts=pool.filter(c=>versions.includes(c.version)&&c.index<4&&c.type==='SD'&&c.title!=='ジングルベル');for(const kind of name==='真'?['极','神']:['极','将','神']){const done=charts.filter(c=>{const r=s.records[G.key(c)];return kind==='极'?!!r?.bestCombo:kind==='将'?(r?.achievement||0)>=100:r?.bestCombo==='AP';}).length;out.push({id:name+kind,name:name+kind,text:`${versions.join(' / ')} 全 BASIC–MASTER ${kind==='极'?'FC':kind==='将'?'SSS':'AP'}`,done,total:charts.length,unlocked:charts.length>0&&done===charts.length});}}return out;}
-  function install(api){G=api;Object.assign(api,{TALENTS,CONDITIONS,GLOVES,drawTalents:draw,setup,grantTalent:grant,selectCount,waitQueue,arcadeRest:rest,buyGloves,refill,chatOpen,chatSend,plates});}
+  function install(api){G=api;Object.assign(api,{NPC_IDS:IDS,TALENTS,CONDITIONS,GLOVES,drawTalents:draw,setup,grantTalent:grant,selectCount,waitQueue,arcadeRest:rest,buyGloves,refill,chatOpen,chatSend,plates});}
   const api={ensure,rollCondition,tick,abilityBonus,scoreBonus,consume,afterPlay,choosePartner,selectCount,partnerCharts,newDay,install,has,crowdOffset};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LifeSystems=api;
 })(typeof window==='undefined'?globalThis:window);

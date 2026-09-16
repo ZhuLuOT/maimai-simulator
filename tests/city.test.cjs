@@ -1,6 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),G=require('../engine'),X=require('../systems');
 const ctx={window:{}};vm.runInNewContext(fs.readFileSync(require.resolve('../data/music.js'),'utf8'),ctx);const pool=G.charts(ctx.window.MUSIC_DATA);
-function ready(pair=false){const s=G.create('grinder',42);s.people=18;G.startTrip(s);if(pair)G.setMode(s,'pair');G.travel(s,'bike',0);G.drink(s,'water');if(s.queueUntil>s.clock)G.waitQueue(s);return s;}
+function ready(pair=false){const s=G.create('grinder',42);s.clock=600;s.people=18;G.startTrip(s);if(pair)G.setMode(s,'pair');G.travel(s,'bike',0);G.drink(s,'water');if(s.queueUntil>s.clock)G.waitQueue(s);return s;}
 test('official displayed level differs from constant; capped Rating still preserves higher achievement',()=>{
  const rush=pool.find(c=>c.id==='11657'&&c.index===2);assert.equal(rush.ds,12.5);assert.equal(G.displayLevel(rush),'12');
  assert.equal(G.displayLevel(pool.find(c=>c.title==='ATLAS RUSH'&&c.index===2)),'12+');

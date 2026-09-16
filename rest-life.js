@@ -2,7 +2,7 @@
  'use strict';let G,rollover,tick,depth=0,route=null;
  const RATE=100/960,DAYS_HOURS=122*24;
  class Interrupted extends Error{constructor(){super('困意已满，已终止行动并回家睡觉。');this.interrupted=true;}}
- function ensure(s){s.drowsiness??=Math.min(90,Math.max(0,(s.clock-480)*RATE)+(s.sleepDebt||0)*5);s.sleepDebt=0;s.forcedSleeps??=0;if(s.trip&&s.arcade===5){s.trip.denMinutes??=0;s.trip.denHours??=1;}}
+ function ensure(s){s.drowsiness??=Math.min(90,Math.max(0,(s.clock-480)*RATE)+(s.sleepDebt||0)*5);delete s.sleepDebt;delete s.nightActive;s.totalWorkCount??=s.workCount||0;s.forcedSleeps??=0;if(s.trip&&s.arcade===5){s.trip.denMinutes??=0;s.trip.denHours??=1;}}
  const onSite=s=>s.arcade===5&&s.trip&&['drink','play'].includes(s.phase);
  function hourlyCost(s,minutes){if(!onSite(s))return 0;return Math.max(0,Math.ceil((s.trip.denMinutes+minutes)/60)-s.trip.denHours)*30;}
  function timeReason(s,minutes,reserve=0){return s.money<hourlyCost(s,minutes)+reserve?'余额不足以支付猫窝续时费用（¥30 / 小时）。':'';}
@@ -25,10 +25,8 @@
   tick(s);
  }
  function sleepPlan(s,kind='full'){
-  if(!['full','nap'].includes(kind))throw Error('请选择睡眠时长。');
-  const night=s.clock>=1080||s.clock<480;
-  const morning=s.clock>=1080?1920:480;
-  const duration=kind==='nap'?30:night?Math.max(480,morning-s.clock):480;
+  const duration=kind==='full'?480:kind==='nap'?30:Number(kind);
+  if(!Number.isInteger(duration)||duration<30||duration>720||duration%30)throw Error('请选择 30 分钟至 12 小时的睡眠时长（每档 30 分钟）。');
   const end=s.clock+duration,dayOffset=Math.floor(end/1440),clock=end%1440,conflicts=[];
   for(let offset=0;offset<=dayOffset;offset++){
    const day=s.day+offset;if(day>G.DAYS)break;
@@ -37,14 +35,13 @@
     if(c.start+offset*1440<end&&c.end+offset*1440>s.clock)conflicts.push({name:c.name,kind:c.kind,day});
    }
   }
-  return {duration,day:s.day+dayOffset,clock,conflicts};
+  return {duration,day:s.day+dayOffset,clock,conflicts,recovery:Math.min(s.drowsiness,duration*100/480),staminaRecovery:Math.min(s.maxStamina-s.stamina,duration*s.maxStamina/480)};
  }
  function sleep(s,kind='full',forced=false){
-  if(!['full','nap'].includes(kind))throw Error('请选择睡眠时长。');
   if(!forced&&(s.phase!=='home'||s.ending||s.school.pending||s.event!==null||s.videoEvent||s.city.encounter||s.world?.notice||s.world?.mahjong.active))throw Error(`先回${G.residence(s)}并处理当前事件，再睡觉。`);
-  const {duration}=sleepPlan(s,kind);s.started=true;elapse(s,duration,{sleeping:true,bypass:true,charge:false});if(s.ending)return;
-  s.drowsiness=Math.max(0,s.drowsiness-(kind==='nap'?15:100));s.stamina=Math.min(s.maxStamina,s.stamina+(kind==='nap'?20:s.maxStamina));s.sleepDebt=0;s.consecutive=0;
-  if(kind==='full'){s.nightActive=false;s.partner=null;s.partnerSongs=null;s.friendship=false;s.queueUntil=0;G.rollDailyCondition(s);s.mood=Math.min(100,s.mood+8);}
+  const {duration,recovery,staminaRecovery}=sleepPlan(s,kind);s.started=true;elapse(s,duration,{sleeping:true,bypass:true,charge:false});if(s.ending)return;
+  s.drowsiness=Math.max(0,s.drowsiness-recovery);s.stamina=duration>=480?s.maxStamina:Math.min(s.maxStamina,s.stamina+staminaRecovery);s.consecutive=0;
+  if(duration>=480){s.partner=null;s.partnerSongs=null;s.friendship=false;s.queueUntil=0;G.rollDailyCondition(s);s.mood=Math.min(100,s.mood+8);}
   const hours=Math.floor(duration/60),minutes=duration%60;
   G.log(s,`${kind==='nap'?'小睡 30 分钟':`休息了 ${hours} 小时${minutes?` ${minutes} 分钟`:''}`}，${G.time(s.clock)} 起床，困意降至 ${Math.round(s.drowsiness)}，体力 ${Math.floor(s.stamina)}。`,'rest');G.check(s);
  }

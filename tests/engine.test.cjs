@@ -3,7 +3,7 @@ const G=require('../engine.js'),ctx={window:{}};vm.runInNewContext(fs.readFileSy
 const songs=ctx.window.MUSIC_DATA,pool=G.charts(songs);
 function care(s){if(s.ending||s.phase!=='home')return;if(s.school.pending)G.teacher(s);if(!s.ending&&G.canEatHome(s,'home'))G.eatHome(s,'home');}
 function obligations(s){care(s);while(G.nextObligation(s)&&!s.ending){G.resolveClass(s,G.nextObligation(s).id,true);care(s);}}
-function arrive(s,mode='solo'){G.startTrip(s);G.setMode(s,mode);G.travel(s,'bike',1);if(s.bottles.length)G.finishDrinks(s);else G.drink(s,'water');if(s.queueUntil>s.clock)G.waitQueue(s);}
+function arrive(s,mode='solo'){if(s.clock<G.OPEN)G.advance(s,G.OPEN-s.clock);G.startTrip(s);G.setMode(s,mode);G.travel(s,'bike',1);if(s.bottles.length)G.finishDrinks(s);else G.drink(s,'water');if(s.queueUntil>s.clock)G.waitQueue(s);}
 test('calendar starts March 1 and ends June 30 with UTC-stable dates',()=>{
  const s=G.create();assert.equal(G.dateISO(s),'2026-03-01');assert.equal(G.date(s).getUTCDay(),0);s.day=31;assert.equal(G.dateISO(s),'2026-03-31');s.day=122;assert.equal(G.dateISO(s),'2026-06-30');
  s.money=10000;obligations(s);G.sleep(s);assert.equal(s.ending,'ordinary');assert.equal(s.day,122);
@@ -56,7 +56,7 @@ test('B35 + B15 retains separate records per chart and version',()=>{
  assert.equal(G.best(s).old.length,35);assert.equal(G.best(s).fresh.length,15);assert.equal(s.rating,35*(315+349)/2+15*(310+324)/2);
 });
 test('daily actions consume hours without ending the day; sleep charges baseline once',()=>{
- const s=G.create('grinder');G.daily(s,'work');assert.equal(s.clock,720);assert.equal(s.day,1);assert.equal(s.money,1880);G.daily(s,'wait');assert.equal(s.clock,780);G.daily(s,'fun');assert.equal(s.clock,900);
+ const s=G.create('grinder');G.daily(s,'work');assert.equal(s.clock,720);assert.equal(s.day,1);assert.equal(s.money,1840);G.daily(s,'wait');assert.equal(s.clock,780);G.daily(s,'fun');assert.equal(s.clock,900);
  const before=s.money;G.sleep(s);assert.equal(s.day,1);assert.equal(s.clock,1380);assert.equal(s.money,before);G.daily(s,'wait');assert.equal(s.day,2);assert.equal(s.money,before-25);
 });
 test('worker cannot take side jobs, skip shifts, sleep through work or attend during work',()=>{
@@ -88,7 +88,7 @@ test('paired queue serves two people simultaneously, two chosen and two partner 
 });
 test('arcade closing, return and meal deadlines, and outing does not end the day',()=>{
  const s=G.create();s.clock=1395;G.startTrip(s);assert.throws(()=>G.travel(s,'taxi'));assert.equal(s.clock,1395);
- const t=G.create();arrive(t);t.clock=G.availableUntil(t)-G.roundMinutes(t);assert.equal(G.playReason(t),'');G.play(t,G.recommend(t,pool),pool);assert.ok(t.clock<=1410);assert.ok(G.playReason(t));G.finishPlay(t);G.meal(t,'home');assert.equal(t.day,1);assert.ok(t.clock<=1440);assert.equal(t.phase,'home');
+ const t=G.create();arrive(t);t.clock=G.availableUntil(t)-G.roundMinutes(t);assert.equal(G.playReason(t),'');G.play(t,G.recommend(t,pool),pool);assert.ok(t.clock<=1410);assert.ok(G.playReason(t));G.finishPlay(t);G.meal(t,'home');assert.equal(t.day,2);assert.ok(t.clock<60);assert.equal(t.phase,'home');
 });
 test('romance final event strictly requires >13000 and correct chain',()=>{
  const s=G.create('grinder');s.phase='meal';for(let i=0;i<G.EVENTS.length-1;i++){s.day=Math.max(s.day,s.romance.nextDay);s.clock=600;s.event=i;G.answer(s,G.EVENTS[i].correct);}s.day=s.romance.nextDay;s.phase='play';s.trip={rounds:1};s.visits=30;s.rating=13000;G.finishPlay(s);assert.equal(s.event,null);s.phase='play';s.rating=13001;G.finishPlay(s);assert.equal(s.event,G.EVENTS.length-1);G.answer(s,0);assert.equal(s.ending,'love');

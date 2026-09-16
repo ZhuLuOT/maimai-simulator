@@ -30,7 +30,7 @@
     c.notes.forEach((count,i)=>{const g=empty(),technical=i===2?s.skills.star:s.skills.key,weighted=s.skills.star*c.starWeight+s.skills.key*(1-c.starWeight),factor=clamp(Math.exp((weighted-technical)*.17),.45,2.3);
       // Once GREAT saturates, further loss must produce misses instead of flattening scores.
       const overload=Math.max(0,loss-.24)*.65;
-      const missP=clamp((loss*.30+overload+precision.miss)*factor,0,1),goodP=clamp((loss*.25+precision.good)*factor,0,Math.min(.3,1-missP)),greatP=clamp((loss*2.5+precision.great)*factor,0,Math.min(.6,1-missP-goodP)),perfectP=clamp(loss*10+(margin<2?.04:0),0,Math.min(.65,Math.max(0,1-missP-goodP-greatP)));
+      const missP=clamp((loss*.30+overload+precision.miss)*factor,0,1),goodP=clamp((loss*.25+precision.good)*factor,0,Math.min(.3,1-missP)),greatP=clamp((loss*2.5+precision.great)*factor,0,Math.min(.6,1-missP-goodP)),perfectP=clamp(loss*10+(margin<2?.04:0)+precision.perfect,0,Math.min(.65,Math.max(0,1-missP-goodP-greatP)));
       for(let n=0;n<count;n++){const r=rand(s);let judge=r<missP?'miss':r<missP+goodP?'good':r<missP+goodP+greatP?'great':r<missP+goodP+greatP+perfectP?'perfect':'critical';g[judge]++;if(i===4){if(judge==='perfect')b[rand(s)<.65?'perfect50':'perfect100']++;else if(judge==='great'){const q=rand(s);b[q<.6?'great80':q<.85?'great60':'great50']++;}else b[judge]++;}}
       groups.push(g);
     });return finish(groups,b,noteSequence(s,groups));
