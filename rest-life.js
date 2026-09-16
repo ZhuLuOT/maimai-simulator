@@ -24,13 +24,29 @@
   }
   tick(s);
  }
+ function sleepPlan(s,kind='full'){
+  if(!['full','nap'].includes(kind))throw Error('请选择睡眠时长。');
+  const night=s.clock>=1080||s.clock<480;
+  const morning=s.clock>=1080?1920:480;
+  const duration=kind==='nap'?30:night?Math.max(480,morning-s.clock):480;
+  const end=s.clock+duration,dayOffset=Math.floor(end/1440),clock=end%1440,conflicts=[];
+  for(let offset=0;offset<=dayOffset;offset++){
+   const day=s.day+offset;if(day>G.DAYS)break;
+   for(const c of G.schedule({...s,day})){
+    if(offset===0&&s.completed.includes(c.id))continue;
+    if(c.start+offset*1440<end&&c.end+offset*1440>s.clock)conflicts.push({name:c.name,kind:c.kind,day});
+   }
+  }
+  return {duration,day:s.day+dayOffset,clock,conflicts};
+ }
  function sleep(s,kind='full',forced=false){
   if(!['full','nap'].includes(kind))throw Error('请选择睡眠时长。');
   if(!forced&&(s.phase!=='home'||s.ending||s.school.pending||s.event!==null||s.videoEvent||s.city.encounter))throw Error(`先回${G.residence(s)}并处理当前事件，再睡觉。`);
-  const duration=kind==='nap'?30:480;s.started=true;elapse(s,duration,{sleeping:true,bypass:true,charge:false});if(s.ending)return;
+  const {duration}=sleepPlan(s,kind);s.started=true;elapse(s,duration,{sleeping:true,bypass:true,charge:false});if(s.ending)return;
   s.drowsiness=Math.max(0,s.drowsiness-(kind==='nap'?15:100));s.stamina=Math.min(s.maxStamina,s.stamina+(kind==='nap'?20:s.maxStamina));s.sleepDebt=0;s.consecutive=0;
   if(kind==='full'){s.nightActive=false;s.partner=null;s.partnerSongs=null;s.friendship=false;s.queueUntil=0;G.rollDailyCondition(s);s.mood=Math.min(100,s.mood+8);}
-  G.log(s,`${kind==='nap'?'小睡 30 分钟':'睡了 8 小时'}，困意降至 ${Math.round(s.drowsiness)}，体力 ${Math.floor(s.stamina)}。`,'rest');G.check(s);
+  const hours=Math.floor(duration/60),minutes=duration%60;
+  G.log(s,`${kind==='nap'?'小睡 30 分钟':`休息了 ${hours} 小时${minutes?` ${minutes} 分钟`:''}`}，${G.time(s.clock)} 起床，困意降至 ${Math.round(s.drowsiness)}，体力 ${Math.floor(s.stamina)}。`,'rest');G.check(s);
  }
  function forceSleep(s){
   G.log(s,'困意达到 100，终止当前行动，回家睡觉。','rest');s.forcedSleeps++;const movement=route,arcade=movement?.arcade??s.arcade;let back=s.trip?.returnTime||0,distance=back?G.ARCADE_KM[arcade]:0;
@@ -42,7 +58,7 @@
  function advance(s,minutes,movement=null){if(!G.canSpendTime(s,minutes))throw Error('时间不足或与课程 / 工作冲突。');const reason=timeReason(s,minutes);if(reason)throw Error(reason);s.started=true;route=movement?{...movement,elapsed:0}:null;try{elapse(s,minutes);}finally{route=null;}}
  function attend(s,c){const lunch=720;if(!s.nutrition.meals[1]&&s.clock<lunch&&c.end>lunch){elapse(s,lunch-s.clock,{charge:false});s.mealBreak=c.start<lunch?c.id:null;G.log(s,c.start<lunch?`${c.name}暂告一段落，午休时间，先吃午饭。`:`距离${c.name}还有一会儿，先吃午饭。`,'meal');return false;}s.mealBreak=null;const duration=Math.max(0,c.end-s.clock);elapse(s,duration,{charge:false});return true;}
  function advanceMeal(s,minutes){const c=G.nextObligation(s);if(c&&s.mealBreak===c.id&&s.clock>=720&&s.clock+minutes<=c.end){s.started=true;elapse(s,minutes,{charge:false});}else advance(s,minutes);}
- function install(api,callbacks){G=api;rollover=callbacks.rollover;tick=callbacks.tick;Object.assign(api,{advanceMeal,hourlyCost,timeChargeReason:timeReason,sleepPenalty:s=>Math.max(0,(s.drowsiness||0)-60)*.025,rollDailyCondition:callbacks.condition,addTravelDistance:callbacks.distance});}
+ function install(api,callbacks){G=api;rollover=callbacks.rollover;tick=callbacks.tick;Object.assign(api,{sleepPlan,advanceMeal,hourlyCost,timeChargeReason:timeReason,sleepPenalty:s=>Math.max(0,(s.drowsiness||0)-60)*.025,rollDailyCondition:callbacks.condition,addTravelDistance:callbacks.distance});}
  function wrap(api){for(const name of ['advance','advanceMeal','packDrink','eatHome','daily','sleep','nextDay','resolveClass','teacher','travel','drink','play','meal','runCourse','waitQueue','refill','chatSend','watchVideos','explore','answerEncounter','answer','contactLove']){const fn=api[name];api[name]=function(...args){depth++;try{return fn(...args);}catch(e){if(!e.interrupted||depth>1)throw e;}finally{depth--;}};}}
  function valid(s){return Number.isFinite(s.drowsiness)&&s.drowsiness>=0&&s.drowsiness<=100&&Number.isInteger(s.forcedSleeps)&&s.forcedSleeps>=0&&s.forcedSleeps<10000&&(!s.trip||s.arcade!==5||Number.isInteger(s.trip.denMinutes)&&s.trip.denMinutes>=0&&Number.isInteger(s.trip.denHours)&&s.trip.denHours>=1&&s.trip.denHours<=DAYS_HOURS&&s.trip.denMinutes<=s.trip.denHours*60);}
  const api={ensure,advance,sleep,attend,install,wrap,valid};if(typeof module!=='undefined')module.exports=api;else root.RestLife=api;

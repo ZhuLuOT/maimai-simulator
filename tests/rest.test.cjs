@@ -1,6 +1,24 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),G=require('../engine');
 const context={window:{}};vm.runInNewContext(fs.readFileSync(require.resolve('../data/music.js'),'utf8'),context);const pool=G.charts(context.window.MUSIC_DATA);
 function den(){const s=G.create('grinder',42);s.city.denUnlocked=true;s.money=10000;s.people=0;G.startTrip(s);G.travel(s,'taxi',5);G.drink(s,'water');s.queueUntil=0;return s;}
+test('evening sleep wakes at 08:00 while late nights still require eight hours',()=>{
+ for(const [start,day,clock] of [[1080,2,480],[1200,2,480],[1260,2,480],[1320,2,480],[1380,2,480],[0,1,480],[60,1,540],[180,1,660],[420,1,900],[900,1,1380]]){
+  const s=G.create('grinder',42);s.clock=start;const plan=G.sleepPlan(s),before=JSON.stringify(s);
+  assert.equal(JSON.stringify(s),before);assert.equal(plan.day,day);assert.equal(plan.clock,clock);
+  const money=s.money;G.sleep(s);assert.equal(s.day,day);assert.equal(s.clock,clock);assert.equal(s.drowsiness,0);assert.equal(s.stamina,s.maxStamina);
+  assert.equal(s.money,money-(day-1)*G.JOBS.grinder.daily);assert.ok(G.validate(s));assert.match(s.logs[0].text,/起床/);
+ }
+});
+test('night sleep forecasts obligations precisely and naps keep their own duration',()=>{
+ const worker=G.create('worker',42);worker.clock=1200;assert.deepEqual(G.sleepPlan(worker).conflicts,[]);G.sleep(worker);assert.equal(worker.clock,480);assert.equal(worker.workAbsences,0);
+ worker.clock=120;const late=G.sleepPlan(worker);assert.equal(late.clock,600);assert.deepEqual(late.conflicts.map(c=>c.kind),['shift']);G.sleep(worker);assert.equal(worker.workAbsences,1);
+ const student=G.create('student',42);student.clock=1200;G.sleep(student);assert.equal(student.clock,480);assert.equal(student.absences.length,0);
+ student.clock=539;assert.equal(G.sleepPlan(student,'nap').duration,30);assert.deepEqual(G.sleepPlan(student,'nap').conflicts.map(c=>c.name),['程序设计']);G.sleep(student,'nap');assert.equal(student.clock,569);assert.ok(student.absences.includes('mon-major'));
+});
+test('forced sleep uses the same morning boundary and terminal days do not roll past June',()=>{
+ const s=G.create('grinder',42);s.clock=1200;s.drowsiness=99.99;G.advance(s,1);assert.equal(s.forcedSleeps,1);assert.equal(s.day,2);assert.equal(s.clock,480);
+ const last=G.create('grinder',42);last.day=122;last.clock=1200;G.sleep(last);assert.equal(last.ending,'ordinary');assert.equal(last.day,122);
+});
 test('hourly billing renews at minute 61, persists, includes queue/chat and pauses for meals',()=>{
  let s=den();const cash=s.money;G.advance(s,55);assert.equal(s.trip.denMinutes,60);assert.equal(s.money,cash);
  s=G.migrate(JSON.parse(JSON.stringify(s)));G.advance(s,1);assert.equal(s.money,cash-30);assert.equal(s.trip.denHours,2);
