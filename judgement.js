@@ -13,7 +13,8 @@
     return {achievement:Number((baseScore+extraScore).toFixed(4)),baseScore,extraScore,judgements,judgementGroups:groups,breakJudgements:b,combo:judgements.miss?'':judgements.good?'FC':judgements.great?'FC+':'AP'};
   }
   // Keep small challenges approachable; large skill deficits grow progressively harder.
-  function difficultyPenalty(difficulty,ability){const gap=Math.max(0,difficulty-ability);return gap*3.7+.65*Math.max(0,gap-1)**2;}
+  function difficultyValue(d){return d+.12*Math.max(0,d-12)**2+.35*Math.max(0,d-14.5)**2;}
+  function difficultyPenalty(difficulty,ability){const gap=Math.max(0,difficultyValue(difficulty)-difficultyValue(ability));return gap*3.7+.65*Math.max(0,gap-1)**2;}
   function noteSequence(s,groups){
     const sequence=[];groups.forEach((g,i)=>judges.forEach((k,j)=>{for(let n=0;n<g[k];n++)sequence.push(i*5+j);}));
     // No chart timelines are available: interleave the sampled judgements in a seeded note order.
@@ -80,5 +81,5 @@
     const adjusted=finish(groups,breaks,sequence);event.loss=Number((result.achievement-adjusted.achievement).toFixed(4));
     return {...adjusted,segmentEvent:event};
   }
-  const api={calculate,difficultyPenalty,simulate,segment};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.Judgement=api;
+  const api={calculate,difficultyPenalty,difficultyValue,simulate,segment};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.Judgement=api;
 })(globalThis);
