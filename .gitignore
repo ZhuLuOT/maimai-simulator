@@ -4,6 +4,7 @@ artifacts/
 # Build artifacts we can regenerate locally
 out/
 dist/app.js.map
+output/imagegen/
 
 # Logs and temp files
 *.log

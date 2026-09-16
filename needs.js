@@ -9,6 +9,7 @@
   const labels=['早餐','午餐','晚餐'];
   function ensure(s){
     s.nutrition??={meals:[false,false,false],dismissed:[],away:false,badDays:0,goodDays:0};s.mealBreak??=null;
+    if(s.mealBreak&&G.dayInfo(s).holiday&&!G.schedule(s).some(c=>c.id===s.mealBreak))s.mealBreak=null;
     if(!s.bottles){const d=G.DRINKS.find(d=>d.id===s.drink);s.bottles=[];let ml=s.liquid||0;while(d&&ml>0&&s.bottles.length<3){const amount=Math.min(d.ml,ml);s.bottles.push({id:d.id,ml:amount});ml-=amount;}sync(s);}
   }
   function sync(s){s.liquid=s.bottles.reduce((n,b)=>n+b.ml,0);s.drink=s.bottles[0]?.id||null;}

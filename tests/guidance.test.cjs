@@ -1,10 +1,14 @@
 const test=require('node:test'),assert=require('node:assert/strict'),G=require('../engine');
 const options={name:'',id:'',talent:'rich',offers:['rich','reader','steady']};
-test('opening story is stored in the group chat once, resumes after reload and grants no chat rewards',()=>{
+test('opening story is separate from group chat, resumes after reload and grants no chat rewards',()=>{
  const s=G.create();G.setup(s,options);const before=[s.clock,s.money,s.chatCount,s.npcs[0].familiarity];
- assert.equal(G.postIntro(s),true);assert.equal(s.chat.length,5);assert.equal(s.chat[0].id,'逃遁');assert.equal(s.chat[2].id,'鲁米诺');assert.ok(s.chat[1].self);assert.equal(G.postIntro(s),false);
- const restored=G.migrate(JSON.parse(JSON.stringify(s)));assert.equal(G.postIntro(restored),false);restored.guide.step=1;G.postIntro(restored);restored.guide.step=2;G.postIntro(restored);assert.equal(restored.chat.length,13);restored.guide.introDone=true;assert.equal(G.postIntro(restored),false);
+ assert.equal(G.postIntro(s),true);assert.equal(s.chat.length,0);const intro=G.introMessages(s);assert.equal(intro.length,5);assert.equal(intro[0].id,'逃遁');assert.equal(intro[2].id,'鲁米诺');assert.ok(intro[1].self);assert.equal(G.postIntro(s),false);
+ const restored=G.migrate(JSON.parse(JSON.stringify(s)));assert.equal(G.postIntro(restored),false);restored.guide.step=1;G.postIntro(restored);restored.guide.step=2;G.postIntro(restored);assert.equal(restored.chat.length,0);assert.equal(G.introMessages(restored).length,13);assert.equal(restored.city.denUnlocked,false);restored.guide.introDone=true;assert.equal(G.postIntro(restored),false);
  assert.deepEqual([restored.clock,restored.money,restored.chatCount,restored.npcs[0].familiarity],before);assert.equal(restored.guide.chatted,false);assert.ok(G.validate(restored));const chat=JSON.stringify(restored.chat);G.introMessages(restored);assert.equal(JSON.stringify(restored.chat),chat);
+});
+
+test('legacy introduction messages are removed while ordinary chat is preserved',()=>{
+ const s=G.create();G.setup(s,options);s.chat=[...G.introMessages(s),{id:'电压',text:'今天去观鸟。',day:1,time:480}];G.migrate(s);assert.equal(s.chat.length,1);assert.equal(s.chat[0].id,'电压');assert.equal(s.guide.step,0);assert.equal(s.guide.introDone,false);
 });
 test('starting play styles balance star and key, stack with talents once and survive save migration',()=>{
  const outer=G.create(),inner=G.create();G.setup(outer,{...options,playStyle:'outer'});G.setup(inner,{...options,playStyle:'inner'});

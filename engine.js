@@ -15,6 +15,7 @@
   const P=typeof module!=='undefined'?require('./precision'):root.Precision;
   const C=typeof module!=='undefined'?require('./collection.js'):root.Collections;
   const EXP=typeof module!=='undefined'?require('./data/expansion.js'):root.EXPANSION;
+  const HOLIDAYS=typeof module!=='undefined'?require('./data/holidays-2026'):root.HOLIDAYS_2026;
   const START=Date.UTC(2026,2,1), DAYS=122, OPEN=600, CLOSE=1410, NIGHT=1440;
   const JOBS={student:{name:'学生',money:1800,monthly:1800,daily:35,rent:0,wage:40,workTime:240,icon:'graduation-cap',detail:'月生活费 ¥1800 · 日常 ¥35'},grinder:{name:'挂壁',money:1800,monthly:0,daily:25,rent:600,wage:40,workTime:240,icon:'gamepad-2',detail:'无固定收入 · 月租 ¥600'},worker:{name:'上班族',money:6000,monthly:6000,daily:65,rent:1800,wage:0,workTime:0,icon:'briefcase-business',detail:'月薪 ¥6000 · 月租 ¥1800'}};
   const ARCADE_KM=[1.8,3.2,2.4,7.6,10.2,8.8];
@@ -30,9 +31,10 @@
   function date(s){return new Date(START+(s.day-1)*86400000);}
   function dateISO(s){return date(s).toISOString().slice(0,10);}
   function dateLabel(s){return `${dateISO(s)} 周${'日一二三四五六'[date(s).getUTCDay()]}`;}
+  function dayInfo(s){const iso=dateISO(s),weekday=date(s).getUTCDay(),holiday=HOLIDAYS.holidays.find(h=>iso>=h.start&&iso<=h.end),makeup=HOLIDAYS.makeup[iso];return {iso,weekday,holiday:holiday?.name||'',makeup:makeup?.name||'',scheduleWeekday:makeup?.weekday??weekday,rest:!!holiday||!makeup&&[0,6].includes(weekday)};}
   function time(n){return `${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;}
   function log(s,text,type='normal'){s.logs.unshift({day:s.day,time:s.clock,text:api.homeText(s,text),type});s.logs=s.logs.slice(0,250);}
-  function crowd(s){s.people=2+Math.floor(random(s)*15)+([0,6].includes(date(s).getUTCDay())?5:0);}
+  function crowd(s){s.people=2+Math.floor(random(s)*15)+(dayInfo(s).rest?5:0);}
   function create(job='student',seed=Date.now()){
     if(!JOBS[job])job='student';
     const s={version:2,job,seed:seed>>>0,day:1,clock:480,money:JOBS[job].money,mood:78,skills:{star:8,key:8},rating:0,records:{},practice:{},phase:'home',started:false,visits:0,credits:0,tracks:0,people:0,arcade:0,mode:'solo',trip:null,drink:null,last:null,love:0,loveFailed:false,event:null,nextLoveVisit:2,ending:null,logs:[],history:[{day:1,rating:0}],school:{academic:70,failing:false,since:null,talks:0,pending:false},completed:[],rests:0,workCount:0,paidMonths:[],lastSettlement:null};
@@ -40,9 +42,10 @@
   }
   function end(s,ending){s.ending=ending;s.phase='ending';s.event=null;s.school.pending=false;return true;}
   function check(s){s.money=Math.round(s.money*100)/100;if(s.trip)s.trip.cost=Math.round(s.trip.cost*100)/100;if(s.ending)return true;if(s.school.talks>=3)return end(s,'dropout');if(s.mood<=0)return end(s,'burnout');if(s.money<=0)return end(s,'broke');if(s.rating>=16000)return end(s,'good');return false;}
-  function schedule(s,weekday=date(s).getUTCDay()){
-    if(s.job==='worker')return [0,6].includes(weekday)?[]:[{id:'shift',name:'公司上班',kind:'shift',start:540,end:1080}];
-    return s.job==='student'?(WEEK[weekday]||[]).map(c=>({...c})):[];
+  function schedule(s){
+    const info=dayInfo(s);if(info.rest)return [];
+    if(s.job==='worker')return [{id:'shift',name:'公司上班',kind:'shift',start:540,end:1080}];
+    return s.job==='student'?(WEEK[info.scheduleWeekday]||[]).map(c=>({...c})):[];
   }
   function pending(s){return schedule(s).filter(c=>!s.completed.includes(c.id));}
   function nextObligation(s){return pending(s)[0]||null;}
@@ -130,7 +133,7 @@
   function levelValue(c){const level=api.displayLevel(c);return parseInt(level,10)+(level.endsWith('+')?.5:0);}
   function challengeThreshold(rating){return rating>=14000?14.5:rating>=13000?14:rating>=12000?13.5:rating>=11000?12:11.5;}
   function isOverreach(rating,c,achievement=c.achievement){return !isUtage(c)&&levelValue(c)>=challengeThreshold(rating)&&Number.isFinite(achievement)&&achievement<=97;}
-  function growthFactor(s,c){const raw=c.ds-baseAbility(s,c),gap=J.difficultyValue?J.difficultyValue(c.ds)-J.difficultyValue(baseAbility(s,c)):raw,base=clamp(1-Math.abs(gap)*.18,.2,1),average=(s.skills.star+s.skills.key+s.skills.reading)/3,maturity=1/(1+Math.max(0,average-10)*.5);return base*maturity*(gap>0&&gap<1.5?1+.5*Math.min(1,gap/.4,(1.5-gap)/.5):1);}
+  function growthFactor(s,c){const raw=c.ds-baseAbility(s,c),gap=J.difficultyValue?J.difficultyValue(c.ds)-J.difficultyValue(baseAbility(s,c)):raw,base=clamp(1-Math.abs(gap)*.18,.2,1),average=(s.skills.star+s.skills.key+s.skills.reading)/3,advanced=Math.max(0,average-10),maturity=1/(1+advanced*.5+advanced*advanced*.2);return base*maturity*(gap>0&&gap<1.5?1+.5*Math.min(1,gap/.4,(1.5-gap)/.5):1);}
   function recommend(s,pool,count=X.selectCount(s),exclude=[]){
     const b=best(s),oldFloor=b.old.length<35?0:b.old.at(-1).ra,newFloor=b.fresh.length<15?0:b.fresh.at(-1).ra;
     const excluded=new Set(exclude.map(c=>c.id)),recent=new Set((s.last?.results||[]).map(c=>c.id));
@@ -216,7 +219,7 @@
     if(s.trip&&(!integer(s.trip.returnTime,0,180)||!num(s.trip.cost,0,1e9)||!integer(s.trip.rounds,0,10000)||!num(s.trip.ratingBefore,0,30000)||!Array.isArray(s.trip.played)||!s.trip.played.every(record)))return false;
     if(s.last&&(!Array.isArray(s.last.results)||!s.last.results.every(record)||!num(s.last.gain,0,30000)||!MODES[s.last.mode]||!s.last.skillsBefore))return false;return CITY.valid(s)&&M.valid(s);
   }
-  const api={START,DAYS,OPEN,CLOSE,NIGHT,pcPrice,entryPrice,allNight,arcadeIsOpen,JOBS,ARCADE_KM,TRANSPORT,transportOptions,DRINKS,MEALS,EVENTS,WEEK,MODES,create,date,dateISO,dateLabel,time,key,log,check,resolveClass,teacher,daily,workIncome,sleep,nextDay:sleep,schedule,pending,nextObligation,canSpendTime,academicChange,startTrip,setMode,peopleAt,roundInfo,roundMinutes,travel,drink,availableUntil,playReason,coefficient,chartRating,rank,ratingTier,best,recalculate,charts,baseAbility,levelValue,challengeThreshold,isOverreach,growthFactor,ability,familiarity,expected,combo,simulate,recommend,play,finishPlay,answer,returnToPlayReason,meal,migrate,validate};
+  const api={START,DAYS,OPEN,CLOSE,NIGHT,HOLIDAYS,dayInfo,pcPrice,entryPrice,allNight,arcadeIsOpen,JOBS,ARCADE_KM,TRANSPORT,transportOptions,DRINKS,MEALS,EVENTS,WEEK,MODES,create,date,dateISO,dateLabel,time,key,log,check,resolveClass,teacher,daily,workIncome,sleep,nextDay:sleep,schedule,pending,nextObligation,canSpendTime,academicChange,startTrip,setMode,peopleAt,roundInfo,roundMinutes,travel,drink,availableUntil,playReason,coefficient,chartRating,rank,ratingTier,best,recalculate,charts,baseAbility,levelValue,challengeThreshold,isOverreach,growthFactor,ability,familiarity,expected,combo,simulate,recommend,play,finishPlay,answer,returnToPlayReason,meal,migrate,validate};
   X.install(api);C.install(api);CITY.install(api);NEEDS.install(api);M.install(api);COMP.install(api);R.install(api);GUIDE.install(api);WORLD.install(api);REST.install(api,{rollover,tick:X.tick,condition:X.rollCondition,distance:C.distance});Object.assign(api,{isUtage,advance,preparePartner,setPartnerDifficulty,calculateJudgements:J.calculate});REST.wrap(api);
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.Game=api;
 })(typeof window==='undefined'?globalThis:window);

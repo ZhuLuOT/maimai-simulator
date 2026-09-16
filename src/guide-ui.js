@@ -2,7 +2,7 @@ import {html} from 'lit';
 import {icon} from './ui.js';
 const G=window.Game;
 export function intro(s,replay=false){
- return html`<div class="chat-meta">开局群聊 · ${s.guide.step+1}/3 · ${replay?'回看记录':'逃遁、鲁米诺正在和你聊天'}</div><div class="modal-actions"><button class="secondary-btn" data-action="intro-skip">${replay?'结束回看':'跳过引导'}</button>${replay&&s.guide.step?html`<button class="secondary-btn" data-action="intro-back">上一段</button>`:''}<button class="primary-btn" data-action="intro-next">${s.guide.step===2?'聊完了，安排今天':'继续聊聊'} ${icon('arrow-right')}</button></div>`;
+ return html`<div class="intro-story"><div class="chat-window">${G.introMessages(s).map(m=>{const src=m.self?(s.profile.avatar||window.AVATARS?.[0]?.src):window.AVATARS?.[G.NPC_IDS.indexOf(m.id)+1]?.src;return html`<article class="chat-message ${m.self?'self':''}"><div class="chat-avatar">${src?html`<img src=${src} alt=${m.id+'的头像'}>`:icon('user-round')}</div><div><small>${m.id}</small><p>${m.text}</p></div></article>`;})}</div><div class="chat-meta">${s.guide.step+1}/3 · ${replay?'回看记录':'逃遁、鲁米诺正在和你聊天'}</div><div class="modal-actions"><button class="secondary-btn" data-action="intro-skip">${replay?'结束回看':'跳过引导'}</button>${replay&&s.guide.step?html`<button class="secondary-btn" data-action="intro-back">上一段</button>`:''}<button class="primary-btn" data-action="intro-next">${s.guide.step===2?'聊完了，安排今天':'继续聊聊'} ${icon('arrow-right')}</button></div></div>`;
 }
 export function guideSummary(s){
  const goals=G.goals(s),next=goals.find(g=>g.done&&!g.claimed)||goals.find(g=>!g.done);

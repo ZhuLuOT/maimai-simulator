@@ -1,0 +1,52 @@
+{
+  "status": "generated: 25 species including the hidden owl; integrated into the bird atlas",
+  "generation": {"model":"gpt-image-2","quality":"medium","provider":"ShuaiAPI","mode":"reference-guided asynchronous edits","endpoint":"/v1/images/edits/async","originalDirectory":"output/imagegen"},
+  "reference": "C:/Users/ADMIN/Documents/Pictures/4d0cf49cc019bd7af1059f9e7e06ddd0090d76201e217-pq4NOl_fw658webp.jpg",
+  "referenceRole": "Style reference only. Create a new individual illustration for each species.",
+  "assetDirectory": "assets/world/birds",
+  "filePattern": "{id}.png",
+  "sharedPrompt": "Use case: stylized-concept. Asset type: bird encyclopedia game sprite. Create exactly one bird of the specified species, using the supplied reference's chunky low-resolution pixel sticker style. Full body in a side or three-quarter view; rounded simplified silhouette, dark stepped pixel outlines, thick continuous white sticker border, a small restrained palette with crisp square pixel clusters. Keep identifying plumage, bill, legs and tail recognizable. Center the entire bird with generous margins on a flat muted blue-gray background matching the reference. Square composition, consistent apparent pixel size across the collection. No text, labels, watermarks, frame, other birds, scenery, gradients, smooth vector curves, blur or photorealistic textures. Do not crop the feet, bill, crest, wings or tail.",
+  "delivery": {
+    "sourceSize": "1024x1024",
+    "gameSize": "256x256",
+    "resampling": "nearest-neighbor after inspecting the generated pixel grid",
+    "format": "png",
+    "background": "opaque blue-gray; no transparency required",
+    "review": "Inspect every species for identity, complete body, reference-style pixel grid and consistent white border; review a contact sheet and desktop/mobile atlas."
+  },
+  "integration": {
+    "atlas": "Use the new assets/world/birds/{id}.png only for bird encyclopedia artwork. Compute progress from the catalog length.",
+    "groupChat": "Keep assets/world/bulbul.png, robin.png, egret.png and kingfisher.png byte-for-byte unchanged. Keep Dianya's group messages using these original photos and original four species.",
+    "otherArt": "Keep the four existing art entries and their assets unchanged.",
+    "saves": "Preserve existing bird IDs and unlocks. Expand entry validation for the new catalog.",
+    "collection": "Keep the first four quest bird unlocks. Twenty additional species are discoverable on daytime revisits. The hidden collared scops owl unlocks only in the fifth and final nighttime Baiyun Mountain quest.",
+    "activation": "Do not activate new atlas paths or catalog entries until all required artwork exists and has been reviewed."
+  },
+  "species": [
+    {"id":"bulbul","name":"白头鹎","scientificName":"Pycnonotus sinensis","place":"yuexiu","subjectPrompt":"Adult light-vented bulbul: black crown and cheek, conspicuous white patch across the back of the head, olive-gray wings, pale belly, medium dark tail."},
+    {"id":"robin","name":"鹊鸲","scientificName":"Copsychus saularis","place":"shamian","subjectPrompt":"Adult male Oriental magpie-robin: glossy black head and upperparts, broad white wing patch, white belly, long black tail held slightly upright. Not a European robin."},
+    {"id":"egret","name":"白鹭","scientificName":"Egretta garzetta","place":"canton","subjectPrompt":"Adult little egret: entirely white plumage, slender black bill, long black legs and clearly yellow feet; gently curved neck and compact folded wings."},
+    {"id":"kingfisher","name":"普通翠鸟","scientificName":"Alcedo atthis","place":"yongqing","subjectPrompt":"Adult male common kingfisher: turquoise-blue back and crown, orange breast and belly, white throat and neck patch, long straight dark bill, tiny red feet and short tail."},
+    {"id":"tree-sparrow","name":"树麻雀","scientificName":"Passer montanus","place":"shamian","subjectPrompt":"Adult Eurasian tree sparrow: chestnut-brown cap, white cheek with a distinct black cheek spot, small black bib, streaked brown wings, buff belly and short conical bill."},
+    {"id":"spotted-dove","name":"珠颈斑鸠","scientificName":"Spilopelia chinensis","place":"shamian","subjectPrompt":"Adult spotted dove: small gray head, dusty pink breast, warm brown wings, long tapered tail and diagnostic black neck patch dotted with white square pixels."},
+    {"id":"crested-myna","name":"八哥","scientificName":"Acridotheres cristatellus","place":"yuexiu","subjectPrompt":"Adult crested myna: black plumage, small upright tuft above a pale ivory bill, yellow-orange legs, tiny white wing patch visible on the folded wing."},
+    {"id":"red-whiskered-bulbul","name":"红耳鹎","scientificName":"Pycnonotus jocosus","place":"yuexiu","subjectPrompt":"Adult red-whiskered bulbul: tall pointed black crest, white cheek with small red ear patch behind the eye, brown back, pale belly and red vent."},
+    {"id":"red-billed-blue-magpie","name":"红嘴蓝鹊","scientificName":"Urocissa erythroryncha","place":"yuexiu","subjectPrompt":"Adult red-billed blue magpie: black head and chest, pale nape, blue wings, red bill and feet, exceptionally long graduated blue tail with pale tips. Show the complete tail diagonally within the square."},
+    {"id":"cinereous-tit","name":"苍背山雀","scientificName":"Parus cinereus","place":"yuexiu","subjectPrompt":"Adult cinereous tit: black cap and throat, large white cheek patches, gray back, gray wings with a white bar, whitish belly with a narrow black center stripe."},
+    {"id":"swinhoes-white-eye","name":"暗绿绣眼鸟","scientificName":"Zosterops simplex","place":"yuexiu","subjectPrompt":"Adult Swinhoe's white-eye: tiny olive-green bird with a prominent complete white eye ring, yellow throat, pale gray-white belly and short fine dark bill."},
+    {"id":"long-tailed-shrike","name":"棕背伯劳","scientificName":"Lanius schach","place":"shamian","subjectPrompt":"Adult long-tailed shrike of the gray-headed form: gray crown, broad black eye mask, warm rufous back and flanks, pale breast, black wings and a very long black tail; subtly hooked bill."},
+    {"id":"black-drongo","name":"黑卷尾","scientificName":"Dicrurus macrocercus","place":"shamian","subjectPrompt":"Adult black drongo: sleek entirely black bird with subtle blue-black highlights, red eye and clearly forked long tail; upright posture and stout dark bill."},
+    {"id":"black-collared-starling","name":"黑领椋鸟","scientificName":"Gracupica nigricollis","place":"shamian","subjectPrompt":"Adult black-collared starling: pale cream head, bare yellow skin around the eye, broad black collar across the neck and upper breast, white belly and dark wings with pale markings."},
+    {"id":"white-rumped-munia","name":"白腰文鸟","scientificName":"Lonchura striata","place":"yuexiu","subjectPrompt":"Adult white-rumped munia: dark chocolate-brown head and breast, brown back, pale belly, thick blue-gray conical bill and contrasting white rump above a dark tail; angle the body so the white rump is visible."},
+    {"id":"scaly-breasted-munia","name":"斑文鸟","scientificName":"Lonchura punctulata","place":"yuexiu","subjectPrompt":"Adult scaly-breasted munia: warm chestnut head and throat, brown upperparts, pale breast and belly with distinct dark scalloped scale markings, stout dark conical bill and short tail."},
+    {"id":"chinese-blackbird","name":"乌鸫","scientificName":"Turdus mandarinus","place":"shamian","subjectPrompt":"Adult male Chinese blackbird: rounded dark charcoal-black body, vivid yellow-orange bill and narrow yellow eye ring, long straight tail and dark legs; no crest or white wing patch."},
+    {"id":"white-wagtail","name":"白鹡鸰","scientificName":"Motacilla alba","place":"canton","subjectPrompt":"Adult white wagtail of the leucopsis form: white face, black crown and nape, dark upper breast, black back, white belly and wing markings; slim body, fine bill, thin legs and very long narrow black-and-white tail."},
+    {"id":"barn-swallow","name":"家燕","scientificName":"Hirundo rustica","place":"canton","subjectPrompt":"Adult barn swallow: glossy blue-black upperparts, chestnut forehead and throat, pale belly, dark breast band and deeply forked tail with two fine elongated streamers. Perched with wings folded, all tail streamers visible."},
+    {"id":"night-heron","name":"夜鹭","scientificName":"Nycticorax nycticorax","place":"canton","subjectPrompt":"Adult black-crowned night heron: squat body, black crown and back, gray wings, pale underside, bright red eye, stout black bill, short yellow legs and two slender pale nape plumes."},
+    {"id":"chinese-pond-heron","name":"池鹭","scientificName":"Ardeola bacchus","place":"canton","subjectPrompt":"Adult Chinese pond heron in breeding plumage: chestnut-red head and neck, dark slate back, white folded wings and belly, yellow bill with a dark tip and yellow-green legs; compact heron shape."},
+    {"id":"grey-heron","name":"苍鹭","scientificName":"Ardea cinerea","place":"canton","subjectPrompt":"Adult grey heron: tall long-legged body, gray back and wings, long pale neck with sparse dark marks, white head with a black eyebrow continuing into a short crest, long yellowish spear-shaped bill."},
+    {"id":"common-moorhen","name":"黑水鸡","scientificName":"Gallinula chloropus","place":"yongqing","subjectPrompt":"Adult common moorhen: charcoal head and chest, dark brown back, bright red frontal shield and red bill with yellow tip, broken white flank stripe, yellow-green legs with long toes and small white undertail patch."},
+    {"id":"white-breasted-waterhen","name":"白胸苦恶鸟","scientificName":"Amaurornis phoenicurus","place":"yongqing","subjectPrompt":"Adult white-breasted waterhen: striking white face, throat and breast against dark slate crown and back, chestnut undertail, yellow-green bill with red at the base, long yellowish legs and toes; compact upright stance."},
+    {"id":"owl","name":"领角鸮","scientificName":"Otus lettia","place":"baiyun","subjectPrompt":"One adult collared scops owl, a small woodland owl: rounded stocky body, two short upright ear tufts, large orange-brown eyes in a pale facial disk with dark borders, dark tiny hooked bill, warm gray-brown mottled plumage with dark vertical streaks and a pale buff collar around the neck, short tail, two feathered feet with small curved claws. Front three-quarter view so both eyes and both ear tufts are visible. Chunky adorable pixel sticker bird, no branch, no moon, no scenery."}
+  ]
+}

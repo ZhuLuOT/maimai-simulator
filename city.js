@@ -16,6 +16,7 @@
     {id:'shamian',name:'沙面岛',place:'榕树与骑楼街景',time:150,cost:8,stamina:14,mood:25,icon:'camera'},
     {id:'canton',name:'花城广场',place:'珠江新城与广州塔夜景',time:120,cost:8,stamina:12,mood:23,icon:'building-2'},
     {id:'yongqing',name:'永庆坊',place:'西关骑楼与粤剧艺术博物馆',time:150,cost:8,stamina:16,mood:26,icon:'map-pinned'},
+    {id:'baiyun',name:'白云山',place:'林间山道与山顶夜色',time:180,cost:10,stamina:22,mood:30,icon:'mountain'},
     {id:'movie',name:'看一场电影',place:'附近电影院',time:150,cost:38,stamina:0,mood:30,icon:'film'},
     {id:'music',name:'听音乐',place:'在家听歌',time:45,cost:0,stamina:0,mood:9,icon:'headphones'},
     {id:'games',name:'和群友联机',place:'线上游戏',time:60,cost:0,stamina:0,mood:12,icon:'gamepad-2'}
