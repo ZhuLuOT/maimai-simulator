@@ -8,7 +8,7 @@
   const slot=s=>s.clock<360?-1:s.clock<660?0:s.clock<1020?1:2;
   const labels=['早餐','午餐','晚餐'];
   function ensure(s){
-    s.nutrition??={meals:[false,false,false],dismissed:[],away:false,badDays:0,goodDays:0};s.mealBreak??=null;
+    s.nutrition??={meals:[false,false,false],dismissed:[],away:false,badDays:0,goodDays:0};s.mealBreak??=null;s.nutrition.paidMeals??=[0,0,0];
     if(s.mealBreak&&G.dayInfo(s).holiday&&!G.schedule(s).some(c=>c.id===s.mealBreak))s.mealBreak=null;
     if(!s.bottles){const d=G.DRINKS.find(d=>d.id===s.drink);s.bottles=[];let ml=s.liquid||0;while(d&&ml>0&&s.bottles.length<3){const amount=Math.min(d.ml,ml);s.bottles.push({id:d.id,ml:amount});ml-=amount;}sync(s);}
   }
@@ -37,22 +37,23 @@
   function homeMeals(s){return meals(s).map(m=>m.id==='home'?{...m,name:s.mealBreak?'午休便当':s.job==='student'?'食堂打饭带回宿舍':'家常饭'}:m).concat(s.job==='student'&&!s.mealBreak?[{id:'delivery',name:'美团拼好饭',cost:12,time:15,mood:10,stamina:35,icon:'bike',note:'宿舍用餐 · 心情 +10'}]:[]);}
   function due(s){const i=slot(s);return i>=0&&!s.nutrition.meals[i]?i:-1;}
   function reminder(s){const i=due(s);return ['home','travel'].includes(s.phase)&&i>=0&&s.clock>=[480,720,1080][i]&&!s.nutrition.dismissed.includes(i)?i:-1;}
-  function mark(s,i=slot(s)){if(i>=0)s.nutrition.meals[i]=true;}
+  function mark(s,i=slot(s),cost=0){if(i>=0){s.nutrition.meals[i]=true;s.nutrition.paidMeals[i]=Math.max(s.nutrition.paidMeals[i],Math.min(G.JOBS[s.job].mealAllowance,cost));}}
+  function dailyExpense(s){return cents(G.JOBS[s.job].daily-s.nutrition.paidMeals.reduce((sum,n)=>sum+n,0));}
   function canEat(s,id){const m=homeMeals(s).find(x=>x.id===id);if(!m||s.money<m.cost||due(s)<0)return false;const c=G.nextObligation(s);return G.canSpendTime(s,m.time)||!!(c&&s.mealBreak===c.id&&s.clock>=720&&s.clock+m.time<=c.end);}
   function ready(s){if(s.phase!=='drink'||s.ending)throw Error('当前不能进入排队。');if(s.money<G.pcPrice(s))throw Error('余额不足以上机。');s.phase='play';}
   function eat(s,id){
     if(!['home','travel'].includes(s.phase)||s.ending||s.school.pending||s.event!==null||s.videoEvent||s.city.encounter||s.world?.notice||s.world?.mahjong.active)throw Error(`先回${residence(s)}并处理当前事件。`);
     const m=homeMeals(s).find(m=>m.id===id),i=slot(s),day=s.day;if(!canEat(s,id))throw Error('本餐已吃过，或用餐时间 / 余额不足。');
     G.advanceMeal(s,m.time);s.money=cents(s.money-m.cost);s.mood=clamp(s.mood+m.mood,0,100);s.stamina=clamp(s.stamina+(m.stamina||{home:30,noodles:40,burger:45,saizeriya:40,hotpot:60}[id]||30),0,s.maxStamina);
-    if(day===s.day)mark(s,i);if(!['home','delivery'].includes(id))s.nutrition.away=true;G.applyFoodBuff(s,m);G.log(s,`${m.name} · ${i<0?'加餐':labels[i]}，${m.time} 分钟，¥${m.cost}。`,'meal');G.check(s);
+    if(day===s.day)mark(s,i,m.cost);if(!['home','delivery'].includes(id))s.nutrition.away=true;G.applyFoodBuff(s,m);G.log(s,`${m.name} · ${i<0?'加餐':labels[i]}，${m.time} 分钟，¥${m.cost}。`,'meal');G.check(s);
   }
   function settle(s){
     const n=s.nutrition,count=n.meals.filter(Boolean).length;
     if(count<3){n.badDays++;n.goodDays=0;if(n.badDays>=3){s.maxStamina=Math.max(70,s.maxStamina-2);G.log(s,'连续漏餐，最大体力 -2。','health');}}
     else{n.badDays=0;if(n.away){n.goodDays++;if(n.goodDays>=3){s.maxStamina=Math.min(s.talents.includes('endurance')?130:120,s.maxStamina+1);G.log(s,'规律三餐并出门活动，最大体力 +1。','health');n.goodDays=0;}}else n.goodDays=0;}
-    s.stamina=Math.min(s.stamina,s.maxStamina);n.meals=[false,false,false];n.dismissed=[];n.away=false;s.mealBreak=null;
+    s.stamina=Math.min(s.stamina,s.maxStamina);n.meals=[false,false,false];n.paidMeals=[0,0,0];n.dismissed=[];n.away=false;s.mealBreak=null;
   }
-  function valid(s){const n=s.nutrition;return (s.mealBreak===null||typeof s.mealBreak==='string'&&G.schedule(s).some(c=>c.id===s.mealBreak))&&!!n&&Array.isArray(n.meals)&&n.meals.length===3&&n.meals.every(x=>typeof x==='boolean')&&Array.isArray(n.dismissed)&&n.dismissed.length<=3&&n.dismissed.every(i=>Number.isInteger(i)&&i>=0&&i<3)&&typeof n.away==='boolean'&&['badDays','goodDays'].every(k=>Number.isInteger(n[k])&&n[k]>=0&&n[k]<=G.DAYS)&&Array.isArray(s.bottles)&&s.bottles.length<=3&&s.bottles.every(b=>b&&G.DRINKS.some(d=>d.id===b.id&&Number.isInteger(b.ml)&&b.ml>0&&b.ml<=d.ml))&&s.bottles.filter(b=>b.id==='water').length<=2&&s.liquid===s.bottles.reduce((n,b)=>n+b.ml,0)&&s.drink===(s.bottles[0]?.id||null);}
-  function install(api){G=api;baseMeals=api.mealOptions;Object.assign(api,{residence,homeText,drinkOptions:drinks,bottleReason,packDrink:pack,consumeDrink:consume,useBottle:use,mealOptions:meals,homeMeals,canEatHome:canEat,finishDrinks:ready,mealSlot:slot,mealDue:due,mealReminder:reminder,MEAL_NAMES:labels,eatHome:eat,markMeal:mark});}
+  function valid(s){const n=s.nutrition;return (s.mealBreak===null||typeof s.mealBreak==='string'&&G.schedule(s).some(c=>c.id===s.mealBreak))&&!!n&&Array.isArray(n.meals)&&n.meals.length===3&&n.meals.every(x=>typeof x==='boolean')&&Array.isArray(n.paidMeals)&&n.paidMeals.length===3&&n.paidMeals.every(x=>Number.isFinite(x)&&x>=0&&x<=G.JOBS[s.job].mealAllowance)&&Array.isArray(n.dismissed)&&n.dismissed.length<=3&&n.dismissed.every(i=>Number.isInteger(i)&&i>=0&&i<3)&&typeof n.away==='boolean'&&['badDays','goodDays'].every(k=>Number.isInteger(n[k])&&n[k]>=0&&n[k]<=G.DAYS)&&Array.isArray(s.bottles)&&s.bottles.length<=3&&s.bottles.every(b=>b&&G.DRINKS.some(d=>d.id===b.id&&Number.isInteger(b.ml)&&b.ml>0&&b.ml<=d.ml))&&s.bottles.filter(b=>b.id==='water').length<=2&&s.liquid===s.bottles.reduce((n,b)=>n+b.ml,0)&&s.drink===(s.bottles[0]?.id||null);}
+  function install(api){G=api;baseMeals=api.mealOptions;Object.assign(api,{residence,homeText,drinkOptions:drinks,bottleReason,packDrink:pack,consumeDrink:consume,useBottle:use,mealOptions:meals,homeMeals,canEatHome:canEat,finishDrinks:ready,mealSlot:slot,mealDue:due,mealReminder:reminder,MEAL_NAMES:labels,eatHome:eat,markMeal:mark,dailyExpense});}
   const api={ensure,settle,valid,install};if(typeof module!=='undefined')module.exports=api;else root.Needs=api;
 })(globalThis);

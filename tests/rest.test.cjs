@@ -29,7 +29,7 @@ test('unaffordable renewal rejects a round before time or resources change',()=>
  const s=den();s.trip.denMinutes=60;s.money=29;const before=JSON.stringify(s);assert.throws(()=>G.play(s,pool.slice(0,3),pool),/续时/);assert.equal(JSON.stringify(s),before);
 });
 test('midnight charges can end a paid-hour action without corrupting the outing',()=>{
- const s=den();s.clock=1439;s.trip.denMinutes=59;s.money=40;G.advance(s,5);assert.equal(s.phase,'meal');assert.equal(s.money,15);assert.equal(s.trip.denHours,1);assert.equal(s.trip.denMinutes,60);assert.ok(G.validate(s));
+ const s=den();s.clock=1439;s.trip.denMinutes=59;s.money=40;G.advance(s,5);assert.equal(s.phase,'meal');assert.equal(s.money,40-G.JOBS.grinder.daily);assert.equal(s.trip.denHours,1);assert.equal(s.trip.denMinutes,60);assert.ok(G.validate(s));
 });
 test('drowsiness accumulates independently, impacts performance above 60 and naps restore resources',()=>{
  const s=G.create('grinder',42);s.stamina=40;G.advance(s,180);assert.ok(Math.abs(s.drowsiness-18.75)<1e-8);assert.equal(s.stamina,40);

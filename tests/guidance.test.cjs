@@ -18,7 +18,7 @@ test('starting play styles balance star and key, stack with talents once and sur
 });
 test('small goals use actual progress, reward once and cannot be claimed during an outing',()=>{
  const s=G.create('grinder');assert.throws(()=>G.claimGoal(s,'first-pc'));const money=s.money;s.credits=1;G.claimGoal(s,'first-pc');assert.equal(s.money,money+30);assert.throws(()=>G.claimGoal(s,'first-pc'));assert.ok(G.validate(G.migrate(JSON.parse(JSON.stringify(s)))));
- assert.equal(G.goals(s).find(g=>g.id==='social').done,false);G.chatSend(s,'机厅见');assert.equal(G.goals(s).find(g=>g.id==='social').done,true);G.startTrip(s);assert.throws(()=>G.claimGoal(s,'social'));assert.equal(s.guide.claimed.length,1);
+ assert.equal(G.goals(s).find(g=>g.id==='social').done,false);G.chatSend(s,'机厅见');assert.equal(G.goals(s).find(g=>g.id==='social').done,true);G.startTrip(s);assert.throws(()=>G.claimGoal(s,'social'));assert.equal(s.guide.claimed.length,2);assert.ok(s.guide.claimed.includes('social'));
  const bad=G.create();bad.guide.claimed=['fake'];assert.equal(G.validate(bad),false);
 });
 test('short meals retain price and recovery and only consume their duration plus real return travel',()=>{

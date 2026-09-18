@@ -57,7 +57,7 @@ test('B35 + B15 retains separate records per chart and version',()=>{
 });
 test('daily actions consume hours without ending the day; sleep charges baseline once',()=>{
  const s=G.create('grinder');G.daily(s,'work');assert.equal(s.clock,720);assert.equal(s.day,1);assert.equal(s.money,1860);G.daily(s,'wait');assert.equal(s.clock,780);G.daily(s,'fun');assert.equal(s.clock,900);
- const before=s.money;G.sleep(s);assert.equal(s.day,2);assert.equal(s.clock,60);assert.equal(s.money,before-25);G.daily(s,'wait');assert.equal(s.day,2);assert.equal(s.money,before-25);
+ const before=s.money;G.sleep(s);assert.equal(s.day,2);assert.equal(s.clock,60);assert.equal(s.money,before-G.JOBS.grinder.daily);G.daily(s,'wait');assert.equal(s.day,2);assert.equal(s.money,before-G.JOBS.grinder.daily);
 });
 test('worker cannot take side jobs, skip shifts, sleep through work or attend during work',()=>{
  const s=G.create('worker');s.day=2;assert.throws(()=>G.daily(s,'work'));assert.throws(()=>G.resolveClass(s,'shift',false));
@@ -75,11 +75,11 @@ test('teacher event and recovery, three consultations and continuous ten-day fai
  const d=G.create();d.money=10000;G.academicChange(d,-70);G.teacher(d);d.day=9;d.completed=G.schedule(d).map(c=>c.id);d.clock=1380;G.sleep(d);assert.equal(d.ending,null);assert.equal(d.day,10);d.completed=G.schedule(d).map(c=>c.id);d.clock=1380;G.sleep(d);assert.equal(d.ending,'dropout');
 });
 test('rent checks on the 25th, reserves are deducted only once, salary on the 1st',()=>{
- const s=G.create('worker');s.day=24;s.money=1866;s.clock=1380;s.completed=G.schedule(s).map(c=>c.id);G.sleep(s);assert.equal(s.day,25);assert.equal(s.money,1);assert.deepEqual(s.paidMonths,[3]);
- s.money=5000;s.clock=1380;s.completed=G.schedule(s).map(c=>c.id);G.sleep(s);assert.equal(s.money,4935);assert.deepEqual(s.paidMonths,[3]);
- const poor=G.create('grinder');poor.day=24;poor.money=624;poor.clock=1380;G.sleep(poor);assert.equal(poor.ending,'rent');assert.equal(poor.day,25);
- const paid=G.create('worker');paid.day=31;paid.money=2000;paid.clock=1380;paid.completed=G.schedule(paid).map(c=>c.id);G.sleep(paid);assert.equal(G.dateISO(paid),'2026-04-01');assert.equal(paid.money,7935);
- const student=G.create();student.day=31;student.money=1000;student.clock=1380;student.completed=G.schedule(student).map(c=>c.id);G.sleep(student);assert.equal(student.money,2765);
+ const s=G.create('worker');s.day=24;s.money=1801+G.JOBS.worker.daily;s.clock=1380;s.completed=G.schedule(s).map(c=>c.id);G.sleep(s);assert.equal(s.day,25);assert.equal(s.money,1);assert.deepEqual(s.paidMonths,[3]);
+ s.money=5000;s.clock=1380;s.completed=G.schedule(s).map(c=>c.id);G.sleep(s);assert.equal(s.money,5000-G.JOBS.worker.daily);assert.deepEqual(s.paidMonths,[3]);
+ const poor=G.create('grinder');poor.day=24;poor.money=599+G.JOBS.grinder.daily;poor.clock=1380;G.sleep(poor);assert.equal(poor.ending,'rent');assert.equal(poor.day,25);
+ const paid=G.create('worker');paid.day=31;paid.money=2000;paid.clock=1380;paid.completed=G.schedule(paid).map(c=>c.id);G.sleep(paid);assert.equal(G.dateISO(paid),'2026-04-01');assert.equal(paid.money,8000-G.JOBS.worker.daily);
+ const student=G.create();student.day=31;student.money=1000;student.clock=1380;student.completed=G.schedule(student).map(c=>c.id);G.sleep(student);assert.equal(student.money,2800-G.JOBS.student.daily);
 });
 test('paired queue serves two people simultaneously, two chosen and two partner songs',()=>{
  const s=G.create();s.people=8;s.clock=900;const solo=G.roundInfo(s,0,'solo'),pair=G.roundInfo(s,0,'pair');assert.equal(solo.duration,12);assert.equal(pair.duration,16);assert.equal(solo.queue,48);assert.equal(pair.queue,32);assert.equal(pair.total,48);

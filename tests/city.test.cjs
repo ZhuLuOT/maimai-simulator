@@ -35,7 +35,7 @@ test('Guangzhou outings discover persistent venues, restaurants and an actionabl
 test('nonwalking entertainment does not restore stamina; outings respect money, time and endings',()=>{
  const s=G.create('grinder');s.stamina=40;G.explore(s,'movie');assert.equal(s.stamina,40);assert.equal(s.money,1762);
  s.stamina=0;assert.throws(()=>G.explore(s,'yuexiu'));s.money=0;assert.throws(()=>G.explore(s,'movie'));
- const late=G.create('grinder');late.day=122;late.clock=1380;const cash=late.money;G.explore(late,'stroll');assert.equal(late.ending,'ordinary');assert.equal(late.city.walks,0);assert.equal(late.money,cash-25);
+ const late=G.create('grinder');late.day=122;late.clock=1380;const cash=late.money;G.explore(late,'stroll');assert.equal(late.ending,'ordinary');assert.equal(late.city.walks,0);assert.equal(late.money,cash-G.JOBS.grinder.daily);
 });
 test('sync awards use both combo results and relative difficulty; best sync survives a solo new best',()=>{
  for(const [a,b,notHigher,want] of [['','AP',true,'sync'],['FC','FC',false,'fs'],['FC','FC',true,'fsp'],['FC+','AP',true,'fsd'],['AP','AP',true,'fsdp']])assert.equal(G.syncBadge({combo:a,index:3},{combo:b,index:notHigher?3:2}),want);

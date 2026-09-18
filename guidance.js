@@ -26,7 +26,8 @@
  function applyReward(s,r,money=true){if(money)s.money+=r.money||0;for(const [skill,amount] of Object.entries(r.skills||{}))s.skills[skill]=Math.min(22,s.skills[skill]+amount);if(r.mood)s.mood=Math.min(100,s.mood+r.mood);if(r.familiarity)s.npcs.forEach(n=>n.familiarity=Math.min(100,n.familiarity+r.familiarity));}
  function inviteToDen(s){if(s.city.denUnlocked)return;s.city.denUnlocked=true;s.chat.push({id:s.npcs[1].id,text:G.homeText(s,'给你发个地址：不眠猫窝，全天开。¥30 / 小时，打歌不另收费，凌晨也能打，记得留钱回家。'),day:s.day,time:s.clock});s.chat=s.chat.slice(-60);G.log(s,'鲁米诺发来了不眠猫窝的地址，机厅地图已更新。','event');}
  function claim(s,id){const g=goals(s).find(g=>g.id===id);if(s.phase!=='home'||s.ending)throw Error(`回${G.residence(s)}后再领取小目标奖励。`);if(!g?.done||g.claimed)throw Error('目标尚未达成或已领取。');s.guide.claimed.push(id);applyReward(s,g.reward);G.log(s,`小目标「${g.name}」达成：${g.reward.label}。`,'event');}
+ function claimHome(s){if(s.phase!=='home'||s.ending)return;for(const g of goals(s))if(g.done&&!g.claimed)claim(s,g.id);}
  function valid(s){return ['balanced','outer','inner'].includes(s.playStyle)&&typeof s.roundReview==='boolean'&&s.guide&&s.guide.rewardVersion===3&&typeof s.guide.introDone==='boolean'&&typeof s.guide.chatted==='boolean'&&Number.isInteger(s.guide.posted)&&s.guide.posted>=0&&s.guide.posted<=3&&Number.isInteger(s.guide.step)&&s.guide.step>=0&&s.guide.step<=2&&Array.isArray(s.guide.claimed)&&new Set(s.guide.claimed).size===s.guide.claimed.length&&s.guide.claimed.every(id=>GOALS.some(g=>g.id===id));}
- function install(api){G=api;Object.assign(api,{PLAY_STYLES:STYLES,startGuide:start,introMessages,postIntro,goals,claimGoal:claim,inviteToDen});}
+ function install(api){G=api;Object.assign(api,{PLAY_STYLES:STYLES,startGuide:start,introMessages,postIntro,goals,claimGoal:claim,claimHomeGoals:claimHome,inviteToDen});}
  const api={ensure,install,valid};if(typeof module!=='undefined')module.exports=api;else root.Guidance=api;
 })(globalThis);

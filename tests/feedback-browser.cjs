@@ -1,0 +1,23 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{pathToFileURL}=require('node:url');
+const runtime=require('node:module').createRequire('C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/browser-runtime.js'),{chromium}=runtime('playwright'),G=require('../engine'),vm=require('node:vm');
+const ctx={window:{}};vm.runInNewContext(fs.readFileSync(require.resolve('../data/music.js'),'utf8'),ctx);const pool=G.charts(ctx.window.MUSIC_DATA);
+(async()=>{const browser=await chromium.launch({headless:true,channel:'msedge'});try{
+ const page=await browser.newPage({viewport:{width:1234,height:960}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.addLocatorHandler(page.locator('[data-action="meal-later"]'),async()=>page.locator('[data-action="meal-later"]').click());
+ await page.goto(pathToFileURL(path.resolve(__dirname,'../index.html')).href);
+ async function load(s){s.setupDone=true;s.guide.introDone=true;await page.evaluate(s=>localStorage.setItem('attendance-simulator-v2',JSON.stringify(s)),s);await page.reload();}
+ const saved=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('attendance-simulator-v2')));
+ async function matching(level,pattern,color,oldOnly=false){const keys=await page.locator('.chart-cell').evaluateAll(els=>els.map(e=>e.dataset.value));assert.ok(keys.length);for(const k of keys){const c=pool.find(c=>G.key(c)===k);assert.ok((level==='12-range'?['12','12+']: [level]).includes(c.level));assert.equal(c.tendency,pattern);if(color!=='all')assert.equal(c.index,Number(color));if(oldOnly)assert.equal(c.isNew,false);}}
+ for(const width of [1234,390,320]){
+  await page.setViewportSize({width,height:960});const s=G.create('worker',42);s.credits=1;await load(s);
+  assert.equal((await saved()).money,6030);await page.locator('[data-action="guide"]').click();assert.equal(await page.locator('[data-action="goal-claim"]').count(),0);assert.match(await page.locator('.goal-list article').first().innerText(),/已领取/);await page.getByRole('button',{name:'关闭',exact:true}).click();await page.reload();assert.equal((await saved()).money,6030);
+  await page.getByRole('button',{name:'曲库',exact:true}).click();await page.locator('#song-level').selectOption('12+');await page.locator('#difficulty').selectOption('2');await page.locator('#song-pattern').selectOption('key');await matching('12+','key','2');
+  await page.locator('#song-age').selectOption('old');await matching('12+','key','2',true);
+  await page.locator('#song-level').selectOption('12-range');await page.locator('#difficulty').selectOption('all');await page.locator('#song-pattern').selectOption('star');await matching('12-range','star','all',true);
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:path.resolve(__dirname,'../artifacts/feedback-filters-'+width+'.png'),animations:'disabled'});
+  await page.getByRole('button',{name:'重置筛选',exact:true}).click();assert.equal(await page.locator('#song-level').inputValue(),'all');assert.equal(await page.locator('#song-age').inputValue(),'all');assert.equal(await page.locator('#difficulty').inputValue(),'all');
+ }
+ const s=G.create('grinder',42);s.clock=900;G.startTrip(s);G.travel(s,'bike',0);G.drink(s,'water');if(s.queueUntil>s.clock)G.waitQueue(s);await load(s);await page.locator('[data-action="attend"]').click();await page.locator('[data-action="picker"][data-value="0"]').click();await page.locator('#song-level').selectOption('13');await page.locator('#difficulty').selectOption('2');await page.locator('#song-pattern').selectOption('star');await matching('13','star','2');await page.locator('[data-action="pick"]').first().click();await page.locator('[data-action="picker"][data-value="1"]').click();assert.equal(await page.locator('#song-level').inputValue(),'13');await matching('13','star','2');assert.ok(await page.locator('.modal').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
+ const worker=G.create('worker',42);G.eatHome(worker,'noodles');await page.setViewportSize({width:390,height:960});await load(worker);assert.match(await page.locator('.money').innerText(),/今日基础 -¥35/);assert.match(await page.locator('.ledger').innerText(),/餐费抵扣后.*-¥35/s);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:path.resolve(__dirname,'../artifacts/feedback-home-390.png'),animations:'disabled'});
+ assert.deepEqual(errors,[]);console.log('PASS: desktop/390/320 combined level/color/pattern/version filters, reset, continued selection and automatic goal persistence.');
+}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

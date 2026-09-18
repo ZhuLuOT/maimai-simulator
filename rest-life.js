@@ -41,7 +41,7 @@
   if(!forced&&(s.phase!=='home'||s.ending||s.school.pending||s.event!==null||s.videoEvent||s.city.encounter||s.world?.notice||s.world?.mahjong.active))throw Error(`先回${G.residence(s)}并处理当前事件，再睡觉。`);
   const {duration,recovery,staminaRecovery}=sleepPlan(s,kind);s.started=true;elapse(s,duration,{sleeping:true,bypass:true,charge:false});if(s.ending)return;
   s.drowsiness=Math.max(0,s.drowsiness-recovery);s.stamina=duration>=480?s.maxStamina:Math.min(s.maxStamina,s.stamina+staminaRecovery);s.consecutive=0;
-  if(duration>=480){s.partner=null;s.partnerSongs=null;s.friendship=false;s.queueUntil=0;G.rollDailyCondition(s);s.mood=Math.min(100,s.mood+8);}
+  if(duration>=480){s.partner=null;s.partnerSongs=null;s.friendship=false;s.queueUntil=0;s.mood=Math.min(100,s.mood+8);}
   const hours=Math.floor(duration/60),minutes=duration%60;
   G.log(s,`${kind==='nap'?'小睡 30 分钟':`休息了 ${hours} 小时${minutes?` ${minutes} 分钟`:''}`}，${G.time(s.clock)} 起床，困意降至 ${Math.round(s.drowsiness)}，体力 ${Math.floor(s.stamina)}。`,'rest');G.check(s);
  }
@@ -56,7 +56,7 @@
  function attend(s,c){const lunch=720;if(!s.nutrition.meals[1]&&s.clock<lunch&&c.end>lunch){elapse(s,lunch-s.clock,{charge:false});s.mealBreak=c.start<lunch?c.id:null;G.log(s,c.start<lunch?`${c.name}暂告一段落，午休时间，先吃午饭。`:`距离${c.name}还有一会儿，先吃午饭。`,'meal');return false;}s.mealBreak=null;const duration=Math.max(0,c.end-s.clock);elapse(s,duration,{charge:false});return true;}
  function advanceMeal(s,minutes){const c=G.nextObligation(s);if(c&&s.mealBreak===c.id&&s.clock>=720&&s.clock+minutes<=c.end){s.started=true;elapse(s,minutes,{charge:false});}else advance(s,minutes);}
  function install(api,callbacks){G=api;rollover=callbacks.rollover;tick=callbacks.tick;Object.assign(api,{sleepPlan,advanceMeal,hourlyCost,timeChargeReason:timeReason,sleepPenalty:s=>Math.max(0,(s.drowsiness||0)-60)*.025,rollDailyCondition:callbacks.condition,addTravelDistance:callbacks.distance});}
- function wrap(api){for(const name of ['advance','advanceMeal','packDrink','eatHome','daily','sleep','nextDay','resolveClass','teacher','travel','drink','play','meal','runCourse','waitQueue','refill','chatSend','watchVideos','explore','answerEncounter','answer','contactLove','doQuest','sendDM','startMahjong']){const fn=api[name];api[name]=function(...args){depth++;try{return fn(...args);}catch(e){if(!e.interrupted||depth>1)throw e;}finally{depth--;}};}}
+ function wrap(api){for(const name of ['advance','advanceMeal','packDrink','eatHome','daily','sleep','nextDay','resolveClass','teacher','travel','drink','play','meal','runCourse','waitQueue','refill','chatSend','watchVideos','explore','answerEncounter','answer','contactLove','doQuest','sendDM','startMahjong']){const fn=api[name];api[name]=function(...args){depth++;try{return fn(...args);}catch(e){if(!e.interrupted||depth>1)throw e;}finally{depth--;if(depth===0)api.claimHomeGoals(args[0]);}};}}
  function valid(s){return Number.isFinite(s.drowsiness)&&s.drowsiness>=0&&s.drowsiness<=100&&Number.isInteger(s.forcedSleeps)&&s.forcedSleeps>=0&&s.forcedSleeps<10000&&(!s.trip||s.arcade!==5||Number.isInteger(s.trip.denMinutes)&&s.trip.denMinutes>=0&&Number.isInteger(s.trip.denHours)&&s.trip.denHours>=1&&s.trip.denHours<=DAYS_HOURS&&s.trip.denMinutes<=s.trip.denHours*60);}
  const api={ensure,advance,sleep,attend,install,wrap,valid};if(typeof module!=='undefined')module.exports=api;else root.RestLife=api;
 })(globalThis);

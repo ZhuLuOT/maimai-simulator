@@ -19,7 +19,7 @@
   const EXP=typeof module!=='undefined'?require('./data/expansion.js'):root.EXPANSION;
   const HOLIDAYS=typeof module!=='undefined'?require('./data/holidays-2026'):root.HOLIDAYS_2026;
   const START=Date.UTC(2026,2,1), DAYS=122, OPEN=600, CLOSE=1410, NIGHT=1440;
-  const JOBS={student:{name:'学生',money:1800,monthly:1800,daily:35,rent:0,wage:40,workTime:240,icon:'graduation-cap',detail:'月生活费 ¥1800 · 日常 ¥35'},grinder:{name:'挂壁',money:1800,monthly:0,daily:25,rent:600,wage:60,workTime:240,icon:'gamepad-2',detail:'无固定收入 · 月租 ¥600'},worker:{name:'上班族',money:6000,monthly:6000,daily:65,rent:1800,wage:0,workTime:0,icon:'briefcase-business',detail:'月薪 ¥6000 · 月租 ¥1800'}};
+  const JOBS={student:{name:'学生',money:1800,monthly:1800,daily:25,mealAllowance:6,rent:0,wage:40,workTime:240,icon:'graduation-cap',detail:'月生活费 ¥1800 · 日常至多 ¥25'},grinder:{name:'挂壁',money:1800,monthly:0,daily:20,mealAllowance:5,rent:600,wage:60,workTime:240,icon:'gamepad-2',detail:'无固定收入 · 月租 ¥600'},worker:{name:'上班族',money:6000,monthly:6000,daily:45,mealAllowance:10,rent:1800,wage:0,workTime:0,icon:'briefcase-business',detail:'月薪 ¥6000 · 月租 ¥1800'}};
   const ARCADE_KM=[1.8,3.2,2.4,7.6,10.2,8.8];
   const TRANSPORT=[{id:'walk',name:'步行',cost:0,time:70,mood:-3,icon:'footprints',note:'慢一点，也能到达'},{id:'bike',name:'骑共享',cost:5,time:36,mood:2,icon:'bike',note:'让晚风先来一首'},{id:'bus',name:'公共交通',cost:8,time:44,mood:0,icon:'bus-front',note:'靠窗的位置刚刚好'},{id:'taxi',name:'打车',cost:30,time:16,mood:4,icon:'car-taxi-front',note:'钱包换时间'}];
   const DRINKS=[{id:'water',name:'大水',cost:5,ml:1000,buff:0,mood:2,icon:'droplet',note:'1000 ml · 心情 +2'},{id:'tea',name:'无糖乌龙茶',cost:5,ml:500,buff:.12,mood:5,icon:'cup-soda',note:'500 ml · 状态 +0.12 · 心情 +5'},{id:'coffee',name:'冰美式',cost:9.9,ml:200,buff:.24,mood:2,icon:'coffee',note:'200 ml · 状态 +0.24 · 心情 +2'},{id:'energy',name:'魔爪',cost:10,ml:300,buff:.2,mood:4,icon:'zap',note:'300 ml · 状态 +0.20 · 心情 +4'},{id:'pink',name:'粉色魔爪',cost:12,ml:300,buff:.35,mood:8,icon:'heart',note:'300 ml · 状态 +0.35 · 心情 +8 · 认识小凛后解锁'}];
@@ -43,7 +43,7 @@
     crowd(s);X.ensure(s);C.ensure(s);CITY.ensure(s);M.ensure(s);R.ensure(s);GUIDE.ensure(s);NEEDS.ensure(s);REST.ensure(s);WORLD.ensure(s);log(s,'2026 年 3 月 1 日，新学期与新生活开始。','start');return s;
   }
   function end(s,ending){s.ending=ending;s.phase='ending';s.event=null;s.school.pending=false;return true;}
-  function check(s){s.money=Math.round(s.money*100)/100;if(s.trip)s.trip.cost=Math.round(s.trip.cost*100)/100;if(s.ending)return true;if(s.school.talks>=3)return end(s,'dropout');if(s.mood<=0)return end(s,'burnout');if(s.money<=0)return end(s,'broke');if(s.rating>=16000)return end(s,'good');return false;}
+  function check(s){if(s.guide)api.claimHomeGoals(s);s.money=Math.round(s.money*100)/100;if(s.trip)s.trip.cost=Math.round(s.trip.cost*100)/100;if(s.ending)return true;if(s.school.talks>=3)return end(s,'dropout');if(s.mood<=0)return end(s,'burnout');if(s.money<=0)return end(s,'broke');if(s.rating>=16000)return end(s,'good');return false;}
   function schedule(s){
     const info=dayInfo(s);if(info.rest)return [];
     if(s.job==='worker')return [{id:'shift',name:'公司上班',kind:'shift',start:540,end:1080}];
@@ -54,13 +54,13 @@
   function guard(s,phase='home'){if(s.ending)throw Error('这段故事已经结束。');if(s.school.pending)throw Error('请先回应老师约谈。');if(s.event!==null)throw Error('请先回应小凛。');if(s.world?.notice||s.world?.mahjong.active)throw Error('请先完成当前事件或对局。');if(s.city.encounter)throw Error('请先回应街头偶遇。');if(s.videoEvent)throw Error('请先看完当前手元。');if(s.phase!==phase)throw Error('请先完成当前出勤阶段。');}
   function canSpendTime(s,duration,start=s.clock){if(!Number.isInteger(duration)||duration<0||duration>1440)return false;const end=start+duration;if(pending(s).some(c=>start<c.end&&end>c.start))return false;if(end>1440){const tomorrow={...s,day:s.day+1};if(schedule(tomorrow).some(c=>end-1440>c.start))return false;}return true;}
   function rollover(s){
-    const j=JOBS[s.job];NEEDS.settle(s);s.money-=j.daily;s.lastSettlement={day:s.day,expense:j.daily};log(s,`今日餐食与日常支出 -¥${j.daily}。`,'money');
-    if(check(s))return false;if(s.school.failing&&s.day-s.school.since+1>=10){end(s,'dropout');return false;}if(s.day===DAYS){end(s,'ordinary');return false;}
+    const j=JOBS[s.job],expense=api.dailyExpense(s),credit=j.daily-expense;NEEDS.settle(s);s.money-=expense;s.lastSettlement={day:s.day,expense};log(s,`今日餐食与日常支出 -¥${expense}${credit?`（已付餐费抵扣 ¥${credit}）`:''}。`,'money');
+    if(s.school.talks>=3){end(s,'dropout');return false;}if(s.mood<=0){end(s,'burnout');return false;}if(s.school.failing&&s.day-s.school.since+1>=10){end(s,'dropout');return false;}if(s.day===DAYS){if(!check(s))end(s,'ordinary');return false;}
     s.day++;s.clock=0;s.completed=[];s.absences=[];s.rests=0;s.workCount=0;s.queueUntil=['play','drink'].includes(s.phase)?Math.max(0,s.queueUntil-NIGHT):0;
     const d=date(s),month=d.getUTCMonth()+1;
     if(d.getUTCDate()===1&&j.monthly){s.money+=j.monthly;log(s,`${s.job==='worker'?'工资':'生活费'}到账 +¥${j.monthly}。`,'money');}
     if(d.getUTCDate()===25&&j.rent){if(s.money<j.rent){log(s,`25 日房租到期，余额不足 ¥${j.rent}。`,'money');end(s,'rent');return false;}s.money-=j.rent;s.paidMonths.push(month);log(s,`本月房租已缴 -¥${j.rent}。`,'money');}
-    crowd(s);s.history.push({day:s.day,rating:s.rating});return !check(s);
+    X.rollCondition(s);crowd(s);s.history.push({day:s.day,rating:s.rating});return !check(s);
   }
   function advance(s,duration,movement=null){return REST.advance(s,duration,movement);}
   function academicChange(s,amount){
@@ -119,12 +119,12 @@
   function best(s){const all=Object.values(s.records).filter(r=>!isUtage(r)).sort((a,b)=>b.ra-a.ra||b.achievement-a.achievement);return {old:all.filter(r=>!r.isNew).slice(0,35),fresh:all.filter(r=>r.isNew).slice(0,15)};}
   function recalculate(s){for(const r of Object.values(s.records)){r.ra=isUtage(r)?0:chartRating(r.ds,r.achievement);const cn=CN.map[r.id];if(cn){r.originalVersion??=r.version;r.version=cn.version;r.isNew=cn.versionCode===Math.max(...CN.versions.map(v=>v.version));}}const b=best(s);s.rating=[...b.old,...b.fresh].reduce((sum,r)=>sum+r.ra,0);}
   function charts(songs){const result=songs.flatMap(song=>song.ds.map((ds,index)=>{const source=song.notes?.[index]||[200,20,40,10],n=source.length===4?[source[0],source[1],source[2],0,source[3]]:source,ratio=n[2]/Math.max(1,n.reduce((a,b)=>a+b,0)),meta=META.entries[`${song.id}:${index}`],override=META.overrides[`${song.id}:${index}`],tags=EXP.chartTags[`${song.id}:${index}`]||[],star=tags.includes('星星谱'),keyboard=tags.includes('键盘谱'),starWeight=override?.starWeight??(star&&!keyboard?.85:keyboard&&!star?.15:tags.some(t=>['错位','一笔画'].includes(t))?Math.max(.65,clamp(ratio*2.4,.12,.88)):clamp(ratio*2.4,.12,.88));return {id:song.id,title:song.title,type:song.type,ds,index,level:song.level[index],isNew:CN.map[song.id]?CN.map[song.id].versionCode===Math.max(...CN.versions.map(v=>v.version)):song.isNew,artist:song.artist,genre:song.genre,version:CN.map[song.id]?.version||song.version.replace('maimai ',''),originalVersion:song.version,cover:song.cover,notes:n,starWeight,tendency:starWeight>=.5?'star':'key',fit:meta?.fit,samples:meta?.samples,tag:M.tag({ds,index,tag:meta?.tag}),comparison:meta?.other,utage:isUtage(song),tags,classification:override?'人工校正':tags.some(t=>['星星谱','键盘谱','错位','一笔画'].includes(t))?'DXRating 社区标签':'音符占比估算'};}).filter(c=>c.ds>0));M.setPool(result);api.setLinPool(result);return result;}
-  function ability(s,c){const bonuses=(s.liquid>0?(DRINKS.find(d=>d.id===s.drink)?.buff||0):0)+(s.mood-65)/180+X.abilityBonus(s,c);return baseAbility(s,c)+Math.min(.75,bonuses)-(s.school.failing?.2:0);}
+  function ability(s,c){const bonuses=(s.liquid>0?(DRINKS.find(d=>d.id===s.drink)?.buff||0):0)+(s.mood-65)/180+X.abilityBonus(s,c);const base=baseAbility(s,c),difficulty=M.effective(s,c);return base-Math.max(0,base-difficulty)*.15+Math.min(.75,bonuses)-(s.school.failing?.2:0);}
   function familiarity(plays){return plays===0?-.55:Math.min(.85,.12*Math.log2(plays+1));}
   function expected(s,c){const plays=s.practice[key(c)]||0,difficulty=M.effective(s,c),skill=ability(s,c);
     const predicted=100.65-J.difficultyPenalty(difficulty,skill)+familiarity(plays)+X.scoreBonus(s,c)+M.score(s,c)+api.foodBonus(s)+api.worldScoreBonus(s,c)-Math.max(0,s.consecutive-3)*.04;
     // High technical ability alone cannot substitute for knowing the chart and accurate timing.
-    const ease=clamp(Math.exp(-Math.max(0,skill-difficulty)*.4),.15,1),masteryLoss=(.12+.65/(1+plays/6)+(100-P.value(s))*.0045)*ease;
+    const ease=clamp(Math.exp(-Math.max(0,skill-difficulty)*.32),.15,1),masteryLoss=(.12+.65/(1+plays/6)+(100-P.value(s))*.0045)*ease;
     return clamp(Math.min(predicted,101-masteryLoss),0,101);
   }
   function combo(j){if(j.miss>0)return '';if(j.good>0)return 'FC';if(j.great>0)return 'FC+';return 'AP';}
@@ -188,7 +188,7 @@
     if(future.clock+round.total>availableUntil(future)||!canSpendTime(s,duration+round.total))return '剩余时间不足，或即将上课 / 上班、机厅闭店。';
     return '';
   }
-  function meal(s,id,destination='home'){guard(s,'meal');if(!['home','arcade'].includes(destination))throw Error('请选择饭后去向。');const continuing=destination==='arcade';if(continuing){const reason=returnToPlayReason(s,id);if(reason)throw Error(reason);}const m=id==='skip'?{id:'skip',name:'不吃饭，直接回家',cost:0,time:0,mood:0}:api.mealOptions(s).find(m=>m.id===id);if(id==='skip'&&!continuing&&!M.canSkipMeal(s))throw Error(`饭点或本次体力消耗较多，先吃饭再回${api.residence(s)}。`);if(!m||s.money<m.cost)throw Error(`余额不足，可以回${api.residence(s)}吃饭。`);const mealDay=s.day,mealSlot=api.mealSlot(s);advance(s,m.time+(continuing?(id==='skip'?0:10):s.trip.returnTime),continuing?null:{direction:'home',arcade:s.arcade,meal:m.time});if(s.ending)return;if(!continuing)C.distance(s,ARCADE_KM[s.arcade]);s.money-=m.cost;s.trip.cost=Math.round((s.trip.cost+m.cost)*100)/100;if(id!=='skip'&&s.day===mealDay)api.markMeal(s,mealSlot);s.mood=clamp(s.mood+m.mood,0,100);if(id!=='skip')s.stamina=clamp(s.stamina+(m.stamina||{home:30,noodles:40,burger:45,hotpot:60}[id]||0),0,s.maxStamina);if(continuing){
+  function meal(s,id,destination='home'){guard(s,'meal');if(!['home','arcade'].includes(destination))throw Error('请选择饭后去向。');const continuing=destination==='arcade';if(continuing){const reason=returnToPlayReason(s,id);if(reason)throw Error(reason);}const m=id==='skip'?{id:'skip',name:'不吃饭，直接回家',cost:0,time:0,mood:0}:api.mealOptions(s).find(m=>m.id===id);if(id==='skip'&&!continuing&&!M.canSkipMeal(s))throw Error(`饭点或本次体力消耗较多，先吃饭再回${api.residence(s)}。`);if(!m||s.money<m.cost)throw Error(`余额不足，可以回${api.residence(s)}吃饭。`);const mealDay=s.day,mealSlot=api.mealSlot(s);advance(s,m.time+(continuing?(id==='skip'?0:10):s.trip.returnTime),continuing?null:{direction:'home',arcade:s.arcade,meal:m.time});if(s.ending)return;if(!continuing)C.distance(s,ARCADE_KM[s.arcade]);s.money-=m.cost;s.trip.cost=Math.round((s.trip.cost+m.cost)*100)/100;if(id!=='skip'&&s.day===mealDay)api.markMeal(s,mealSlot,m.cost);s.mood=clamp(s.mood+m.mood,0,100);if(id!=='skip')s.stamina=clamp(s.stamina+(m.stamina||{home:30,noodles:40,burger:45,hotpot:60}[id]||0),0,s.maxStamina);if(continuing){
       CITY.food(s,m);s.phase='play';s.partnerSongs=null;s.roundReview=false;s.last=null;
       if(id!=='skip')s.consecutive=0;
       if(s.mode==='pair'&&peopleAt(s)===0){s.mode='solo';log(s,'机厅暂无其他玩家，改为单开；有人到店后可以再拼机。','crowd');}

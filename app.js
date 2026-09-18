@@ -38,6 +38,8 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
     modal = null,
     search = '',
     difficulty = 'all',
+    levelFilter = 'all',
+    ageFilter = 'all',
     typeFilter = 'all',
     page = 0,
     eraFilter = 'all',
@@ -100,6 +102,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
   saveDraft();
   function syncPhone(){G.syncPhone(state);if(modal==='chat'&&!(conversationList&&window.innerWidth<=600))G.readPhone(state,conversation);}
   function save() {
+    G.claimHomeGoals(state);
     syncPhone();
     if(state.phase==='play'){
       G.preparePartner(state,pool);
@@ -181,7 +184,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
       return html`<div class="schedule-row ${done ? 'done' : ''}"><span class="schedule-time">${G.time(c.start)}<small>${G.time(c.end)}</small></span><div><b>${c.name}</b><small>${c.kind === 'major' ? '专业课 · 学力 +5 / 心情 -7' : c.kind === 'general' ? '水课 · 学力 +2 / 心情 -3' : '固定工作 · 心情 -15'}${state.absences.includes(c.id) ? (c.kind === 'shift' ? ' · 旷工' : ' · 旷课') : done ? ' · 已处理' : ''}</small></div><div class="schedule-buttons">${!done ? html`<button class="secondary-btn" data-action="class" data-value="${c.id}" ?disabled=${busy || c.id !== next?.id}>${icon(c.kind === 'shift' ? 'briefcase-business' : 'book-open')}${c.kind === 'shift' ? '上班' : '上课'}</button>${c.kind !== 'shift' ? html`<button class="icon-btn" data-action="skip-dialog" data-value="${c.id}" ?disabled=${busy || c.id !== next?.id} title="逃课" aria-label="逃课 ${c.name}">${icon('door-open')}</button>` : ''}` : icon('circle-check')}</div></div>`;
     }) : html`<div class="free-day">${icon('sun')}<div><b>${state.job === 'student' ? '今日无课' : '今天没有固定日程'}</b><span>机厅 10:00 开门，23:30 结束游玩</span></div></div>`}</div>
     ${state.job === 'student' ? html`<div class="academic-line ${school.failing ? 'warning' : ''}"><span>${icon('graduation-cap')}学力 <b>${school.academic}/100</b></span><span>约谈 ${school.talks}/3</span><span>${school.failing ? `挂科第 ${state.day - school.since + 1}/10 天` : '学业正常'}</span><button class="text-btn" data-action="daily" data-value="study" ?disabled=${busy}>补习 2 小时 ${icon('book-open')}</button></div>` : html`<div class="rent-line"><span>${icon('house')}每月 25 日房租</span><b>¥${j.rent}</b><span class="${state.money < j.rent ? 'danger-text' : ''}">${state.money >= j.rent ? '余额已足够' : '还差 ¥' + (j.rent - state.money)}</span></div>`}</section>
-    <aside class="life-panel"><div class="section-heading"><h2>本月收支</h2><span>${G.date(state).getUTCMonth() + 1} 月</span></div><div class="ledger"><div><span>${state.job === 'worker' ? '工资 · 每月 1 日发放' : state.job === 'student' ? '生活费 · 每月 1 日发放' : '固定收入'}</span><b>¥${j.monthly}</b></div><div><span>每日基本开销</span><b>-¥${j.daily}</b></div><div><span>25 日房租</span><b>${j.rent ? '-¥' + j.rent : '住宿费已缴'}</b></div></div><div class="goal-inline"><span>W6 进度</span><b>${Math.round(state.rating / 16000 * 100)}%</b></div><div class="meter"><span style="width:${Math.min(100, state.rating / 16000 * 100)}%"></span></div><div class="relationship">${icon('heart-handshake')}<div><b>${G.relationshipLabel(state)}</b><small>${state.visits} 次出勤 · ${state.tracks} 首游玩</small></div></div></aside></div>
+    <aside class="life-panel"><div class="section-heading"><h2>本月收支</h2><span>${G.date(state).getUTCMonth() + 1} 月</span></div><div class="ledger"><div><span>${state.job === 'worker' ? '工资 · 每月 1 日发放' : state.job === 'student' ? '生活费 · 每月 1 日发放' : '固定收入'}</span><b>¥${j.monthly}</b></div><div><span>今日基本开销（餐费抵扣后）</span><b>-¥${G.dailyExpense(state)}</b></div><div><span>25 日房租</span><b>${j.rent ? '-¥' + j.rent : '住宿费已缴'}</b></div></div><div class="goal-inline"><span>W6 进度</span><b>${Math.round(state.rating / 16000 * 100)}%</b></div><div class="meter"><span style="width:${Math.min(100, state.rating / 16000 * 100)}%"></span></div><div class="relationship">${icon('heart-handshake')}<div><b>${G.relationshipLabel(state)}</b><small>${state.visits} 次出勤 · ${state.tracks} 首游玩</small></div></div></aside></div>
     <section class="actions-section"><div class="section-heading"><h2>安排接下来的时间</h2><span>${G.time(state.clock)} · 困意 ${Math.round(state.drowsiness)}/100</span></div><div class="action-grid"><button class="action-card attend" data-action="attend" ?disabled=${state.ending}><span class="action-icon">${icon('disc-3')}</span><div><h3>${state.phase === 'home' ? '出发，打舞萌！' : '继续出勤'}</h3><p>普通机厅 ¥6 / PC${state.city.denUnlocked?' · 猫窝 ¥30/小时':''}</p><small>${state.city.denUnlocked?'普通店 23:30 停机 · 猫窝全天营业':'23:30 结束游玩'}</small></div>${icon('arrow-up-right')}</button>${state.job !== 'worker' ? html`<button class="action-card work" data-action="daily" data-value="work" ?disabled=${busy}><span class="action-icon">${icon('briefcase-business')}</span><div><h3>打工，攒钱</h3><p>4 小时 · +¥${G.workIncome(state)}</p><small>已打工 ${state.totalWorkCount} 次 · 每天最多 2 次 · 8 小时最高 ¥${state.job==='grinder'?300:200}</small></div>${icon('arrow-up-right')}</button>` : ''}<button class="action-card fun" data-action="entertain" ?disabled=${busy}><span class="action-icon">${icon('gamepad-2')}</span><div><h3>娱乐</h3><p>给心情充个电</p><small>外出娱乐 · 刷视频</small></div>${icon('arrow-up-right')}</button></div>${LifeUI.mealStatus(state)}<div class="day-controls"><button class="secondary-btn" data-action="daily-meal" ?disabled=${busy}>${icon('utensils')}一日三餐</button><button class="secondary-btn" data-action="plates" aria-label="名牌与解锁进度">${icon('badge')}名牌与装饰</button><button class="phone-launch ${G.unreadPhone(state)?'has-unread':'is-read'}" data-action="chat" aria-label=${G.unreadPhone(state)?'手机，有新消息':'手机，无新消息'} title=${G.unreadPhone(state)?'有新消息':'暂无新消息'}><span class="pixel-phone"><span class="phone-screen">${icon('message-circle')}${G.unreadPhone(state)?html`<i></i>`:''}</span></span><span>手机${G.unreadPhone(state)?html`<small>新消息 ${G.unreadPhone(state)}</small>`:html`<small>暂无新消息</small>`}</span></button><button class="secondary-btn" data-action="daily" data-value="wait" ?disabled=${busy}>${icon('clock-3')}等待</button><button class="primary-btn" data-action="sleep-menu" ?disabled=${busy}>${icon('moon')}睡觉</button></div></section>
     <section class="recent-section"><div class="section-heading"><h2>今日手账</h2><button class="text-btn" data-action="nav" data-value="journal">全部记录 ${icon('arrow-right')}</button></div>${logRows(state.logs.slice(0, 5))}</section>`;
   }
@@ -215,7 +218,8 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
   }
   function chartMatches(c) {
     const levelQuery = /^\d{1,2}\+?$/.test(search.trim()) ? search.trim() : null;
-    return (!levelQuery || G.displayLevel(c) === levelQuery) && (difficulty === 'all' || c.index === Number(difficulty)) && (patternFilter === 'all' || c.tendency === patternFilter || c.tag === patternFilter);
+    const level=G.displayLevel(c),levelMatches=levelFilter==='all'||(levelFilter==='12-range'?['12','12+'].includes(level):level===levelFilter);
+    return levelMatches && (ageFilter==='all'||c.isNew===(ageFilter==='new')) && (!levelQuery || G.displayLevel(c) === levelQuery) && (difficulty === 'all' || c.index === Number(difficulty)) && (patternFilter === 'all' || c.tendency === patternFilter || c.tag === patternFilter);
   }
   function filtered() {
     const q = search.trim().toLowerCase();
@@ -225,8 +229,8 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
     }));
   }
   function filters() {
-    const select = (id, label, options, value) => html`<select id="${id}" aria-label="${label}"><option value="all">${label}</option>${options.map(([v, t]) => html`<option value="${esc(v)}" ?selected=${value === v}>${esc(t)}</option>`)}</select>`;
-    return html`<div class="library-filters"><label class="search-box">${icon('search')}<input id="song-search" aria-label="搜索曲名、艺术家或曲目 ID" value="${esc(search)}" placeholder="曲名 / ID / 等级（如 12+）" autocomplete="off"></label><select id="difficulty" aria-label="谱面难度"><option value="all">全部难度</option>${names.map((n, i) => html`<option value="${i}" ?selected=${difficulty === String(i)}>${n}</option>`)}</select><select id="song-type" aria-label="谱面版本"><option value="all">标准 + DX</option><option value="SD" ?selected=${typeFilter === 'SD'}>标准</option><option value="DX" ?selected=${typeFilter === 'DX'}>DX</option></select>${select('song-era', '全部时代', [...new Set(songs.map(s => s.version))].map(v => [v, v]), eraFilter)}${select('song-genre', '全部分区', [...new Set(songs.map(s => s.genre))].map(v => [v, v]), genreFilter)}${select('song-pattern', '全部配置', [['star', '星星谱'], ['key', '键盘谱'], ['ghost', '鬼歌'], ['easy', '吃分推荐']], patternFilter)}<select id="song-utage" aria-label="宴曲筛选">${[['exclude', '排除宴曲'], ['only', '只看宴曲'], ['all', '包含宴曲']].map(([v, t]) => html`<option value="${v}" ?selected=${utageFilter === v}>${t}</option>`)}</select></div>`;
+    const select = (id, label, options, value) => html`<select id="${id}" aria-label="${label}"><option value="all" ?selected=${value==='all'}>${label}</option>${options.map(([v, t]) => html`<option value="${esc(v)}" ?selected=${value === v}>${esc(t)}</option>`)}</select>`;
+    return html`<div class="library-filters"><label class="search-box">${icon('search')}<input id="song-search" aria-label="搜索曲名、艺术家或曲目 ID" value="${esc(search)}" placeholder="曲名 / ID / 等级（如 12+）" autocomplete="off"></label>${select('song-level','全部等级',[['12-range','12 和 12+'],...[...new Set(pool.map(c=>G.displayLevel(c)))].sort((a,b)=>parseInt(a)-parseInt(b)||a.length-b.length).map(v=>[v,v])],levelFilter)}<select id="difficulty" aria-label="谱面难度"><option value="all" ?selected=${difficulty==='all'}>全部谱色</option>${names.map((n, i) => html`<option value="${i}" ?selected=${difficulty === String(i)}>${n} · ${['绿谱','黄谱','红谱','紫谱','白谱'][i]}</option>`)}</select><select id="song-type" aria-label="谱面版本"><option value="all" ?selected=${typeFilter==='all'}>标准 + DX</option><option value="SD" ?selected=${typeFilter === 'SD'}>标准</option><option value="DX" ?selected=${typeFilter === 'DX'}>DX</option></select>${select('song-age','新旧版本',[['old','旧版本 · B35'],['new','新版本 · B15']],ageFilter)}${select('song-era', '全部时代', [...new Set(songs.map(s => s.version))].map(v => [v, v]), eraFilter)}${select('song-genre', '全部分区', [...new Set(songs.map(s => s.genre))].map(v => [v, v]), genreFilter)}${select('song-pattern', '全部配置', [['star', '星星谱'], ['key', '键盘谱'], ['ghost', '鬼歌'], ['easy', '吃分推荐']], patternFilter)}<select id="song-utage" aria-label="宴曲筛选">${[['exclude', '排除宴曲'], ['only', '只看宴曲'], ['all', '包含宴曲']].map(([v, t]) => html`<option value="${v}" ?selected=${utageFilter === v}>${t}</option>`)}</select><button class="icon-btn" data-action="filter-reset" title="重置筛选" aria-label="重置筛选">${icon('rotate-ccw')}</button></div>`;
   }
   function grouped(list, selectable = false) {
     return list.map(s => html`<article class="song-group"><div class="song-group-header">${cover(s)}<div><h3>${esc(s.title)} <span class="type-label ${s.type}">${s.type === 'DX' ? 'DX' : '标准'}</span></h3><p>${esc(s.artist)}</p><small>${esc(s.version)} · ${s.bpm} BPM · ID ${s.id}</small></div></div><div class="difficulty-grid">${s.ds.map((ds, index) => {
@@ -343,7 +347,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
           length: G.selectCount(state)
         }, (_, i) => html`<button class="secondary-btn" data-action="picker" data-value="${i}">${icon('disc-3')}第 ${i + 1} 首 · ${esc(picked[i]?.title || recommendations[i]?.title || '选择曲目')}</button>`)}</div>${state.mode==='solo'?html`<div class="supply-actions">${(picked.length?picked:recommendations).map((c,i)=>html`<button class="secondary-btn" data-action="repeat-song" data-value="${i}" aria-label="本轮连打三首 ${esc(c.title)}">连打第 ${i+1} 首 ×3</button>`)}</div>`:''}${rows(picked.length ? picked : recommendations)}${LifeUI.partnerChoices(state, pool)}<div class="modal-actions"><button class="secondary-btn" data-action="picker">${icon('list-music')}自选曲目</button><button class="secondary-btn" data-action="reroll" title="换一组">${icon('shuffle')}换一组</button><button class="primary-btn" data-action="play" ?disabled=${reason}>${icon('play')}${G.allNight(state)?'开始游玩 · 已计时':`投币上机 · ¥${G.pcPrice(state)}`}</button></div>${reason ? html`<p class="warning">${reason}</p>` : ''}`:html`<p class="queue-notice">本轮已结束或正在排队，轮到上机后再选择下一轮曲目。</p>${state.queueUntil<=state.clock?html`<button class="primary-btn" data-action="next-round">下一轮上机 · 开始选曲</button>`:''}`}<button class="finish-btn" data-action="finish">结束上机，去吃饭 ${icon('arrow-right')}</button>`, true);
       }
-      if (state.phase === 'meal') content = frame('下机了，好好吃顿饭', `${G.time(state.clock)} · 回程 ${state.trip.returnTime} 分钟`, html`${steps(2)}<div class="outing-summary"><div><small>本次上机</small><b>${state.trip.rounds}<span> 轮</span></b></div><div><small>Rating 提升</small><b>+${state.rating - state.trip.ratingBefore}</b></div><div><small>已花费</small><b>¥${state.trip.cost}</b></div></div><div class="mode-select" aria-label="饭后去向">${[['home',`吃完回${G.residence(state)}`],['arcade','吃完回机厅继续打']].map(([id,label])=>html`<button class="${mealDestination===id?'selected':''}" aria-pressed=${mealDestination===id} data-action="meal-destination" data-value="${id}">${label}</button>`)}</div>${options(G.mealOptions(state).filter(m=>mealDestination!=='arcade'||m.id!=='home'), 'meal')}<button class="secondary-btn" data-action="resume-play" ?disabled=${!!G.returnToPlayReason(state)}>先不吃，返回机厅继续打</button>${mealDestination==='home'&&G.canSkipMeal(state) ? html`<button class="secondary-btn" data-action="meal" data-value="skip">不吃饭，直接回${G.residence(state)}</button>` : ''}<p class="form-note">选择回机厅：附近用餐另计往返步行 10 分钟，回店后重新排队；仍须在闭店或固定日程前结束。回${G.residence(state)}后也可再次出勤。基础餐食包含在每日 ¥${G.JOBS[state.job].daily} 生活开销内。</p>`);
+      if (state.phase === 'meal') content = frame('下机了，好好吃顿饭', `${G.time(state.clock)} · 回程 ${state.trip.returnTime} 分钟`, html`${steps(2)}<div class="outing-summary"><div><small>本次上机</small><b>${state.trip.rounds}<span> 轮</span></b></div><div><small>Rating 提升</small><b>+${state.rating - state.trip.ratingBefore}</b></div><div><small>已花费</small><b>¥${state.trip.cost}</b></div></div><div class="mode-select" aria-label="饭后去向">${[['home',`吃完回${G.residence(state)}`],['arcade','吃完回机厅继续打']].map(([id,label])=>html`<button class="${mealDestination===id?'selected':''}" aria-pressed=${mealDestination===id} data-action="meal-destination" data-value="${id}">${label}</button>`)}</div>${options(G.mealOptions(state).filter(m=>mealDestination!=='arcade'||m.id!=='home'), 'meal')}<button class="secondary-btn" data-action="resume-play" ?disabled=${!!G.returnToPlayReason(state)}>先不吃，返回机厅继续打</button>${mealDestination==='home'&&G.canSkipMeal(state) ? html`<button class="secondary-btn" data-action="meal" data-value="skip">不吃饭，直接回${G.residence(state)}</button>` : ''}<p class="form-note">选择回机厅：附近用餐另计往返步行 10 分钟，回店后重新排队；仍须在闭店或固定日程前结束。回${G.residence(state)}后也可再次出勤。每日基本开销至多 ¥${G.JOBS[state.job].daily}，已付正餐每餐可抵扣至多 ¥${G.JOBS[state.job].mealAllowance} 的基础餐费。</p>`);
     }
     if (modal === 'picker') content = frame(`自选曲目 · ${G.MODES[state.mode].name}`, `选择第 ${pickSlot + 1} 首 / 共 ${G.selectCount(state)} 首`, html`${filters()}<div class="picker-list" id="song-results">${libraryResults()}</div><div class="modal-actions"><span id="pick-count">${picked[pickSlot] ? esc(picked[pickSlot].title) : '本首尚未选择'}</span><button class="primary-btn" data-action="picked">${icon('check')}确认选曲</button></div>`, true);
     if(modal==='city-encounter') content=frame('街角的偶遇','广州 · 小凛',html`<p class="event-text">小凛拎着舞萌手套朝你挥了挥手：“你也来这边逛呀？”</p><div class="modal-actions"><button class="primary-btn" data-action="city-answer" data-value="0">聊聊舞萌，加个好友</button><button class="secondary-btn" data-action="city-answer" data-value="1">点头招呼，下次再聊</button></div><p class="form-note">交谈 10 分钟</p>`,false,false);
@@ -619,13 +623,9 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
         pickSlot = Number(v) || 0;
         modal = 'picker';
         page = 0;
-        search = '';
-        difficulty = 'all';
-        typeFilter = 'all';
-        eraFilter = 'all';
-        genreFilter = 'all';
-        patternFilter = 'all';
-        utageFilter = 'exclude';
+        break;
+      case 'filter-reset':
+        search='';difficulty=levelFilter=ageFilter=typeFilter=eraFilter=genreFilter=patternFilter='all';utageFilter='exclude';page=0;
         break;
       case 'repeat-song': {
         if(state.phase!=='play'||state.mode!=='solo'||state.queueUntil>state.clock||state.roundReview)throw Error('单开轮到上机后才能设置连打。');
@@ -829,8 +829,8 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
       state.instinct = e.target.checked;
       save();
     }
-    if (['difficulty', 'song-type', 'song-era', 'song-genre', 'song-pattern', 'song-utage'].includes(e.target.id)) {
-      if (e.target.id === 'difficulty') difficulty = e.target.value;else if (e.target.id === 'song-type') typeFilter = e.target.value;else if (e.target.id === 'song-era') eraFilter = e.target.value;else if (e.target.id === 'song-genre') genreFilter = e.target.value;else if (e.target.id === 'song-pattern') patternFilter = e.target.value;else utageFilter = e.target.value;
+    if (['difficulty', 'song-level', 'song-age', 'song-type', 'song-era', 'song-genre', 'song-pattern', 'song-utage'].includes(e.target.id)) {
+      if(e.target.id==='song-level'){levelFilter=e.target.value;if(/^\d{1,2}\+?$/.test(search.trim()))search='';}else if(e.target.id==='song-age')ageFilter=e.target.value;else if (e.target.id === 'difficulty') difficulty = e.target.value;else if (e.target.id === 'song-type') typeFilter = e.target.value;else if (e.target.id === 'song-era') eraFilter = e.target.value;else if (e.target.id === 'song-genre') genreFilter = e.target.value;else if (e.target.id === 'song-pattern') patternFilter = e.target.value;else utageFilter = e.target.value;
       page = 0;
       render();
       icons();
@@ -883,6 +883,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
     recommend();
     save();
   }
+  if(state.phase==='home'&&(state.setupDone||state.started))save();
   render();
   installUpdateNotice({current:__APP_VERSION__,save,hasSave:state.setupDone||state.started});
 })();
