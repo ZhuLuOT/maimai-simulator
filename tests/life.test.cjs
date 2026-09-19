@@ -2,12 +2,35 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const G=require('../engine'),X=require('../systems'),ctx={window:{}};vm.runInNewContext(fs.readFileSync(require.resolve('../data/music.js'),'utf8'),ctx);const pool=G.charts(ctx.window.MUSIC_DATA);
 function ready(seed=42){const s=G.create('grinder',seed);s.clock=600;s.people=18;G.startTrip(s);G.setMode(s,'pair');G.travel(s,'bike',1);G.drink(s,'water');if(s.queueUntil>s.clock)G.waitQueue(s);return s;}
 
-test('large direct talent bonuses are two points and cannot be claimed twice',()=>{
+test('large direct talent bonuses retain two points at low skill and cannot be claimed twice',()=>{
  for(const [id,skills] of [['reader',['reading']],['dragon',['star','key','reading']],['key',['key']],['star',['star']],['slide',['star']],['speed',['key']]]){
   const s=G.create(),before={...s.skills};G.grantTalent(s,id);G.grantTalent(s,id);
   for(const skill of ['star','key','reading'])assert.equal(s.skills[skill],before[skill]+(skills.includes(skill)?2:0),id+' '+skill);
   const restored=G.migrate(structuredClone(s));assert.deepEqual(restored.skills,s.skills);assert.ok(G.validate(restored));
  }
+});
+
+test('permanent talent gains decay continuously per skill and logs show actual awards',()=>{
+ for(const [skill,gain] of [[8,2],[10,2],[11,1.5],[12,1],[13,.5],[13.6,.3298769777],[14,.25],[15,.125],[20,.00390625],[22,0]]){
+  const s=G.create();s.skills={star:skill,key:skill,reading:skill};const before=JSON.stringify(s),preview=G.talentGains(s,'foundation');
+  assert.equal(JSON.stringify(s),before);assert.ok(Math.abs(preview.key-gain)<1e-9);
+  G.grantTalent(s,'foundation');for(const k of ['star','key','reading'])assert.ok(Math.abs(s.skills[k]-skill-gain)<1e-9);
+  assert.match(s.logs[0].text,/获得词条「基本功扎实」：星星力/);assert.doesNotMatch(s.logs[0].text,/最高|B35/);
+ }
+ const split=G.create();split.skills={star:10,key:12,reading:13};G.grantTalent(split,'expert');assert.deepEqual(split.skills,{star:12,key:13,reading:13.5});assert.match(split.logs[0].text,/星星力 \+2\.00 · 键盘力 \+1\.00 · 读谱力 \+0\.50/);
+ for(const id of ['transfer','musician','dragon','foundation','expert','reader','key','star','slide','reading','speed']){
+  const s=G.create();s.skills={star:15,key:15,reading:15};const gains=G.talentGains(s,id);assert.ok(Object.keys(gains).length);
+  G.grantTalent(s,id);for(const k of ['star','key','reading'])assert.equal(s.skills[k],15+(gains[k]||0));assert.ok(Object.values(gains).every(n=>n<=.1875));
+ }
+ const capped=G.create();capped.skills={star:21.9999,key:22,reading:13};G.grantTalent(capped,'foundation');assert.equal(capped.skills.star,22);assert.equal(capped.skills.key,22);
+ for(const boundary of [10,12,13]){const s=G.create();s.skills.key=boundary-.000001;const below=G.talentGains(s,'key').key;s.skills.key=boundary+.000001;const above=G.talentGains(s,'key').key;assert.ok(below>=above&&below-above<.00001);}
+});
+
+test('stacked milestones cannot raise 13.6 skill by whole levels and never regrant on reload',()=>{
+ const s=G.create();s.skills={star:13.6,key:13.6,reading:13.6};
+ let priorGain=Infinity;for(const id of ['foundation','key','speed','expert']){const before=s.skills.key;G.grantTalent(s,id);const gain=s.skills.key-before;assert.ok(gain<priorGain);priorGain=gain;}
+ assert.ok(s.skills.key>14&&s.skills.key<14.7);const snapshot=structuredClone(s.skills);G.migrate(s);for(const id of s.talents.slice())G.grantTalent(s,id);assert.deepEqual(s.skills,snapshot);assert.ok(G.validate(s));
+ const legacy=G.create();legacy.skills={star:20,key:20,reading:20};legacy.talents=['foundation'];G.migrate(legacy);assert.equal(legacy.skills.key,20);G.grantTalent(legacy,'key');assert.ok(legacy.skills.key>20&&legacy.skills.key<20.01);
 });
 
 test('star and keyboard milestones use 500 historical non-utage plays strictly above displayed level 12',()=>{

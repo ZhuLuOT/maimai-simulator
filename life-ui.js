@@ -35,7 +35,7 @@ import { live } from 'lit/directives/live.js';
     return html`<div class="plate-gallery">${G.plates(s, pool).map(p => html`<button class="plate-item ${s.profile.plate === p.id ? 'equipped' : ''}" data-action="equip-plate" data-value="${p.id}" ?disabled=${!p.unlocked}><div class="plate-preview" style="background-image:url('assets/plates/${encodeURIComponent(p.id)}.png')">${p.id === 'default' ? esc(p.name) : ''}</div><b>${p.name} ${s.profile.plate === p.id ? '· 已装备' : p.unlocked ? '· 可装备' : icon('lock-keyhole')}</b><small>${p.text}</small>${p.total ? html`<progress max="${p.total}" value="${p.done}"></progress><small>${p.done} / ${p.total} 张谱面</small>` : ''}</button>`)}</div>`;
   }
   function talents(s) {
-    return html`<div class="talent-list">${G.TALENTS.filter(t => !t.initial || s.talents.includes(t.id)).map(t => html`<article class="${s.talents.includes(t.id) ? 'owned' : ''}"><span>${icon(s.talents.includes(t.id) ? 'sparkles' : 'lock-keyhole')}</span><div><b>${t.name}</b><p>${t.description}</p></div><small>${s.talents.includes(t.id) ? '已获得' : '未解锁'}</small></article>`)}</div>`;
+    return html`<div class="talent-list">${G.TALENTS.filter(t => !t.initial || s.talents.includes(t.id)).map(t => html`<article class="${s.talents.includes(t.id) ? 'owned' : ''}"><span>${icon(s.talents.includes(t.id) ? 'sparkles' : 'lock-keyhole')}</span><div><b>${t.name}</b><p>${t.description}</p>${!s.talents.includes(t.id)&&Object.keys(G.talentGains(s,t.id)).length?html`<p class="talent-gain">当前可获：${G.talentGainText(G.talentGains(s,t.id))}</p>`:''}</div><small>${s.talents.includes(t.id) ? '已获得' : '未解锁'}</small></article>`)}</div>`;
   }
   function partnerChoices(s, pool) {
     if (s.mode !== 'pair' || !s.partnerSongs) return '';

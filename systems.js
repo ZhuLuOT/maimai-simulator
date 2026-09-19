@@ -5,10 +5,11 @@
   const IDS=['逃遁','鲁米诺','电压','Toqin','COLDDD','星轨','小盐','404NOTFOUND','八分音符','纸飞机','折返跑','凛冬','橘子汽水','月读','栗子','白昼梦','NekoDX','竹间雨','北纬31','千层雪','再来一把','空白键','mikan','摇光','未完成','七海','镜花','下次一定','微光','晚风'];
   const CONDITIONS=[{name:'极差',score:-.65},{name:'还行',score:-.25},{name:'普通',score:0},{name:'不错',score:.13},{name:'完美',score:.26}];
   const GLOVES=[{id:'cotton',name:'棉线手套',cost:8,durability:100,wear:1},{id:'sport',name:'耐磨手套',cost:25,durability:240,wear:.85}];
+  const TALENT_SKILLS={transfer:{amount:3,skills:['star','key','reading']},musician:{amount:2,skills:['star','key','reading']},dragon:{amount:2,skills:['star','key','reading']},foundation:{amount:2,skills:['star','key','reading']},expert:{amount:2,skills:['star','key','reading']},reader:{amount:2,skills:['reading']},key:{amount:2,skills:['key']},star:{amount:2,skills:['star']},slide:{amount:2,skills:['star']},reading:{amount:2,skills:['reading']},speed:{amount:2,skills:['key']}};
   const TALENTS=[
     ['transfer','其他音游转生者','初始全底力 +3',true],['endurance','体力过人','体力上限 +10',true],['musician','精通乐器','初始全底力 +2',true],['friends','熟人小团体','所有群友眼熟度 +25',true],['reader','读谱天才','读谱力 +2',true],['steady','稳定发挥','不会出现极差状态',true],['rich','富哥','初始资金 +1000',true],['dragon','龙B！','初始全底力 +2 · 第二周目起',true],['gifted','天赋异禀','每曲底力成长 +5%',true],
     ['foundation','基本功扎实','B35 旧最佳满 35 张且均为 12 / 12+ 谱面，全底力 +2'],['adapt','快适应体质','同谱累计游玩 10 次；复打有效底力 +0.3'],['key','键盘B','累计 500 首标级大于 12 的键盘谱（12+ 及以上）；键盘力 +2'],['star','星星B','累计 500 首标级大于 12 的星星谱（12+ 及以上）；星星力 +2'],['slide','一眼会划','100 张 12+ 以上星星谱达到鸟；星星力 +2'],['reading','见招拆招','初见 150 张谱面；读谱力 +2'],['speed','天生的手速','100 张 12+ 以上键盘谱达到鸟；键盘力 +2'],['instinct','手比脑快','累计游玩 250 首；可开启凭手感模式'],['streak','越打越有','累计 50 PC；每段连续第 5 PC 全底力临时 +2'],['challenge','就爱越级','越级谱游玩 30 首；越级有效底力 +0.3'],['stage','舞台型选手','人多时累计游玩 40 首；人越多分数略有加成'],['expert','精于此道','累计 1000 首；全底力 +2'],['classic','吃屎大王','真超檄世代游玩 50 首；对应曲有效底力 +0.5'],['vocal','V家爱好者','V 家分区游玩 80 首；对应曲有效底力 +0.5'],['touhou','东方痴','东方分区游玩 80 首；对应曲有效底力 +0.5'],['ghost','鬼歌王','鬼歌游玩 50 首；对应曲有效底力 +0.5，但拼机伙伴眼熟度 -2']
-  ].map(([id,name,description,initial=false])=>({id,name,description,initial}));
+  ].map(([id,name,description,initial=false])=>({id,name,description:TALENT_SKILLS[id]?description.replace(` +${TALENT_SKILLS[id].amount}`,`最高 +${TALENT_SKILLS[id].amount}`)+'（随对应底力递减）':description,initial}));
   const P=typeof module!=='undefined'?require('./precision'):root.Precision;
   const M=typeof module!=='undefined'?require('./gameplay'):root.Gameplay;
   let G;
@@ -56,13 +57,18 @@
     const bucket=(s.day-1)*48+Math.floor(s.clock/30);if(s.crowdTick!==bucket){s.crowdTick=bucket;s.crowdShift=Math.floor(rand(s)*5)-2;}reportCrowd(s);M.crowdChat(s);if(['drink','play'].includes(s.phase)&&s.mode==='pair'){if(G.peopleAt(s)===0){s.partner=null;s.partnerSongs=null;s.friendship=false;}else if(s.partner===null||s.npcs[s.partner]?.id==='小凛'&&G.linArcade(s)!==s.arcade||s.arcade===5&&!G.denVisitors(s).some(n=>n===s.npcs[s.partner]))choosePartner(s);}
   }
   function reportCrowd(s){const current=G.peopleAt(s),last=s.crowdSeen;if(last&&last.arcade===s.arcade&&last.count!==current&&['drink','play','meal'].includes(s.phase)){const delta=current-last.count;G.log(s,`${G.ARCADES[s.arcade].name}：${Math.abs(delta)} 位玩家${delta>0?'到店':'离店'}，当前 ${current} 人。`,'crowd');}s.crowdSeen={arcade:s.arcade,count:current};}
-  function addSkills(s,n,skill){for(const k of skill?[skill]:['star','key','reading'])s.skills[k]=clamp(s.skills[k]+n,1,22);}
+  function talentSkillGain(current,amount){
+    // Continuous at 10, 12 and 13; every further point halves the reward.
+    const scale=current<=10?1:current<13?1-(current-10)*.25:.25*2**(13-current);
+    return Math.max(0,Math.min(22-current,amount*scale));
+  }
+  function talentGains(s,id){const reward=TALENT_SKILLS[id];return reward?Object.fromEntries(reward.skills.map(k=>[k,talentSkillGain(s.skills[k],reward.amount)])):{};}
+  function talentGainText(gains){const names={star:'星星力',key:'键盘力',reading:'读谱力'};return Object.entries(gains).map(([k,n])=>`${names[k]} ${n>0&&n<.01?'+<0.01':'+'+n.toFixed(2)}`).join(' · ');}
   function grant(s,id){if(has(s,id))return;const t=TALENTS.find(x=>x.id===id);if(!t)throw Error('未知词条。');s.talents.push(id);
-    if(['transfer','musician','dragon','foundation','expert'].includes(id))addSkills(s,id==='transfer'?3:2);
-    if(id==='endurance'){s.maxStamina+=10;s.stamina+=10;}if(id==='reader')addSkills(s,2,'reading');if(id==='rich')s.money+=1000;
+    const gains=talentGains(s,id);for(const [k,n] of Object.entries(gains))s.skills[k]+=n;
+    if(id==='endurance'){s.maxStamina+=10;s.stamina+=10;}if(id==='rich')s.money+=1000;
     if(id==='friends')s.npcs.forEach(n=>n.familiarity=clamp(n.familiarity+25,0,100));if(id==='steady'&&s.condition===0)s.condition=1;
-    if(['key','star','slide','reading','speed'].includes(id))addSkills(s,2,{key:'key',star:'star',slide:'star',reading:'reading',speed:'key'}[id]);
-    G.log(s,`获得词条「${t.name}」：${t.description}`,'talent');
+    G.log(s,`获得词条「${t.name}」：${Object.keys(gains).length?talentGainText(gains):t.description}`,'talent');
   }
   function draw(s,run=1){const a=TALENTS.filter(t=>t.initial&&(t.id!=='dragon'||run>=2));for(let i=a.length-1;i>0;i--){const j=Math.floor(rand(s)*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a.slice(0,3).map(t=>t.id);}
   function setup(s,{name,id,talent,offers,playStyle='outer'}){if(s.setupDone||s.started)throw Error('角色已经创建。');name=String(name??'').trim()||'神秘人';id=String(id??'').trim()||'Maimai';if(name.length>16||id.length>16)throw Error('姓名和舞萌 ID 请填写 1–16 个字符。');if(!offers?.includes(talent))throw Error('请在本次三个词条中选择一个。');if(!G.PLAY_STYLES[playStyle])throw Error('请选择外键或内屏。');G.startGuide(s,playStyle);s.profile={name,id,plate:'default',title:'title-1',avatar:null};s.setupDone=true;grant(s,talent);rollCondition(s);}
@@ -100,7 +106,7 @@
   function chatSend(s,text){assertActive(s);if(!['home','play','travel'].includes(s.phase))throw Error('先完成当前阶段再聊天。');text=String(text).trim();if(!text||text.length>100)throw Error('消息请输入 1–100 个字符。');if(M.bot(s,text))return;spend(s,5);if(s.ending)return;if(s.chatDay!==s.day){s.chatDay=s.day;s.chatCount=0;}s.chat.push({id:s.profile.id,text,day:s.day,time:s.clock,self:true});if(s.chatCount<5){s.npcs.filter(n=>n.id!=='小凛').forEach(n=>n.familiarity=clamp(n.familiarity+3,0,100));s.mood=clamp(s.mood+1,0,100);}s.chatCount++;const awake=G.nightVisitors(s),responders=(s.clock<480||s.clock>=1380)&&awake.length?awake:s.npcs.filter(n=>n.id!=='小凛');const n=responders[Math.floor(rand(s)*responders.length)];G.postNPCMessage(s,n,G.npcReply(s,n.id,text));s.chat=s.chat.slice(-60);s.guide.chatted=true;G.inviteToDen(s);G.log(s,'在舞萌群聊了 5 分钟。','heart');}
   function newDay(s){s.stamina=s.maxStamina;s.consecutive=0;s.queueUntil=0;s.partner=null;s.partnerSongs=null;s.friendship=false;rollCondition(s);tick(s);}
   function plates(s,pool){const groups=[['真',['maimai','maimai PLUS']],['超',['maimai GreeN']],['檄',['maimai GreeN PLUS']],['橙',['maimai ORANGE']],['晓',['maimai ORANGE PLUS']]];const out=[{id:'default',name:'初来乍到',text:'初始名牌',unlocked:true,done:0,total:0}];for(const [name,versions]of groups){const charts=pool.filter(c=>versions.includes(c.version)&&c.index<4&&c.type==='SD'&&c.title!=='ジングルベル');for(const kind of name==='真'?['极','神']:['极','将','神']){const done=charts.filter(c=>{const r=s.records[G.key(c)];return kind==='极'?!!r?.bestCombo:kind==='将'?(r?.achievement||0)>=100:r?.bestCombo==='AP';}).length;out.push({id:name+kind,name:name+kind,text:`${versions.join(' / ')} 全 BASIC–MASTER ${kind==='极'?'FC':kind==='将'?'SSS':'AP'}`,done,total:charts.length,unlocked:charts.length>0&&done===charts.length});}}return out;}
-  function install(api){G=api;Object.assign(api,{NPC_IDS:IDS,TALENTS,CONDITIONS,GLOVES,drawTalents:draw,setup,grantTalent:grant,selectCount,waitQueue,arcadeRest:rest,buyGloves,refill,chatOpen,chatSend,plates});}
+  function install(api){G=api;Object.assign(api,{NPC_IDS:IDS,TALENTS,CONDITIONS,GLOVES,drawTalents:draw,setup,grantTalent:grant,talentGains,talentGainText,selectCount,waitQueue,arcadeRest:rest,buyGloves,refill,chatOpen,chatSend,plates});}
   const api={ensure,rollCondition,tick,abilityBonus,scoreBonus,consume,afterPlay,choosePartner,selectCount,partnerCharts,newDay,install,has,crowdOffset};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LifeSystems=api;
 })(typeof window==='undefined'?globalThis:window);
