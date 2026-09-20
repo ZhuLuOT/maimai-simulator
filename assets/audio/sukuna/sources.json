@@ -1,0 +1,22 @@
+[
+  {
+    "id": "aizo",
+    "source": "https://inmp3.com/song/531389547/",
+    "title": "AIZO",
+    "artist": "King Gnu",
+    "bytes": 3455058,
+    "sha256": "342fc15d2b1c713d9c338b3ac39875fea2afc1b56ed33a2f43e588e4fef3c6e5",
+    "providedBy": "user",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": "yuai",
+    "source": "https://inmp3.com/song/1035026/",
+    "title": "雨爱",
+    "artist": "杨丞琳",
+    "bytes": 4168946,
+    "sha256": "dee54c63a9d8491de123e58cb9c511d905fdc43a8482b02fb8403a564e5b5a17",
+    "providedBy": "user",
+    "contentType": "audio/mpeg"
+  }
+]

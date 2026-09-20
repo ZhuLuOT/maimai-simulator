@@ -56,17 +56,48 @@
     '交互':{skills:{key:.65,reading:.35},groups:[0],scene:'双手交互段开始了'},
     '高物量':{skills:{key:.6,reading:.4},groups:[0,3],scene:'密集音符涌入屏幕'}
   };
-  function segment(s,c,result){
+  function planSegment(s,c){
     const tags=(c.tags||[]).filter(t=>segments[t]);
-    if(!tags.length||rand(s)>(s.condition<2?.45:s.condition>2?.35:.4))return result;
-    const tag=tags[Math.floor(rand(s)*tags.length)],rule=segments[tag];
-    const skill=Object.entries(rule.skills).reduce((n,[k,w])=>n+s.skills[k]*w,0);
-    const chance=clamp(.65+(skill-c.ds)*.16+(s.condition-2)*.03-Math.max(0,50-s.stamina)*.004,.08,.97);
-    const passed=rand(s)<chance,event={tag,scene:rule.scene,passed,loss:0,misses:0};
-    if(passed)return {...result,segmentEvent:event};
+    if(!tags.length||rand(s)>(s.condition<2?.45:s.condition>2?.35:.4))return null;
+    return {tag:tags[Math.floor(rand(s)*tags.length)]};
+  }
+  function planSegments(s,c){
+    const first=planSegment(s,c);if(!first)return [];
+    const plans=[first],tags=[...new Set(c.tags.filter(t=>segments[t]))];
+    for(const chance of [c.ds>=13.6?.55:.25,c.ds>=14?.3:.15]){
+      if(rand(s)>=chance)break;
+      const remaining=tags.filter(t=>!plans.some(p=>p.tag===t)),choices=remaining.length?remaining:tags;
+      plans.push({tag:choices[Math.floor(rand(s)*choices.length)]});
+    }
+    return plans;
+  }
+  function segmentOptions(s,c,tag){
+    const rule=segments[tag];if(!rule)return [];
+    const names={star:'星星力',key:'键盘力',reading:'读谱力'};
+    const star=(rule.skills.star||0)>(rule.skills.key||0),alternate=star?'key':'star';
+    const variants=[{id:'technique',name:'按配置稳接',weights:rule.skills,required:c.ds},
+      {id:'alternate',name:star?'拆开硬接':'预划分担',weights:{[alternate]:1},required:c.ds+(star?.85:1.15)},
+      {id:'read',name:'看清节奏再动手',weights:{reading:1},required:c.ds+(tag==='跳拍'||tag==='定拍'?.15:.7)}];
+    return [...variants.map(o=>{const skill=Object.entries(o.weights).reduce((n,[k,w])=>n+s.skills[k]*w,0);return {...o,requirement:Object.entries(o.weights).map(([k,w])=>`${names[k]} ${Math.round(w*100)}%`).join(' + '),skill,chance:clamp(.65+(skill-o.required)*.16+(s.condition-2)*.03-Math.max(0,50-s.stamina)*.004,.08,.97)};}),{id:'luck',name:'赌一把手感',requirement:'看运气，不依赖底力',chance:.38}];
+  }
+  function segment(s,c,result,decision){
+    if(Array.isArray(decision)){
+      if(!decision.length)return result;
+      const events=[];
+      for(const plan of decision){result=segment(s,c,result,plan);events.push(result.segmentEvent);}
+      const combined={...result,segmentEvents:events,segmentEvent:events.findLast(e=>!e.passed)||events.at(-1)};
+      sequences.set(combined,sequences.get(result));return combined;
+    }
+    const plan=decision===undefined?planSegment(s,c):decision;if(!plan)return result;
+    const tag=plan.tag,rule=segments[tag];if(!rule||!(c.tags||[]).includes(tag))throw Error('无效难段。');
+    const option=segmentOptions(s,c,tag).find(o=>o.id===(plan.strategy||'technique'));if(!option)throw Error('无效策略。');
+    const chance=Number.isFinite(plan.chance)?clamp(plan.chance,.08,.97):option.chance;
+    const passed=typeof plan.passed==='boolean'?plan.passed:rand(s)<chance,event={tag,scene:rule.scene,strategy:option.name,chance,passed,loss:0,misses:0};
+    const withEvent=base=>{const next={...base,segmentEvent:event};sequences.set(next,sequences.get(base));return next;};
+    if(passed)return withEvent(result);
     // Convert successful notes into misses, then recompute both base and BREAK bonus scores.
     const groups=result.judgementGroups.map(g=>({...g})),breaks={...result.breakJudgements},sequence=(sequences.get(result)||noteSequence(s,groups)).slice();
-    let remaining=Math.max(1,Math.ceil(c.notes.reduce((a,b)=>a+b,0)*(.005+rand(s)*.01)));
+    let remaining=Math.max(1,Math.ceil(c.notes.reduce((a,b)=>a+b,0)*(.005+rand(s)*.01)*clamp(plan.intensity??1,1/3,1)));
     const order=[...new Set([...rule.groups,0,2,1,3,4])];
     for(const i of order){
       const g=groups[i];
@@ -79,7 +110,7 @@
       if(!remaining)break;
     }
     const adjusted=finish(groups,breaks,sequence);event.loss=Number((result.achievement-adjusted.achievement).toFixed(4));
-    return {...adjusted,segmentEvent:event};
+    return withEvent(adjusted);
   }
-  const api={calculate,difficultyPenalty,difficultyValue,simulate,segment};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.Judgement=api;
+  const api={calculate,difficultyPenalty,difficultyValue,simulate,segment,segments,planSegment,planSegments,segmentOptions};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.Judgement=api;
 })(globalThis);

@@ -1,6 +1,14 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),G=require('../engine'),M=require('../gameplay');
 const ctx={window:{}};vm.runInNewContext(fs.readFileSync(require.resolve('../data/music.js'),'utf8'),ctx);const pool=G.charts(ctx.window.MUSIC_DATA);
 function arrive(){const s=G.create('grinder',42);G.startTrip(s);G.travel(s,'bike',0);G.drink(s,'water');if(s.queueUntil>s.clock)G.waitQueue(s);return s;}
+test('high-level stamina is gentler across the catalog and still scales continuously',()=>{
+ const s=G.create(),old=c=>(1+c.notes.reduce((a,b)=>a+b,0)/180)*(c.ds/10)**1.7;
+ for(const c of pool.filter(c=>c.ds>=13.6&&!G.isUtage(c)))assert.ok(G.staminaCost(s,c)<old(c));
+ for(const level of ['13+','14','14+']){const charts=pool.filter(c=>c.level===level&&!G.isUtage(c)),before=charts.reduce((n,c)=>n+old(c),0),after=charts.reduce((n,c)=>n+G.staminaCost(s,c),0);assert.ok(after/before<.85);}
+ const c=pool.find(c=>c.ds===12),cost=ds=>G.staminaCost(s,{...c,ds});for(let ds=11;ds<15;ds+=.1)assert.ok(cost(ds+.1)>cost(ds));
+ const normal=G.staminaCost(s,c);s.instinct=true;assert.equal(G.staminaCost(s,c),normal*1.35);
+ const playing=arrive(),songs=Array(3).fill(pool.find(c=>c.ds===14.8)),before=playing.stamina,spent=playing.trip.staminaSpent,total=songs.reduce((n,c)=>n+G.staminaCost(playing,c),0);G.play(playing,songs,pool);assert.ok(Math.abs(playing.stamina-Math.max(0,before-total))<.000001);assert.ok(Math.abs(playing.trip.staminaSpent-spent-total)<.000001);
+});
 test('B50 stores current cabinet ranks and accepts historical snapshots without rank fields',()=>{
  const s=G.create();s.competition.wins=45;s.competition.courses=[1,2];const snap=G.b50Snapshot(s);
  assert.equal(snap.classRank,15);assert.equal(snap.courseRank,2);

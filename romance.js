@@ -26,7 +26,7 @@
     s.romance.nextDay=s.day+(stage>=3?7:4);s.nextLoveVisit=s.visits+2;
     if(ok){s.love++;s.romance.trust=Math.min(100,s.romance.trust+6);s.mood=Math.min(100,s.mood+8);}
     else{s.romance.mistakes++;s.romance.trust=Math.max(0,s.romance.trust-10);if(stage===EVENTS.length-1||s.romance.mistakes>=3)s.loveFailed=true;}
-    s.romance.pendingStory=null;G.ensureLin(s);G.syncFriends(s);G.linMessage(s,ok?e.reply:e.fail);G.log(s,ok?e.reply:e.fail,'heart');if(s.love===EVENTS.length&&s.rating>13000){s.ending='love';s.phase='ending';G.log(s,'结局：love','ending');}
+    s.romance.pendingStory=null;G.ensureLin(s);G.syncFriends(s);G.linMessage(s,ok?e.reply:e.fail);G.log(s,ok?e.reply:e.fail,'heart');if(s.love===EVENTS.length&&s.rating>13000){G.markMilestone(s,'love');s.ending='love';s.phase='ending';G.log(s,'结局：love','ending');}
   }
   function contact(s,id){
     if(s.phase!=='home'||s.ending||s.school.pending||s.event!==null||s.videoEvent||s.city.encounter||s.world?.notice||s.world?.mahjong.active)throw Error('先完成当前行动。');

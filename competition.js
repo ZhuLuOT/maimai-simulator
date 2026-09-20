@@ -41,13 +41,13 @@
     if(s.mode!=='solo')return '段位挑战需要单开。';
     return G.playReason(s)||(s.money<G.pcPrice(s)*2?`段位挑战需要 ¥${G.pcPrice(s)*2}。`:s.clock+20>G.availableUntil(s)?'剩余时间不足以完成 20 分钟挑战。':s.gloves.durability<4*1.75*s.gloves.wear?'手套耐久不足四首，请更换手套。':'');
   }
-  function course(s,level,pool){
+  function course(s,level,pool,options={}){
     const reason=courseReason(s);if(reason)throw Error(reason);const charts=courseCharts(level,pool);if(charts.length!==4)throw Error('该段位曲目尚未齐备。');
-    const result=G.play(s,charts,pool,level);if(!result)return;
+    const result=G.play(s,charts,pool,level,options);if(!result)return;
     const loss=result.results.reduce((n,r)=>n+r.judgements.great+r.judgements.good*2+r.judgements.miss*3,0),passed=loss<300;
     s.last.courseLevel=level;s.competition.lastCourse={level,life:Math.max(0,300-loss),passed,day:s.day};
     if(passed&&!s.competition.courses.includes(level))s.competition.courses.push(level);
-    G.log(s,`${courseNames[level-1]}模拟段位：${passed?'合格':'挑战失败'}，剩余 LIFE ${Math.max(0,300-loss)}/300。`,'event');
+    G.log(s,`${courseNames[level-1]}模拟段位：${passed?'合格':'挑战失败'}，剩余 LIFE ${Math.max(0,300-loss)}/300。`,'event');return result;
   }
   function install(api){G=api;Object.assign(api,{FRIEND_RANKS:[...['B','A','S','SS','SSS'].flatMap(t=>[5,4,3,2,1].map(n=>t+n)),'LEGEND'],syncBadge:sync,syncLabel:v=>({'sync':'SYNC','fs':'FS','fsp':'FS+','fsd':'FSD','fsdp':'FSD+'}[v]||''),COURSE_NAMES:courseNames,courseReason,courseCharts,runCourse:course,friendRank:s=>Math.min(25,Math.floor(s.competition.wins/3))});}
   const api={paired,install};if(typeof module!=='undefined')module.exports=api;else root.Competition=api;

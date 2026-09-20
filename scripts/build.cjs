@@ -17,6 +17,8 @@ const filesToCopy = [
   'mobile.css',
   'social.css',
   'world.js',
+  'major-life.js',
+  'major.css',
   'precision.js',
   'judgement.js',
   'gameplay.js',

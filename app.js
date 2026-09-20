@@ -1,3 +1,5 @@
+import {createSukunaAudio} from './src/sukuna-audio.js';
+import {majorView,birdMenu} from './src/major-ui.js';
 import {esc,icon} from './src/ui.js';
 import { html, render as mount } from 'lit';
 import {intro,guideSummary,goals as guideGoals} from './src/guide-ui.js';
@@ -71,6 +73,13 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
   } catch {
     saveWarning = true;
   }
+  function updateSukunaMusicButton(){
+    document.querySelectorAll('[data-action="sukuna-music"]').forEach(button=>{
+      button.textContent=sukunaAudio.label;
+      button.setAttribute('aria-pressed',String(['playing','loading'].includes(sukunaAudio.status)));
+    });
+  }
+  const sukunaAudio=createSukunaAudio({onChange:updateSukunaMusicButton});
   let seenForcedSleeps=state.forcedSleeps,mealReturn=null;
   picked=(state.selectedCharts||[]).map(k=>catalog.get(k)).filter(Boolean);
   let run = 1,
@@ -102,9 +111,10 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
   saveDraft();
   function syncPhone(){G.syncPhone(state);if(modal==='chat'&&!(conversationList&&window.innerWidth<=600))G.readPhone(state,conversation);}
   function save() {
+    G.collectionRewards(state);
     G.claimHomeGoals(state);
     syncPhone();
-    if(state.phase==='play'){
+    if(state.phase==='play'&&!G.majorBlocked(state)){
       G.preparePartner(state,pool);
       const count=G.selectCount(state);
       if(recommendations.length!==count)recommendations=G.recommend(state,pool);
@@ -284,17 +294,19 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
   }
   function results() {
     if (!state.last) return '';
-    return html`${state.last.battle?html`<p class="battle-result">友人对战 · ${state.last.battle.outcome==='wins'?'获胜':state.last.battle.outcome==='losses'?'落败':'平局'} · ${state.last.battle.ours.toFixed(4)} / ${state.last.battle.theirs.toFixed(4)}</p>`:''}<div class="result-banner"><div>${icon('sparkles')}Rating <b>+${state.last.gain}</b></div><span>星星 +${(state.skills.star - state.last.skillsBefore.star).toFixed(3)} · 键盘 +${(state.skills.key - state.last.skillsBefore.key).toFixed(3)} · 读谱 +${(state.skills.reading - (state.last.skillsBefore.reading ?? state.skills.reading)).toFixed(3)}</span></div><div class="performance-results">${state.last.results.map(c => html`<article>${cover(c)}<div><small class="diff-text-${c.index}">${names[c.index]} ${G.displayLevel(c)} · ${state.last.courseLevel ? '段位课题' : c.partner ? '对方选曲' : '自选'}</small><b>${esc(c.title)}</b><div class="performance-score">${c.achievement.toFixed(4)}% <em class="grade-icon"><img src="assets/grades/music_icon_${G.rank(c.achievement).toLowerCase().replace('+','p')}.png" alt="${G.rank(c.achievement)}"></em><span class="combo-badge">${c.combo || 'CLEAR'}</span></div>${c.opponent?html`<small class="sync-result">${G.syncLabel(c.sync)} · ${esc(c.opponent.id)} ${names[c.opponent.index]} ${c.opponent.achievement.toFixed(4)}% ${c.opponent.combo||'CLEAR'}</small>`:''}<small>${c.overreach ? '越级 · ' : ''}第 ${c.plays} 次 · ${c.improved ? 'NEW BEST' : ''}</small><details class="judgement-fold"><summary>查看判定</summary>${Number.isInteger(c.maxCombo)?html`<small>最大连击 ${c.maxCombo} / ${c.notes.reduce((a,b)=>a+b,0)}</small>`:''}<div class="judgements">${['critical', 'perfect', 'great', 'good', 'miss'].map((k, i) => html`<span>${['CRITICAL', 'PERFECT', 'GREAT', 'GOOD', 'MISS'][i]} <b>${c.judgements?.[k] ?? 0}</b></span>`)}</div>${c.breakJudgements ? html`<small class="break-details">BREAK 判定 · 基础 ${c.baseScore.toFixed(4)}% + 加分 ${c.extraScore.toFixed(4)}%</small>` : ''}</details>${c.segmentEvent ? html`<p class="segment-outcome ${c.segmentEvent.passed ? 'passed' : 'failed'}">${c.segmentEvent.scene} · ${c.segmentEvent.passed ? '判定通过' : `段落坠机 · +${c.segmentEvent.misses} MISS · -${c.segmentEvent.loss.toFixed(4)}%`}</p>` : ''}</div></article>`)}</div>`;
+    return html`${state.last.battle?html`<p class="battle-result">友人对战 · ${state.last.battle.outcome==='wins'?'获胜':state.last.battle.outcome==='losses'?'落败':'平局'} · ${state.last.battle.ours.toFixed(4)} / ${state.last.battle.theirs.toFixed(4)}</p>`:''}<div class="result-banner"><div>${icon('sparkles')}Rating <b>+${state.last.gain}</b></div><span>星星 +${(state.skills.star - state.last.skillsBefore.star).toFixed(3)} · 键盘 +${(state.skills.key - state.last.skillsBefore.key).toFixed(3)} · 读谱 +${(state.skills.reading - (state.last.skillsBefore.reading ?? state.skills.reading)).toFixed(3)}</span></div><div class="performance-results">${state.last.results.map(c => html`<article>${cover(c)}<div><small class="diff-text-${c.index}">${names[c.index]} ${G.displayLevel(c)} · ${state.last.courseLevel ? '段位课题' : c.partner ? '对方选曲' : '自选'}</small><b>${esc(c.title)}</b><div class="performance-score">${c.achievement.toFixed(4)}% <em class="grade-icon"><img src="assets/grades/music_icon_${G.rank(c.achievement).toLowerCase().replace('+','p')}.png" alt="${G.rank(c.achievement)}"></em><span class="combo-badge">${c.combo || 'CLEAR'}</span></div>${c.opponent?html`<small class="sync-result">${G.syncLabel(c.sync)} · ${esc(c.opponent.id)} ${names[c.opponent.index]} ${c.opponent.achievement.toFixed(4)}% ${c.opponent.combo||'CLEAR'}</small>`:''}<small>${c.overreach ? '越级 · ' : ''}第 ${c.plays} 次 · ${c.improved ? 'NEW BEST' : ''}</small><details class="judgement-fold"><summary>查看判定</summary>${Number.isInteger(c.maxCombo)?html`<small>最大连击 ${c.maxCombo} / ${c.notes.reduce((a,b)=>a+b,0)}</small>`:''}<div class="judgements">${['critical', 'perfect', 'great', 'good', 'miss'].map((k, i) => html`<span>${['CRITICAL', 'PERFECT', 'GREAT', 'GOOD', 'MISS'][i]} <b>${c.judgements?.[k] ?? 0}</b></span>`)}</div>${c.breakJudgements ? html`<small class="break-details">BREAK 判定 · 基础 ${c.baseScore.toFixed(4)}% + 加分 ${c.extraScore.toFixed(4)}%</small>` : ''}</details>${(c.segmentEvents||(c.segmentEvent?[c.segmentEvent]:[])).map((e,i)=>html`<p class="segment-outcome ${e.passed?'passed':'failed'}">难点 ${i+1} · ${e.scene} · ${e.passed?'判定通过':`段落坠机 · +${e.misses} MISS · -${e.loss.toFixed(4)}%`}</p>`)}</div></article>`)}</div>`;
   }
   function sleepForecast(kind) {
     const plan=G.sleepPlan(state,kind),day=plan.day===state.day?'今天':'明天';
     return `预计 ${day} ${G.time(plan.clock)} 起床${plan.conflicts.length?' · 将错过：'+plan.conflicts.map(c=>c.name).join('、'):''}`;
   }
   function renderModal() {
+    if(sukunaAudio.sync(state))save();
     if (state.ending && modal !== 'restart') modal = 'ending';else if (state.world?.mahjong.active) modal='mahjong';else if(state.world?.notice) modal='world-event';else if (state.school.pending) modal = 'teacher';else if (state.event !== null) modal = 'event';else if (state.city.encounter) modal = 'city-encounter';else if (state.videoEvent) modal = 'video';else if(state.setupDone&&!state.guide.introDone){modal='intro';if(G.postIntro(state))save();}
     if(state.forcedSleeps!==seenForcedSleeps){seenForcedSleeps=state.forcedSleeps;modal=null;state.roundReview=false;picked=[];recommendations=[];forceModalTop=true;toast(G.homeText(state,'困意已满，已结束行动并回家睡觉。'));}
     if(state.ending&&modal!=='restart')modal='ending';else if(!state.ending&&state.school.pending)modal='teacher';
     if(!state.ending&&!state.school.pending&&state.event===null&&!state.city.encounter&&!state.world?.notice&&!state.world?.mahjong.active&&!state.videoEvent&&state.setupDone&&state.guide.introDone&&(!modal||['trip','chat','entertain'].includes(modal))&&G.mealReminder(state)>=0){mealReturn=modal;modal='daily-meal';forceModalTop=true;}
+    if(!state.ending&&G.majorBlocked(state)&&!(state.major.duel.stage==='select'&&modal==='picker'))modal='major';
     const root = $('#modal-root');
     if (!modal) {
       const dialog=root.querySelector('.modal');
@@ -306,6 +318,13 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
     }
     document.body.classList.add('modal-open');
     let content = '';
+    if(modal==='major'){
+      const intro=state.major.duel.stage==='intro';
+      const musicControl=sukunaAudio.active?html`<button class="sukuna-music secondary-btn" data-action="sukuna-music" aria-pressed=${String(['playing','loading'].includes(sukunaAudio.status))}></button>`:'';
+      const inlineMusic=state.major.duel.stage==='loss'&&!state.major.performance&&!state.major.bird;
+      content=frame(state.major.bird?'观察鸟儿':state.major.performance?'难段应对':'时空裂隙 · 两面宿傩',state.major.bird?'保持对准，记录自然':state.major.performance?'你的策略会影响这一首的表现':intro?'不属于这个时代的挑战':'',html`${majorView(state,picked,inlineMusic?musicControl:'')}${inlineMusic?'':musicControl}`,!intro,false);
+    }
+    if(modal==='bird-menu')content=frame('出发观鸟','选择今天的观察地点',birdMenu(state));
     if(modal==='daily-meal')content=frame(`${G.MEAL_NAMES[G.mealDue(state)]||'用餐'}时间，吃点什么`,`${G.time(state.clock)} · ${state.mealBreak?'午休':G.residence(state)}`,html`${LifeUI.mealStatus(state)}${options(G.homeMeals(state),'eat-home')}<p class="form-note">连续 3 天漏餐开始降低最大体力；连续 3 天规律三餐并出门活动，最大体力 +1。</p><button class="secondary-btn" data-action="meal-later">稍后再吃</button>`,false,false);
     if(modal==='sleep'){const plan=G.sleepPlan(state,sleepMinutes);content=frame('休息一下',`困意 ${Math.round(state.drowsiness)}/100 · 体力 ${Math.floor(state.stamina)}/${state.maxStamina}`,html`<label class="sleep-duration">自选睡眠时长<select id="sleep-duration" .value=${String(sleepMinutes)}>${Array.from({length:24},(_,i)=>(i+1)*30).map(m=>html`<option value=${m} ?selected=${m===sleepMinutes}>${m/60} 小时</option>`)}</select></label><p class="sleep-preview" role="status">消除困意 ${plan.recovery.toFixed(1)} · 醒后困意 ${(state.drowsiness-plan.recovery).toFixed(1)}/100<br>恢复体力 ${plan.staminaRecovery.toFixed(1)} · ${sleepForecast(sleepMinutes)}</p><div class="option-grid"><button class="option" data-action="sleep-now" data-value=${sleepMinutes}>${icon('alarm-clock')}<div><b>睡 ${sleepMinutes/60} 小时</b><small>按所选时长休息</small></div></button><button class="option" data-action="sleep-now" data-value="full">${icon('moon')}<div><b>一次睡到爽</b><small>10 小时 · 困意清零 · 体力恢复满</small><small>${sleepForecast('full')}</small></div></button></div><p class="form-note">每小时消除 12.5 困意。睡过课程记旷课，睡过班次记旷工；冲突会在上方预览。</p>`);}
     if(modal==='guide')content=frame('从今天的一枚游戏币开始','春季小目标',guideGoals(state),true);
@@ -349,9 +368,9 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
       }
       if (state.phase === 'meal') content = frame('下机了，好好吃顿饭', `${G.time(state.clock)} · 回程 ${state.trip.returnTime} 分钟`, html`${steps(2)}<div class="outing-summary"><div><small>本次上机</small><b>${state.trip.rounds}<span> 轮</span></b></div><div><small>Rating 提升</small><b>+${state.rating - state.trip.ratingBefore}</b></div><div><small>已花费</small><b>¥${state.trip.cost}</b></div></div><div class="mode-select" aria-label="饭后去向">${[['home',`吃完回${G.residence(state)}`],['arcade','吃完回机厅继续打']].map(([id,label])=>html`<button class="${mealDestination===id?'selected':''}" aria-pressed=${mealDestination===id} data-action="meal-destination" data-value="${id}">${label}</button>`)}</div>${options(G.mealOptions(state).filter(m=>mealDestination!=='arcade'||m.id!=='home'), 'meal')}<button class="secondary-btn" data-action="resume-play" ?disabled=${!!G.returnToPlayReason(state)}>先不吃，返回机厅继续打</button>${mealDestination==='home'&&G.canSkipMeal(state) ? html`<button class="secondary-btn" data-action="meal" data-value="skip">不吃饭，直接回${G.residence(state)}</button>` : ''}<p class="form-note">选择回机厅：附近用餐另计往返步行 10 分钟，回店后重新排队；仍须在闭店或固定日程前结束。回${G.residence(state)}后也可再次出勤。每日基本开销至多 ¥${G.JOBS[state.job].daily}，已付正餐每餐可抵扣至多 ¥${G.JOBS[state.job].mealAllowance} 的基础餐费。</p>`);
     }
-    if (modal === 'picker') content = frame(`自选曲目 · ${G.MODES[state.mode].name}`, `选择第 ${pickSlot + 1} 首 / 共 ${G.selectCount(state)} 首`, html`${filters()}<div class="picker-list" id="song-results">${libraryResults()}</div><div class="modal-actions"><span id="pick-count">${picked[pickSlot] ? esc(picked[pickSlot].title) : '本首尚未选择'}</span><button class="primary-btn" data-action="picked">${icon('check')}确认选曲</button></div>`, true);
+    if (modal === 'picker') content = frame(`自选曲目 · ${state.major.duel.stage==='select'?'对战两面宿傩':G.MODES[state.mode].name}`, `选择第 ${pickSlot + 1} 首 / 共 ${state.major.duel.stage==='select'?2:G.selectCount(state)} 首`, html`${filters()}<div class="picker-list" id="song-results">${libraryResults()}</div><div class="modal-actions"><span id="pick-count">${picked[pickSlot] ? esc(picked[pickSlot].title) : '本首尚未选择'}</span><button class="primary-btn" data-action="picked">${icon('check')}确认选曲</button></div>`, true);
     if(modal==='city-encounter') content=frame('街角的偶遇','广州 · 小凛',html`<p class="event-text">小凛拎着舞萌手套朝你挥了挥手：“你也来这边逛呀？”</p><div class="modal-actions"><button class="primary-btn" data-action="city-answer" data-value="0">聊聊舞萌，加个好友</button><button class="secondary-btn" data-action="city-answer" data-value="1">点头招呼，下次再聊</button></div><p class="form-note">交谈 10 分钟</p>`,false,false);
-    if (modal === 'entertain') content = frame('娱乐', `${G.time(state.clock)} · 心情 ${state.mood}/100`, html`<div class="option-grid"><button class="option" data-action="daily" data-value="fun" ?disabled=${state.money < 35}>${icon('popcorn')}<div><b>和朋友出去玩</b><small>2 小时 · 心情 +26</small></div><span>¥35</span></button><button class="option" data-action="watch-videos">${icon('clapperboard')}<div><b>刷视频</b><small>30 分钟 · 心情 +7</small></div><span>免费</span></button>${G.availableOutings(state).map(x=>html`<button class="option" data-action="explore" data-value="${x.id}" ?disabled=${state.money<x.cost||state.stamina<x.stamina||!G.canSpendTime(state,x.time)}>${icon(x.icon)}<div><b>${x.name}</b><small>${G.homeText(state,x.place)} · ${x.time} 分钟 · 心情 +${x.mood}${x.stamina?` · 体力 -${x.stamina}`:''}</small></div><span>${x.cost?`¥${x.cost}`:'免费'}</span></button>`)}</div>`);
+    if (modal === 'entertain') content = frame('娱乐', `${G.time(state.clock)} · 心情 ${state.mood}/100`, html`<button class="primary-btn" data-action="bird-menu">出发观鸟</button><div class="option-grid"><button class="option" data-action="daily" data-value="fun" ?disabled=${state.money < 35}>${icon('popcorn')}<div><b>和朋友出去玩</b><small>2 小时 · 心情 +26</small></div><span>¥35</span></button><button class="option" data-action="watch-videos">${icon('clapperboard')}<div><b>刷视频</b><small>30 分钟 · 心情 +7</small></div><span>免费</span></button>${G.availableOutings(state).map(x=>html`<button class="option" data-action="explore" data-value="${x.id}" ?disabled=${state.money<x.cost||state.stamina<x.stamina||!G.canSpendTime(state,x.time)}>${icon(x.icon)}<div><b>${x.name}</b><small>${G.homeText(state,x.place)} · ${x.time} 分钟 · 心情 +${x.mood}${x.stamina?` · 体力 -${x.stamina}`:''}</small></div><span>${x.cost?`¥${x.cost}`:'免费'}</span></button>`)}</div>`);
     if (modal === 'teacher') content = frame('老师约谈', 'ACADEMIC WARNING', html`<p class="event-text">“你最近的课程已经跟不上了。请尽快把落下的内容补上。”</p><div class="warning">挂科第 ${state.day - state.school.since + 1}/10 天 · 本次是第 ${state.school.talks + 1}/3 次约谈。<br>补习或上课将学力恢复到 20，可解除挂科；连续挂科 10 天或第 3 次约谈将进入肄业结局。</div><div class="modal-actions"><button class="primary-btn" data-action="teacher">${icon('book-open')}回应老师</button></div>`, false, false);
     if (modal === 'skip') {
       const c = G.nextObligation(state),
@@ -374,7 +393,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
         dropout: ['BAD ENDING', '肄业通知', '第三次老师约谈，或连续十天未解除挂科。这个学期以肄业告终。', 'graduation-cap']
       };
       const [tag, title, desc, ic] = endings[state.ending];
-      content = frame(title, tag, html`<div class="ending-art ${state.ending}">${icon(ic)}</div><p class="event-text">${desc}</p><div class="outing-summary"><div><small>日期</small><b class="ending-date">${G.dateISO(state)}</b></div><div><small>Rating</small><b>${state.rating}</b></div><div><small>出勤次数</small><b>${state.visits}</b></div></div><div class="modal-actions"><button class="secondary-btn" data-action="export">${icon('download')}导出存档</button><button class="primary-btn" data-action="restart">${icon('rotate-ccw')}开启新故事</button></div>`, false, false);
+      content = frame(title, tag, html`<div class="ending-art ${state.ending}">${icon(ic)}</div><p class="event-text">${desc}</p><div class="outing-summary"><div><small>日期</small><b class="ending-date">${G.dateISO(state)}</b></div><div><small>Rating</small><b>${state.rating}</b></div><div><small>出勤次数</small><b>${state.visits}</b></div></div><div class="modal-actions"><button class="secondary-btn" data-action="export">${icon('download')}导出存档</button>${G.canContinue(state)?html`<button class="primary-btn" data-action="continue-ending">${state.ending==='good'?'继续 · 回应时空裂隙':'继续游玩到日期结束'}</button>`:''}<button class="secondary-btn" data-action="restart">${icon('rotate-ccw')}开启新故事</button></div>`, false, false);
     }
     if (modal === 'settings') content = frame('存档与设置', `${G.dateLabel(state)} · ${G.time(state.clock)}`, html`<div class="settings-buttons"><button class="secondary-btn" data-action="export">${icon('download')}导出存档</button><label class="secondary-btn">${icon('upload')}导入存档<input id="import-save" type="file" accept=".json,application/json" hidden></label><button class="secondary-btn" data-action="restart">${icon('rotate-ccw')}重新开始</button>${oldAvailable ? html`<button class="secondary-btn" data-action="legacy">迁移旧版存档</button>` : ''}</div><p class="form-note">新版独立保存。旧版存档仍保留，迁移时保留余额、成绩和关系，返回对应日期 08:00。</p>`);
     if (modal === 'restart') content = frame('开始新的故事？', 'NEW STORY', html`<p class="event-text">当前新版进度会被替换，可以先导出存档。</p><div class="modal-actions"><button class="secondary-btn" data-action="export">${icon('download')}导出存档</button><button class="primary-btn" data-action="confirm-restart">${icon('rotate-ccw')}确认重新开始</button></div>`);
@@ -389,6 +408,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
     const previousDialog = root.querySelector('.modal');
     if(renderedModal && previousDialog) modalScroll.set(renderedModal, previousDialog.scrollTop);
     mount(content, root);
+    updateSukunaMusicButton();
     if(forceModalTop||renderedModal!==modalKey) root.querySelector('.modal')?.scrollTo(0,forceModalTop?0:modalScroll.get(modalKey)||0);
     forceModalTop=false;
     renderedModal=modalKey;
@@ -403,6 +423,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
     }
   }
   function recommend(exclude = []) {
+    if(G.majorBlocked(state))return;
     if(state.phase==='play'&&(state.queueUntil>state.clock||state.roundReview)){recommendations=[];return;}
     recommendations = G.recommend(state, pool, G.selectCount(state), exclude);
     if (state.phase === 'play') G.preparePartner(state, pool);
@@ -432,7 +453,9 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
     save();
   }
   function act(a, v) {
+    if(G.majorBlocked(state)&&!['continue-ending','sukuna-music','duel-accept','duel-start','duel-close','segment-choice','curse-choice','performance-next','bird-abandon','export',...(state.major.duel.stage==='select'?['picker','pick','filter-reset','page','close','picked']:[])].includes(a))throw Error('请先完成当前挑战或观鸟。');
     switch (a) {
+      case 'sukuna-music':sukunaAudio.toggle();break;
       case 'sleep-menu':modal='sleep';break;
       case 'daily-meal':mealReturn=null;modal='daily-meal';break;
       case 'eat-home':G.eatHome(state,v);modal=mealReturn;mealReturn=null;break;
@@ -547,7 +570,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
         break;
       case 'ranks':modal='ranks';break;
       case 'course':courseLevel=Number(v);G.courseCharts(courseLevel,pool);modal='course-preview';break;
-      case 'course-start':G.runCourse(state,courseLevel,pool);picked=[];state.roundReview=true;recommend();forceModalTop=true;modal='course-result';break;
+      case 'course-start':G.startPerformance(state,[],courseLevel);picked=[];state.roundReview=true;recommend();forceModalTop=true;modal='course-result';break;
       case 'battle':state.competition.battle=!state.competition.battle;break;
       case 'explore':G.explore(state,v);modal=state.city.encounter?'city-encounter':state.world.notice?'world-event':null;break;
       case 'city-answer':G.answerEncounter(state,Number(v));modal=null;break;
@@ -609,7 +632,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
         recommend();
         break;
       case 'play':
-        G.play(state, picked.length ? picked : recommendations, pool);
+        G.startPerformance(state, picked.length ? picked : recommendations);
         state.roundReview=true;forceModalTop=true;
         picked = [];
         recommend();
@@ -637,11 +660,22 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
       case 'pick':
         {
           if (!catalog.has(v)) throw Error('谱面不存在。');
+          if(state.major.duel.stage==='select'&&G.isUtage(catalog.get(v)))throw Error('宿傩对决请选择普通谱面。');
           if (!picked.length) picked = [...recommendations];
           picked[pickSlot] = catalog.get(v);
-          modal = 'trip';
+          modal = state.major.duel.stage==='select'?'major':'trip';
           break;
         }
+      case 'continue-ending':G.continueGame(state);modal=state.phase==='home'?null:'trip';break;
+      case 'duel-accept':if(state.major.duel.stage==='intro')G.nameDuel(state,$('#duel-technique')?.value||'', $('#duel-domain')?.value||'');G.acceptDuel(state);picked=G.recommend(state,pool,2);modal='major';break;
+      case 'duel-start':G.startPerformance(state,picked,0,true);break;
+      case 'duel-close':G.closeDuel(state,Number(v));picked=[];modal=state.phase==='home'?null:'trip';recommend();break;
+      case 'curse-choice':G.chooseCurse(state,v);forceModalTop=true;break;
+      case 'performance-next':{const course=state.major.performance?.course;G.acknowledgePerformance(state);forceModalTop=true;if(!state.major.performance){picked=[];modal=course?'course-result':'trip';recommend();}break;}
+      case 'segment-choice':{const course=state.major.performance?.course;G.chooseSegment(state,v);forceModalTop=true;if(!state.major.performance){picked=[];modal=course?'course-result':'trip';recommend();}break;}
+      case 'bird-menu':modal='bird-menu';break;
+      case 'bird-start':G.startBird(state,v);break;
+      case 'bird-abandon':G.endBird(state);break;
       case 'picked':
         if (!picked.length) throw Error('至少选择一张谱面。');
         modal = 'trip';
@@ -769,6 +803,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
   function updateInput(e) {
     if(e.target.id==='sleep-duration'){sleepMinutes=Number(e.target.value);renderModal();return;}
     if (e.isComposing || composingInputs.has(e.target)) return;
+    if(['duel-technique','duel-domain'].includes(e.target.id)){G.nameDuel(state,$('#duel-technique').value,$('#duel-domain').value);save();return;}
     if (e.target.id === 'collection-search') {
       if (collectionSearch === e.target.value) return;
       collectionSearch = e.target.value;
@@ -859,9 +894,23 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
       img.alt = '曲绘暂不可用';
     }
   }, true);
+  let birdHeld=false;
+  document.addEventListener('pointerdown',e=>{if(e.target.closest('#bird-hold')){e.preventDefault();birdHeld=true;e.target.setPointerCapture?.(e.pointerId);}});
+  for(const event of ['pointerup','pointercancel'])document.addEventListener(event,()=>{birdHeld=false;if(state.major.bird)save();});
+  window.addEventListener('blur',()=>{birdHeld=false;if(state.major.bird)save();});
+  window.addEventListener('pagehide',()=>{sukunaAudio.stop();if(state.major.bird)save();});
+  window.addEventListener('pageshow',e=>{if(e.persisted)renderModal();});
+  for(const event of ['click','keydown'])document.addEventListener(event,e=>{
+    if(e.isTrusted&&!e.target.closest?.('[data-action="sukuna-music"]'))sukunaAudio.retry();
+  },true);
+  document.addEventListener('visibilitychange',()=>{birdHeld=false;if(state.major.bird)save();});
+  document.addEventListener('keyup',e=>{if([' ','ArrowUp'].includes(e.key)){birdHeld=false;if(state.major.bird)save();}});
+  setInterval(()=>{if(!state.major.bird||document.hidden||!document.hasFocus()||document.querySelector('.release-dialog[open]'))return;try{G.birdStep(state,birdHeld);if(!state.major.bird||state.major.bird.ticks%10===0)save();if(state.major.bird)renderModal();else{birdHeld=false;render();}}catch(e){birdHeld=false;toast(e.message);}},100);
   document.addEventListener('keydown', e => {
+    if(state.major.bird&&[' ','ArrowUp'].includes(e.key)){e.preventDefault();birdHeld=true;return;}
+
     if(document.querySelector('.release-dialog[open]'))return;
-    if (e.key === 'Escape' && modal && !['event', 'ending', 'teacher', 'video', 'city-encounter'].includes(modal)) {
+    if (e.key === 'Escape' && modal && !G.majorBlocked(state) && !['event', 'ending', 'teacher', 'video', 'city-encounter'].includes(modal)) {
       act('close');
       render();
     }

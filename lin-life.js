@@ -2,6 +2,7 @@
  'use strict';let G,pool=[];
  const now=s=>(s.day-1)*1440+s.clock;
  function ensure(s){const r=s.romance;if(!r)return;r.metDay??=s.love?s.day:0;r.request??=null;r.requestCheckDay??=0;r.nextRequestDay??=s.day+1;r.pendingStory??=null;r.requestSeed??=(s.seed^0x71ac93)>>>0;
+  if(s.world?.dm?.['小凛'])s.world.dm['小凛']=s.world.dm['小凛'].filter(m=>m.self||!/^.+现在 \d+ 人，大B队来了！$/.test(m.text));
   if(!s.love)return;if(!r.metDay)r.metDay=s.day;
   if(!s.npcs.some(n=>n.id==='小凛'))s.npcs.push({id:'小凛',rating:Math.max(7800,Math.min(13000,s.rating-400)),familiarity:30,activity:2,genre:'niconico & VOCALOID',tendency:'star',risk:.2,lastBoast:0,bestAchievement:0,hesitateUntil:0,career:'student',nightOwl:false,lifeEvent:'',playChatDay:0});
  }

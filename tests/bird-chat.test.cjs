@@ -9,9 +9,9 @@ test('Dianya explains the first bird quest and chat does not collect or unlock a
  s.world.locations.push('yuexiu');const known=ask(s,'出发吧');assert.match(known,/第一次观鸟我陪你去越秀公园/);assert.doesNotMatch(known,/出门闲逛/);assert.equal(s.npcs[2].familiarity,34);
 });
 
-test('Dianya explains guaranteed new records, visit hours, remaining birds and daily quest limits',()=>{
+test('Dianya explains active observation, visit hours, remaining birds and daily quest limits',()=>{
  const s=ready(1);s.world.locations=['yuexiu'];s.world.quests['电压'].lastDay=s.day;
- const reply=ask(s,'自己观鸟是随机触发吗？');assert.match(reply,/整段游览都要在 06:00–18:00 内/);assert.match(reply,/每次都会随机发现一种新鸟/);assert.match(reply,/下一轮要等明天/);
+ const reply=ask(s,'自己观鸟是随机触发吗？');assert.match(reply,/白天 06:00–18:00 留出 45 分钟/);assert.match(reply,/观察成功才会记入图鉴/);assert.match(reply,/下一轮要等明天/);
  assert.match(ask(s,'越秀公园还有鸟吗'),/还有 7 种普通鸟/);
  s.world.entries=G.WORLD_ENTRIES.filter(e=>e.kind==='bird'&&e.place==='yuexiu').map(e=>e.id);assert.match(ask(s,'越秀还有什么鸟'),/还有 0 种普通鸟/);
  assert.match(ask(s,'沙面呢'),/沙面岛还没发现/);

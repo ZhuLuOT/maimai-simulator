@@ -5,11 +5,12 @@
   const IDS=['逃遁','鲁米诺','电压','Toqin','COLDDD','星轨','小盐','404NOTFOUND','八分音符','纸飞机','折返跑','凛冬','橘子汽水','月读','栗子','白昼梦','NekoDX','竹间雨','北纬31','千层雪','再来一把','空白键','mikan','摇光','未完成','七海','镜花','下次一定','微光','晚风'];
   const CONDITIONS=[{name:'极差',score:-.65},{name:'还行',score:-.25},{name:'普通',score:0},{name:'不错',score:.13},{name:'完美',score:.26}];
   const GLOVES=[{id:'cotton',name:'棉线手套',cost:8,durability:100,wear:1},{id:'sport',name:'耐磨手套',cost:25,durability:240,wear:.85}];
-  const TALENT_SKILLS={transfer:{amount:3,skills:['star','key','reading']},musician:{amount:2,skills:['star','key','reading']},dragon:{amount:2,skills:['star','key','reading']},foundation:{amount:2,skills:['star','key','reading']},expert:{amount:2,skills:['star','key','reading']},reader:{amount:2,skills:['reading']},key:{amount:2,skills:['key']},star:{amount:2,skills:['star']},slide:{amount:2,skills:['star']},reading:{amount:2,skills:['reading']},speed:{amount:2,skills:['key']}};
+  const TALENT_SKILLS={'curse-breaker':{amount:2,skills:['star','key','reading']},transfer:{amount:3,skills:['star','key','reading']},musician:{amount:2,skills:['star','key','reading']},dragon:{amount:2,skills:['star','key','reading']},foundation:{amount:2,skills:['star','key','reading']},expert:{amount:2,skills:['star','key','reading']},reader:{amount:2,skills:['reading']},key:{amount:2,skills:['key']},star:{amount:2,skills:['star']},slide:{amount:2,skills:['star']},reading:{amount:2,skills:['reading']},speed:{amount:2,skills:['key']}};
   const TALENTS=[
     ['transfer','其他音游转生者','初始全底力 +3',true],['endurance','体力过人','体力上限 +10',true],['musician','精通乐器','初始全底力 +2',true],['friends','熟人小团体','所有群友眼熟度 +25',true],['reader','读谱天才','读谱力 +2',true],['steady','稳定发挥','不会出现极差状态',true],['rich','富哥','初始资金 +1000',true],['dragon','龙B！','初始全底力 +2 · 第二周目起',true],['gifted','天赋异禀','每曲底力成长 +5%',true],
     ['foundation','基本功扎实','B35 旧最佳满 35 张且均为 12 / 12+ 谱面，全底力 +2'],['adapt','快适应体质','同谱累计游玩 10 次；复打有效底力 +0.3'],['key','键盘B','累计 500 首标级大于 12 的键盘谱（12+ 及以上）；键盘力 +2'],['star','星星B','累计 500 首标级大于 12 的星星谱（12+ 及以上）；星星力 +2'],['slide','一眼会划','100 张 12+ 以上星星谱达到鸟；星星力 +2'],['reading','见招拆招','初见 150 张谱面；读谱力 +2'],['speed','天生的手速','100 张 12+ 以上键盘谱达到鸟；键盘力 +2'],['instinct','手比脑快','累计游玩 250 首；可开启凭手感模式'],['streak','越打越有','累计 50 PC；每段连续第 5 PC 全底力临时 +2'],['challenge','就爱越级','越级谱游玩 30 首；越级有效底力 +0.3'],['stage','舞台型选手','人多时累计游玩 40 首；人越多分数略有加成'],['expert','精于此道','累计 1000 首；全底力 +2'],['classic','吃屎大王','真超檄世代游玩 50 首；对应曲有效底力 +0.5'],['vocal','V家爱好者','V 家分区游玩 80 首；对应曲有效底力 +0.5'],['touhou','东方痴','东方分区游玩 80 首；对应曲有效底力 +0.5'],['ghost','鬼歌王','鬼歌游玩 50 首；对应曲有效底力 +0.5，但拼机伙伴眼熟度 -2']
   ].map(([id,name,description,initial=false])=>({id,name,description:TALENT_SKILLS[id]?description.replace(` +${TALENT_SKILLS[id].amount}`,`最高 +${TALENT_SKILLS[id].amount}`)+'（随对应底力递减）':description,initial}));
+  TALENTS.push({id:'half-maimai',name:'半个舞萌痴',description:'被空间斩送出机厅。纪念词条，无数值加成。',hidden:true},{id:'curse-breaker',name:'终结诅咒之人',description:'四曲总分战胜两面宿傩，参透咒力的核心。全底力最高 +2（随对应底力递减，仅获得时生效一次）。',hidden:true});
   const P=typeof module!=='undefined'?require('./precision'):root.Precision;
   const M=typeof module!=='undefined'?require('./gameplay'):root.Gameplay;
   let G;
@@ -18,7 +19,7 @@
     P.ensure(s);
     s.skills.reading??=(s.skills.star+s.skills.key)/2;
     s.profile??={name:'玩家',id:'初来乍到',plate:'default'};
-    s.talents??=[];s.maxStamina??=100;s.stamina??=s.maxStamina;
+    s.talents??=[];s.curseBreakerRewarded??=false;s.maxStamina??=100;s.stamina??=s.maxStamina;
     s.gloves??={...GLOVES[0],durability:100};s.liquid??=s.drink?600:0;
     s.condition??=2;s.queueUntil??=0;s.consecutive??=0;s.partner??=null;s.friendship??=false;s.instinct??=false;
     s.metrics??={star:0,key:0,challenge:0,crowd:0,classic:0,vocal:0,touhou:0,ghost:0};
@@ -47,6 +48,7 @@
     s.completedRun??=false;s.setupDone??=s.started||Object.keys(s.records).length>0;
     for(const r of Object.values(s.records))r.bestCombo??=r.combo||'';
     if(['drink','play'].includes(s.phase)&&s.mode==='pair'&&(s.partner===null||G.peopleAt(s)===0||s.npcs[s.partner]?.id==='小凛'&&G.linArcade(s)!==s.arcade||s.arcade===5&&!G.denVisitors(s).some(n=>n===s.npcs[s.partner])))choosePartner(s);
+    if(has(s,'curse-breaker')&&s.curseBreakerRewarded===false){const gains=applyTalentSkills(s,'curse-breaker');G.log(s,`补发词条「终结诅咒之人」奖励：${talentGainText(gains)}`,'talent');}
     return s;
   }
   function rollCondition(s){let n=Math.floor(clamp(s.mood/25+(rand(s)-.5)*2,0,4.99));if(has(s,'steady'))n=Math.max(1,n);s.condition=n;}
@@ -64,8 +66,9 @@
   }
   function talentGains(s,id){const reward=TALENT_SKILLS[id];return reward?Object.fromEntries(reward.skills.map(k=>[k,talentSkillGain(s.skills[k],reward.amount)])):{};}
   function talentGainText(gains){const names={star:'星星力',key:'键盘力',reading:'读谱力'};return Object.entries(gains).map(([k,n])=>`${names[k]} ${n>0&&n<.01?'+<0.01':'+'+n.toFixed(2)}`).join(' · ');}
+  function applyTalentSkills(s,id){const gains=talentGains(s,id);for(const [k,n] of Object.entries(gains))s.skills[k]+=n;if(id==='curse-breaker')s.curseBreakerRewarded=true;return gains;}
   function grant(s,id){if(has(s,id))return;const t=TALENTS.find(x=>x.id===id);if(!t)throw Error('未知词条。');s.talents.push(id);
-    const gains=talentGains(s,id);for(const [k,n] of Object.entries(gains))s.skills[k]+=n;
+    const gains=applyTalentSkills(s,id);
     if(id==='endurance'){s.maxStamina+=10;s.stamina+=10;}if(id==='rich')s.money+=1000;
     if(id==='friends')s.npcs.forEach(n=>n.familiarity=clamp(n.familiarity+25,0,100));if(id==='steady'&&s.condition===0)s.condition=1;
     G.log(s,`获得词条「${t.name}」：${Object.keys(gains).length?talentGainText(gains):t.description}`,'talent');

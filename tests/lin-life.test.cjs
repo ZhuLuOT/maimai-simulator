@@ -2,6 +2,19 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const data={window:{}};vm.runInNewContext(fs.readFileSync(require.resolve('../data/music.js'),'utf8'),data);const pool=G.charts(data.window.MUSIC_DATA);
 function met(){const s=G.create('grinder',42);s.city.encounter=true;G.answerEncounter(s,0);return s;}
 function request(){const s=met();s.day=2;s.clock=1080;s.romance.requestSeed=0;G.linTick(s);assert.ok(s.romance.request);return s;}
+test('crowd announcements exclude Lin; migration removes her old crowd alert but preserves conversations',()=>{
+ const original={unlockedArcades:G.unlockedArcades,arcadeIsOpen:G.arcadeIsOpen,peopleAt:G.peopleAt};
+ try{
+  G.unlockedArcades=()=>[{id:0,name:'测试机厅'}];G.arcadeIsOpen=()=>true;G.peopleAt=()=>20;
+  for(let seed=1;seed<=100;seed++){
+   const s=met();s.seed=seed*1234567;s.clock=1100;s.chat=[];s.crowdAlerts.forEach(a=>{a.high=false;a.last=-1;});s.socialLife.posts=0;const before=JSON.stringify(s.world.dm['小凛']);
+   M.crowdChat(s);assert.equal(JSON.stringify(s.world.dm['小凛']),before);assert.ok(s.chat.some(m=>m.text.includes('大B队')));assert.ok(!s.chat.some(m=>m.id==='小凛'));
+  }
+ }finally{Object.assign(G,original);}
+ const s=met(),text='测试机厅现在 20 人，大B队来了！';
+ s.world.dm['小凛'].push({id:'小凛',text,day:1,time:500},{id:s.profile.id,text,day:1,time:501,self:true},{id:'小凛',text:'下次一起打 V 家曲吧。',day:1,time:502});
+ const copy=G.migrate(s);assert.ok(!copy.world.dm['小凛'].some(m=>!m.self&&m.text===text));assert.ok(copy.world.dm['小凛'].some(m=>m.self&&m.text===text));assert.ok(copy.world.dm['小凛'].some(m=>m.text==='下次一起打 V 家曲吧。'));assert.ok(G.validate(copy));
+});
 
 test('meeting Lin adds one private friend and migrates her old group messages without duplicates',()=>{
  const s=met();assert.equal(s.romance.trust,6);assert.equal(s.romance.nextDay,5);assert.equal(s.npcs.filter(n=>n.id==='小凛').length,1);assert.ok(s.world.friends.includes('小凛'));assert.ok(G.validate(s));

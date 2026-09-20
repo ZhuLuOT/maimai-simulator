@@ -4,6 +4,8 @@
 
 ## 构建与部署
 
+本次大版本内容见 [2.0 更新说明](docs/major-september-release.md)。
+
 执行 `npm run build` 会同时更新本地调试用的 `dist/app.js`，并生成一个干净的 `out/` 发布目录。
 
 如果使用 Cloudflare Pages 连接 GitHub 仓库部署，建议使用以下配置：

@@ -29,7 +29,9 @@ test('small challenges stay playable and stronger skills improve boss scores',()
  assert.ok(close.score>96&&close.score<100);
  assert.ok(close.score-boss.score>9);
  assert.ok(boss.score>average({...chart,ds:15},8).score+25);
- assert.ok(average({...chart,ds:15},15).score>99);
+ const first=average({...chart,ds:15},15),trained=average({...chart,ds:15},15,s=>{s.practice[G.key(chart)]=60;});
+ assert.ok(first.score<99,'15 should need specific practice even with fundamentals at 15');
+ assert.ok(trained.score>99&&trained.score>first.score+1,'practice must make high-difficulty charts learnable');
 });
 test('the two reported real Re:MASTER charts have a clear score gap',()=>{
  const easier=pool.find(c=>c.id==='414'&&c.index===4),boss=pool.find(c=>c.id==='11663'&&c.index===4);
