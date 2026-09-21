@@ -47,6 +47,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
     eraFilter = 'all',
     genreFilter = 'all',
     patternFilter = 'all',
+    recommendLock = {unplayed:false,levels:[],plateId:''},
     utageFilter = 'exclude',
     collectionTab = 'achievement',
     collectionSearch = '',
@@ -362,7 +363,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
       if (state.phase === 'play') {
         const reason = G.playReason(state), canSelect=state.queueUntil<=state.clock&&!state.roundReview;
         if(canSelect&&!recommendations.length)recommend();
-        content = frame('上机 / 排队', `${G.time(state.clock)} · ${G.allNight(state)?'猫窝全天营业 · ':''}最晚 ${G.availableUntil(state)>=1440?'次日 ':''}${G.time(G.availableUntil(state)%1440)} 结束上机`, html`${steps(1)}${!canSelect?results():''}${modeControl()}<div class="crowd-broadcast" role="status">${state.logs.filter(l=>l.type==='crowd'&&l.day===state.day&&(l.day>(state.trip.startDay||state.day)||l.time>=state.trip.start)).slice(0,3).map(l=>html`<p>${G.time(l.time)} · ${esc(l.text)}</p>`)}</div>${LifeUI.supplies(state)}${G.linArcade(state)===state.arcade?html`<div class="lin-at-arcade"><span>小凛在店 · 正在挑 V 家曲</span><button class="secondary-btn" data-action="lin-pair">${icon('users')}一起拼机</button></div>`:''}${state.arcade===5&&(state.clock<G.OPEN||state.clock>=G.CLOSE)?html`<p class="night-visitors">夜间出勤 · ${G.denVisitors(state).map(n=>n.id).join('、')||'暂时只有你'}</p>`:''}${state.mode==='solo'&&canSelect?html`<div class="supply-actions"><button class="secondary-btn" data-action="ranks">${icon('medal')}段位挑战</button></div>`:''}${state.arcade===5?html`<div class="supply-actions"><button class="secondary-btn" data-action="mahjong" ?disabled=${G.mahjongPlayers(state).length<3}>${icon('grid-2x2')}${G.mahjongPlayers(state).length<3?'牌友不足三人':'猫窝麻将 · 25 分钟'}</button><button class="secondary-btn" data-action="mahjong-collection">${icon('book-open')}役种收藏</button></div>`:''}${state.last ? html`<div class="round-events">${state.logs.filter(l => l.day === state.day && l.time === state.clock && ['event', 'crowd', 'talent', 'heart'].includes(l.type)).slice(0, 4).map(l => html`<p>${icon('sparkles')}${esc(l.text.replace('的鬼歌手元，','的手元，').replace('；这次没有刷到适合自己的手元。','。'))}</p>`)}</div>` : ''}${canSelect?html`<div class="small-heading">本轮自选 ${G.selectCount(state)} 首<span>${state.mode === 'pair' ? '拼机伙伴选择剩余曲目，两人同时游玩' : '单人三首 · 可重复选同一首'}</span></div><div class="selection-slots">${Array.from({
+        content = frame('上机 / 排队', `${G.time(state.clock)} · ${G.allNight(state)?'猫窝全天营业 · ':''}最晚 ${G.availableUntil(state)>=1440?'次日 ':''}${G.time(G.availableUntil(state)%1440)} 结束上机`, html`${steps(1)}${!canSelect?results():''}${modeControl()}<div class="crowd-broadcast" role="status">${state.logs.filter(l=>l.type==='crowd'&&l.day===state.day&&(l.day>(state.trip.startDay||state.day)||l.time>=state.trip.start)).slice(0,3).map(l=>html`<p>${G.time(l.time)} · ${esc(l.text)}</p>`)}</div>${LifeUI.supplies(state)}${G.linArcade(state)===state.arcade?html`<div class="lin-at-arcade"><span>小凛在店 · 正在挑 V 家曲</span><button class="secondary-btn" data-action="lin-pair">${icon('users')}一起拼机</button></div>`:''}${state.arcade===5&&(state.clock<G.OPEN||state.clock>=G.CLOSE)?html`<p class="night-visitors">夜间出勤 · ${G.denVisitors(state).map(n=>n.id).join('、')||'暂时只有你'}</p>`:''}${state.mode==='solo'&&canSelect?html`<div class="supply-actions"><button class="secondary-btn" data-action="ranks">${icon('medal')}段位挑战</button></div>`:''}${state.arcade===5?html`<div class="supply-actions"><button class="secondary-btn" data-action="mahjong" ?disabled=${G.mahjongPlayers(state).length<3}>${icon('grid-2x2')}${G.mahjongPlayers(state).length<3?'牌友不足三人':'猫窝麻将 · 25 分钟'}</button><button class="secondary-btn" data-action="mahjong-collection">${icon('book-open')}役种收藏</button></div>`:''}${state.last ? html`<div class="round-events">${state.logs.filter(l => l.day === state.day && l.time === state.clock && ['event', 'crowd', 'talent', 'heart'].includes(l.type)).slice(0, 4).map(l => html`<p>${icon('sparkles')}${esc(l.text.replace('的鬼歌手元，','的手元，').replace('；这次没有刷到适合自己的手元。','。'))}</p>`)}</div>` : ''}${canSelect?html`${recommendFilterControls()}<div class="small-heading">本轮自选 ${G.selectCount(state)} 首<span>${state.mode === 'pair' ? '拼机伙伴选择剩余曲目，两人同时游玩' : '单人三首 · 可重复选同一首'}</span></div><div class="selection-slots">${Array.from({
           length: G.selectCount(state)
         }, (_, i) => html`<button class="secondary-btn" data-action="picker" data-value="${i}">${icon('disc-3')}第 ${i + 1} 首 · ${esc(picked[i]?.title || recommendations[i]?.title || '选择曲目')}</button>`)}</div>${state.mode==='solo'?html`<div class="supply-actions">${(picked.length?picked:recommendations).map((c,i)=>html`<button class="secondary-btn" data-action="repeat-song" data-value="${i}" aria-label="本轮连打三首 ${esc(c.title)}">连打第 ${i+1} 首 ×3</button>`)}</div>`:''}${rows(picked.length ? picked : recommendations)}${LifeUI.partnerChoices(state, pool)}<div class="modal-actions"><button class="secondary-btn" data-action="picker">${icon('list-music')}自选曲目</button><button class="secondary-btn" data-action="reroll" title="换一组">${icon('shuffle')}换一组</button><button class="primary-btn" data-action="play" ?disabled=${reason}>${icon('play')}${G.allNight(state)?'开始游玩 · 已计时':`投币上机 · ¥${G.pcPrice(state)}`}</button></div>${reason ? html`<p class="warning">${reason}</p>` : ''}`:html`<p class="queue-notice">本轮已结束或正在排队，轮到上机后再选择下一轮曲目。</p>${state.queueUntil<=state.clock?html`<button class="primary-btn" data-action="next-round">下一轮上机 · 开始选曲</button>`:''}`}<button class="finish-btn" data-action="finish">结束上机，去吃饭 ${icon('arrow-right')}</button>`, true);
       }
@@ -422,10 +423,23 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
       chat.scrollTop = chat.scrollHeight;
     }
   }
+  function recommendOptions(){
+    const plate=G.COLLECTIONS.find(c=>c.id===recommendLock.plateId&&c.kind==='plate');
+    const charts=plate?.required?.flatMap(r=>r.songs.flatMap(song=>{
+      const diffs=r.difficulties?.length?r.difficulties:[0,1,2,3,4];
+      return diffs.map(index=>G.key({id:song.id,index}));
+    }))||null;
+    return {unplayed:recommendLock.unplayed,levels:recommendLock.levels,charts};
+  }
+  function recommendFilterControls(){
+    const levels=[...new Set(pool.map(c=>G.displayLevel(c)))].sort((a,b)=>parseFloat(a)-parseFloat(b)||a.localeCompare(b));
+    const plates=G.COLLECTIONS.filter(c=>c.kind==='plate'&&c.category==='achievement'&&/将/.test(c.name));
+    return html`<div class="recommend-lock" aria-label="推荐曲目锁定"><b>推荐锁定</b><label><input type="checkbox" id="recommend-unplayed" ?checked=${recommendLock.unplayed}>只推荐没打过</label><label><select id="recommend-level" aria-label="推荐难度池"><option value="all">全部难度池</option>${levels.map(v=>html`<option value=${v} ?selected=${recommendLock.levels.length===1&&recommendLock.levels[0]===v}>${v} 池</option>`)}</select></label><label><select id="recommend-plate" aria-label="推荐将牌池"><option value="">不限将牌池</option>${plates.map(c=>html`<option value=${c.id} ?selected=${recommendLock.plateId===c.id}>${c.name} · ${c.description.slice(0,28)}</option>`)}</select></label><button class="text-btn" data-action="recommend-lock-reset">清除锁定</button></div>`;
+  }
   function recommend(exclude = []) {
     if(G.majorBlocked(state))return;
     if(state.phase==='play'&&(state.queueUntil>state.clock||state.roundReview)){recommendations=[];return;}
-    recommendations = G.recommend(state, pool, G.selectCount(state), exclude);
+    recommendations = G.recommend(state, pool, G.selectCount(state), exclude, recommendOptions());
     if (state.phase === 'play') G.preparePartner(state, pool);
   }
   function exportSave() {
@@ -650,6 +664,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
       case 'filter-reset':
         search='';difficulty=levelFilter=ageFilter=typeFilter=eraFilter=genreFilter=patternFilter='all';utageFilter='exclude';page=0;
         break;
+      case 'recommend-lock-reset':recommendLock={unplayed:false,levels:[],plateId:''};recommend();break;
       case 'repeat-song': {
         if(state.phase!=='play'||state.mode!=='solo'||state.queueUntil>state.clock||state.roundReview)throw Error('单开轮到上机后才能设置连打。');
         const song=(picked.length?picked:recommendations)[Number(v)];
@@ -804,6 +819,9 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
     if(e.target.id==='sleep-duration'){sleepMinutes=Number(e.target.value);renderModal();return;}
     if (e.isComposing || composingInputs.has(e.target)) return;
     if(['duel-technique','duel-domain'].includes(e.target.id)){G.nameDuel(state,$('#duel-technique').value,$('#duel-domain').value);save();return;}
+    if(e.target.id==='recommend-unplayed'){recommendLock={...recommendLock,unplayed:e.target.checked};recommend();return;}
+    if(e.target.id==='recommend-level'){recommendLock={...recommendLock,levels:e.target.value==='all'?[]:[e.target.value]};recommend();return;}
+    if(e.target.id==='recommend-plate'){recommendLock={...recommendLock,plateId:e.target.value};recommend();return;}
     if (e.target.id === 'collection-search') {
       if (collectionSearch === e.target.value) return;
       collectionSearch = e.target.value;
