@@ -2,13 +2,13 @@
  'use strict';let G,rollover,tick,depth=0,route=null;
  const RATE=100/960,DAYS_HOURS=122*24;
  class Interrupted extends Error{constructor(){super('困意已满，已终止行动并回家睡觉。');this.interrupted=true;}}
- function ensure(s){s.drowsiness??=Math.min(90,Math.max(0,(s.clock-480)*RATE)+(s.sleepDebt||0)*5);delete s.sleepDebt;delete s.nightActive;s.totalWorkCount??=s.workCount||0;s.forcedSleeps??=0;if(s.trip&&s.arcade===5){s.trip.denMinutes??=0;s.trip.denHours??=1;}}
+ function ensure(s){s.salaryDeduction??=0;s.drowsiness??=Math.min(90,Math.max(0,(s.clock-480)*RATE)+(s.sleepDebt||0)*5);delete s.sleepDebt;delete s.nightActive;s.totalWorkCount??=s.workCount||0;s.forcedSleeps??=0;if(s.trip&&s.arcade===5){s.trip.denMinutes??=0;s.trip.denHours??=1;}}
  const onSite=s=>s.arcade===5&&s.trip&&['drink','play'].includes(s.phase);
  function hourlyCost(s,minutes){if(!onSite(s))return 0;return Math.max(0,Math.ceil((s.trip.denMinutes+minutes)/60)-s.trip.denHours)*30;}
  function timeReason(s,minutes,reserve=0){return s.money<hourlyCost(s,minutes)+reserve?'余额不足以支付猫窝续时费用（¥30 / 小时）。':'';}
  function missed(s,start,end){
   for(const c of G.schedule(s)){if(s.completed.includes(c.id)||c.start>=end||c.end<=start)continue;s.completed.push(c.id);s.absences.push(c.id);
-   if(c.kind==='shift'){s.workAbsences++;const cost=Math.round(G.JOBS.worker.monthly/22);s.money-=cost;s.mood=Math.max(0,s.mood-10);G.log(s,`睡眠或强制返程与上班冲突：旷工，扣薪 ¥${cost}。`,'work');}
+   if(c.kind==='shift'){s.workAbsences++;const cost=Math.round(G.JOBS.worker.monthly/22);const deduction=Math.min(cost,G.JOBS.worker.monthly-s.salaryDeduction);s.salaryDeduction+=deduction;s.mood=Math.max(0,s.mood-10);G.log(s,`睡眠或强制返程与上班冲突：旷工，本月工资扣除 ¥${deduction}（累计 ¥${s.salaryDeduction}），发薪时结算。`,'work');}
    else{const loss=c.kind==='major'?17:6;G.academicChange(s,-loss);s.mood=Math.max(0,s.mood-5);G.log(s,`睡过「${c.name}」：记为旷课，学力 -${loss}。`,'school');}
   }
  }
@@ -57,6 +57,6 @@
  function advanceMeal(s,minutes){const c=G.nextObligation(s);if(c&&s.mealBreak===c.id&&s.clock>=720&&s.clock+minutes<=c.end){s.started=true;elapse(s,minutes,{charge:false});}else advance(s,minutes);}
  function install(api,callbacks){G=api;rollover=callbacks.rollover;tick=callbacks.tick;Object.assign(api,{sleepPlan,advanceMeal,hourlyCost,timeChargeReason:timeReason,sleepPenalty:s=>Math.max(0,(s.drowsiness||0)-60)*.025,rollDailyCondition:callbacks.condition,addTravelDistance:callbacks.distance});}
  function wrap(api){for(const name of ['advance','advanceMeal','packDrink','eatHome','daily','sleep','nextDay','resolveClass','teacher','travel','drink','play','meal','runCourse','waitQueue','refill','chatSend','watchVideos','explore','answerEncounter','answer','contactLove','doQuest','sendDM','startMahjong']){const fn=api[name];api[name]=function(...args){depth++;try{return fn(...args);}catch(e){if(!e.interrupted||depth>1)throw e;}finally{depth--;if(depth===0)api.claimHomeGoals(args[0]);}};}}
- function valid(s){return Number.isFinite(s.drowsiness)&&s.drowsiness>=0&&s.drowsiness<=100&&Number.isInteger(s.forcedSleeps)&&s.forcedSleeps>=0&&s.forcedSleeps<10000&&(!s.trip||s.arcade!==5||Number.isInteger(s.trip.denMinutes)&&s.trip.denMinutes>=0&&Number.isInteger(s.trip.denHours)&&s.trip.denHours>=1&&s.trip.denHours<=DAYS_HOURS&&s.trip.denMinutes<=s.trip.denHours*60);}
+ function valid(s){return Number.isInteger(s.salaryDeduction)&&s.salaryDeduction>=0&&s.salaryDeduction<=G.JOBS.worker.monthly&&Number.isFinite(s.drowsiness)&&s.drowsiness>=0&&s.drowsiness<=100&&Number.isInteger(s.forcedSleeps)&&s.forcedSleeps>=0&&s.forcedSleeps<10000&&(!s.trip||s.arcade!==5||Number.isInteger(s.trip.denMinutes)&&s.trip.denMinutes>=0&&Number.isInteger(s.trip.denHours)&&s.trip.denHours>=1&&s.trip.denHours<=DAYS_HOURS&&s.trip.denMinutes<=s.trip.denHours*60);}
  const api={ensure,advance,sleep,attend,install,wrap,valid};if(typeof module!=='undefined')module.exports=api;else root.RestLife=api;
 })(globalThis);

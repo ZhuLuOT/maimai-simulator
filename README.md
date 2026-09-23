@@ -176,7 +176,7 @@ FC / FC+ / AP 与 SSS 评级独立，由模拟判定统计计算：
 
 ## 开发与验证
 
-手机端使用单层滚动的全屏弹窗，标题、关闭按钮和底部确认区保持可见；选曲返回保留原滚动位置。导航保留文字说明，主要操作触控区域至少 44px，输入字号至少 16px。群聊与弹窗按 VisualViewport 调整可用高度。`tests/mobile-social.cjs` 覆盖 320 / 390px、缩小视口的聊天输入、头像读档、每日联系与机厅上限；软键盘布局使用缩小视口验证，尚未在实体手机上测试。
+手机端使用单层滚动的全屏弹窗，标题、关闭按钮和底部确认区保持可见；选曲返回保留原滚动位置。导航保留文字说明，主要操作触控区域至少 44px，输入字号至少 16px。群聊与弹窗按 VisualViewport 调整可用高度。软键盘布局使用缩小视口验证，尚未在实体手机上测试。
 
 玩家名牌改为机台横向布局：左侧头像，右邻依次排列 Rating / 友人对战等级、玩家 ID / 段位、称号；名牌保持 720:116，右侧原图完整显示。姓名与职业另列于下方。姓名栏及五种称号底板来自 maimaiDX 公开 CN1.55 素材包，来源见 `assets/cabinet/sources.json`；Rating 仍用华立国服官网原图。B50 与群聊图片同步排列，并记录生成时的对战等级及段位；旧图片快照没有这两个字段时显示初始徽章。没有旅行伙伴区域。
 
@@ -191,8 +191,6 @@ FC / FC+ / AP 与 SSS 评级独立，由模拟判定统计计算：
 ```sh
 npm install
 npm run build
-npm test
-node tests/browser-check.cjs
 node scripts/import-music.cjs path/to/music-data.json
 node scripts/cache-covers.cjs
 node scripts/import-chart-meta.cjs
@@ -202,9 +200,9 @@ node scripts/import-cn.cjs
 node scripts/cache-b50-covers.cjs
 ```
 
-浏览器测试使用当前机器的 Playwright / Edge，覆盖出勤、选曲、课表、七种结局、存档迁移、真实曲绘、320–1920 像素布局。同时覆盖称号 / 名牌 / 签到 / 区域、头像上传、拼机伙伴选曲的独立难度、宴曲与时代筛选、凌晨活动与旷工。另覆盖物量体力、饭点跳餐限制、手元两种结果、鬼歌修正、机器人图片、等级搜索、国服映射、完整 50 张成绩图、Lit 输入与选曲存档。截图保存在 `artifacts/`。换机器运行测试时需调整脚本中的依赖路径，游戏本身无运行依赖。
+测试脚本仅保留在本地，不纳入仓库或发布目录。游戏运行及 `npm run build` 均不依赖测试目录。
 
-`import-chart-meta.cjs` 读取系统临时目录下的 `maimai-chart-stats.json` 与 `lxns-song-list.json`，生成本地离线快照。核心测试增加开局三选一、周目门槛、手套与体力阻断、排队重叠、饮料扣减、群聊上限、NPC 成长及选曲、友谊三选曲、状态与读谱修正、词条生效、拟合标签和名牌条件。
+`import-chart-meta.cjs` 读取系统临时目录下的 `maimai-chart-stats.json` 与 `lxns-song-list.json`，生成本地离线快照。
 
 `import-expansion.cjs` 读取系统临时目录下的 `chiffon-tags.json`、`chiffon-plates.json`、`chiffon-trophies.json`，生成 `data/expansion.js`。扩展快照日期为 2026-09-15；来源与改编说明同时记录在 `data/assets-sources.json`。
 ## 广州娱乐与对战扩展（2026-09-15）

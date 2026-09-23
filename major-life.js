@@ -125,13 +125,13 @@
  function birdReason(s,place,quest=false){
   if(s.phase!=='home'||s.ending||s.major.performance||s.major.bird||s.world.mahjong.active||s.world.notice||s.event!==null||s.school.pending||s.city.encounter||s.videoEvent)return '先完成当前行动并回家';
   if(!['locked','done'].includes(s.major.duel.stage))return '先回应宿傩';
-  if(quest)return G.questReason(s,'电压');
-  if(!s.world.quests['电压'].stage)return '先和电压完成第一次观鸟';
+  if(quest)return G.questReason(s,'elubos');
+  if(!s.world.quests['elubos'].stage)return '先和elubos完成第一次观鸟';
   if(!['yuexiu','shamian','canton','yongqing'].includes(place)||!s.world.locations.includes(place))return '先发现观鸟地点';
   if(s.clock<360||s.clock+45>1080)return '白天 06:00–18:00，预留 45 分钟';
   if(!G.canSpendTime(s,45)||s.stamina<8||s.money<5)return '需要 45 分钟、8 体力和 ¥5';return '';
  }
- function startBird(s,place,quest=false){const reason=birdReason(s,place,quest);if(reason)throw Error(reason);const stage=s.world.quests['电压'].stage,step=quest?G.QUESTS['电压'].steps[stage]:{time:45,stamina:8,cost:5};
+ function startBird(s,place,quest=false){const reason=birdReason(s,place,quest);if(reason)throw Error(reason);const stage=s.world.quests['elubos'].stage,step=quest?G.QUESTS['elubos'].steps[stage]:{time:45,stamina:8,cost:5};
   if(!G.canSpendTime(s,step.time)||s.stamina<step.stamina||s.money<step.cost)throw Error('时间、体力或余额不足。');
   let entries=quest?[G.WORLD_ENTRIES.find(e=>e.id===step.entry)]:G.WORLD_ENTRIES.filter(e=>e.kind==='bird'&&!e.hidden&&e.place===place&&!['bulbul','robin','egret','kingfisher'].includes(e.id));
   const unseen=entries.filter(e=>!s.world.entries.includes(e.id));if(unseen.length)entries=unseen;if(!entries.length)throw Error('这里暂时没有可观察的鸟。');
@@ -144,7 +144,7 @@
   if(b.progress>=100)return endBird(s,true);if(b.progress<=0||b.ticks>=600)return endBird(s,false);
  }
  function endBird(s,success=false){const b=s.major.bird;if(!b)throw Error('当前没有观鸟。');s.major.bird=null;const entry=G.WORLD_ENTRIES.find(e=>e.id===b.entry);
-  if(success){if(b.quest){if(s.world.quests['电压'].stage!==b.stage)throw Error('支线进度已变化。');G.completeBirdQuest(s);}else{if(!s.world.entries.includes(entry.id))s.world.entries.push(entry.id);s.world.notice={title:'观鸟记录 · '+entry.name,text:'持续对准后，你记住了它的外形与行为。'+entry.note,entry:entry.id};}collectionRewards(s);G.log(s,'观察成功：'+entry.name+'。','event');}
+  if(success){if(b.quest){if(s.world.quests['elubos'].stage!==b.stage)throw Error('支线进度已变化。');G.completeBirdQuest(s);}else{if(!s.world.entries.includes(entry.id))s.world.entries.push(entry.id);s.world.notice={title:'观鸟记录 · '+entry.name,text:'持续对准后，你记住了它的外形与行为。'+entry.note,entry:entry.id};}collectionRewards(s);G.log(s,'观察成功：'+entry.name+'。','event');}
   else{s.world.notice={title:'鸟儿飞远了',text:'这次没能看清。放下望远镜休息一下，下次可以主动出发再试。',entry:null};G.log(s,'观鸟结束：没有完成记录。','event');}G.check(s);
  }
  function blocked(s){return !!(s.major?.performance||s.major?.bird||s.major&&!['locked','done'].includes(s.major.duel.stage)&&!s.ending);}
@@ -159,7 +159,7 @@
   const b=m.bird;if(b&&(!G.WORLD_ENTRIES.some(e=>e.id===b.entry&&e.kind==='bird')||typeof b.quest!=='boolean'||!Number.isInteger(b.stage)||!num(b.stage,0,5)||!Number.isInteger(b.seed)||!num(b.seed,0,4294967295)||!num(b.position,0,100)||!num(b.velocity,-2.8,2.8)||!num(b.target,0,100)||!num(b.targetGoal,0,100)||!num(b.progress,0,100)||!Number.isInteger(b.ticks)||!num(b.ticks,0,600)||![24,32,42].includes(b.width)||b.entry==='owl'&&(!b.quest||b.stage!==4)))return false;
   if(p&&!p.feedback&&!p.choices.some(list=>list.includes(null))&&!(p.duel&&p.curses.some(e=>e.choice===null))||d.stage==='battle'&&!p||p?.duel&&p.charts.slice(2).join(',')!=='834:4,11663:4'||p?.duel&&p.selection.length!==2||p&&!p.duel&&(s.phase!=='play'||p.charts.length!==(p.course?4:G.MODES[s.mode]?.count))||p&&p.plans.some((list,i)=>list.some(x=>pool.length&&!(pool.find(c=>G.key(c)===p.charts[i]).tags||[]).includes(x.tag))))return false;
   if(p&&(!p.selection.length||p.selection.some((k,i)=>k!==p.charts[i])||p.duel&&p.course!==0||p.course&&p.selection.length!==4||p.partnerSongs!==null&&(!Array.isArray(p.partnerSongs)||p.partnerSongs.length>2||!p.partnerSongs.every(c=>c&&typeof c.id==='string'&&Number.isInteger(c.index)&&num(c.index,0,4)&&Number.isInteger(c.playerIndex)&&num(c.playerIndex,0,4)))))return false;
-  if(b&&(s.phase!=='home'||b.quest&&(b.stage!==s.world?.quests?.['电压']?.stage||G.QUESTS['电压'].steps[b.stage]?.entry!==b.entry)||!b.quest&&(G.WORLD_ENTRIES.find(e=>e.id===b.entry).hidden||!s.world?.quests?.['电压']?.stage)))return false;
+  if(b&&(s.phase!=='home'||b.quest&&(b.stage!==s.world?.quests?.['elubos']?.stage||G.QUESTS['elubos'].steps[b.stage]?.entry!==b.entry)||!b.quest&&(G.WORLD_ENTRIES.find(e=>e.id===b.entry).hidden||!s.world?.quests?.['elubos']?.stage)))return false;
   return !(p&&b);
  }
  function install(api){G=api;Object.assign(api,{ensureMajor:ensure,markMilestone:reached,canContinue,continueGame,setMajorPool:p=>{pool=p;},SUKUNA_QUOTES:QUOTES,sukunaCharts:fixed,sukunaPerformance:opponentScore,nameDuel,currentCurse,chooseCurse,acknowledgePerformance,acceptDuel,closeDuel,startPerformance,currentSegment,chooseSegment,collectionRewards,birdReason,startBird,birdStep,endBird,majorBlocked:blocked});

@@ -25,3 +25,7 @@ version.json
 Thumbs.db
 .idea/
 .vscode/
+
+# Local-only validation files
+/tests/
+/test/

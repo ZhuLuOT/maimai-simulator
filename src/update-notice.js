@@ -28,10 +28,8 @@ export function installUpdateNotice({current,save,hasSave}){
       document.body.append(dialog);
     }
     dialog.replaceChildren();
-    const title=document.createElement('h2');title.id='release-title';title.textContent='游戏已更新，请刷新';
+    const title=document.createElement('h2');title.id='release-title';title.textContent=`${release.label||'游戏'} 已更新，请刷新`;
     const description=document.createElement('p');description.textContent=release.summary||'新版本已就绪，刷新后继续当前进度。';
-    const changes=document.createElement('ul');changes.className='release-changes';
-    for(const text of (Array.isArray(release.changes)?release.changes:[]).filter(x=>typeof x==='string').slice(0,8)){const item=document.createElement('li');item.textContent=text.slice(0,300);changes.append(item);}
     const status=document.createElement('p');status.setAttribute('role','status');
     const button=document.createElement('button');button.className='primary-btn';button.textContent='保存进度并刷新';
     button.addEventListener('click',()=>{
@@ -39,7 +37,7 @@ export function installUpdateNotice({current,save,hasSave}){
       try{localStorage.setItem(key,release.version);}catch{}
       const url=new URL(location.href);url.searchParams.set('v',release.version);location.replace(url.href);
     });
-    dialog.append(title,description,changes,status,button);
+    dialog.append(title,description,status,button);
     if(!dialog.open)dialog.showModal();
   }
   try{

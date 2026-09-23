@@ -63,7 +63,7 @@ await build({
   format: 'iife',
   outfile: path.join(distDir, 'app.js'),
   minify: true,
-  define:{__APP_VERSION__:JSON.stringify(version)},
+  define:{__APP_VERSION__:JSON.stringify(version),__APP_RELEASE__:JSON.stringify(require('../src/release-notes.cjs').label)},
   sourcemap: true,
   target: ['es2022'],
   logLevel: 'info',

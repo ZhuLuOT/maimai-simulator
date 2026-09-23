@@ -49,7 +49,7 @@
       const level=n.rating/1110,expected=clamp(99.4-(c.ds-level)*1.3+(rand(s)-.5)*2,85,100.95);
       const simulated={seed:s.seed,skills:{star:level+(n.tendency==='star'?.2:0),key:level+(n.tendency==='key'?.2:0)},practice:{},condition:2};
       const result=J.simulate(simulated,c,expected,level);s.seed=simulated.seed;
-      n.rating=clamp(n.rating+Math.floor(Math.max(0,result.achievement-97)*n.activity),0,16900);
+      n.rating=clamp(n.rating+Math.floor(Math.max(0,result.achievement-97)*n.activity),0,G.NPC_RATING_CAP);
       if(canBoast(c,result)&&n.lastBoast!==s.day&&s.npcBoasts.count<2){
         n.lastBoast=s.day;s.npcBoasts.count++;n.bestAchievement=Math.max(n.bestAchievement,result.achievement);
         message(s,n.id,`${c.title} ${result.achievement.toFixed(4)}%${result.combo==='AP'?' AP':''}！今天推上去了！`,{performance:{key:G.key(c),ds:c.ds,achievement:result.achievement,combo:result.combo}});
