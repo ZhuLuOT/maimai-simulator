@@ -24,13 +24,23 @@
     let current=0,maxCombo=0;for(const note of sequence){current=note%5===4?0:current+1;maxCombo=Math.max(maxCombo,current);}
     const result={...calculate(groups,breaks),maxCombo};sequences.set(result,sequence);return result;
   }
+  function lowerChartErrors(s,c,ability){
+    // Fundamentals make under-level BASIC/EXPERT clears consistent. Retain
+    // normal precision on harder charts, and never replace sampled notes with AP.
+    if(!s.precision||![0,2].includes(c.index)||c.ds>=13||c.utage||/^\s*\[[^\]]+\]/.test(c.title||''))return 1;
+    const skill=Math.min(ability,s.skills.reading??ability),advantage=Math.max(0,skill-c.ds-1);
+    const health=Math.min(clamp(((s.stamina??100)-25)/50,0,1),clamp((100-(s.drowsiness??0))/40,0,1));
+    const readiness=health*[.35,.65,1,1,1][s.condition??2],lowLevel=clamp((13-c.ds)/.7,0,1);
+    return Math.max(.01,Math.exp(-advantage*1.6*readiness*lowLevel));
+  }
   function simulate(s,c,expected,ability){const groups=[],b={critical:0,perfect50:0,perfect100:0,great80:0,great60:0,great50:0,good:0,miss:0},margin=ability-c.ds,plays=s.practice[`${c.id}:${c.index}`]||0;
     const precision=P.lapses(s,margin,plays);
+    const errorScale=lowerChartErrors(s,c,ability);
     const loss=Math.max(0,101-clamp(expected,0,101))/100*(.9+rand(s)*.2);
     c.notes.forEach((count,i)=>{const g=empty(),technical=i===2?s.skills.star:s.skills.key,weighted=s.skills.star*c.starWeight+s.skills.key*(1-c.starWeight),factor=clamp(Math.exp((weighted-technical)*.17),.45,2.3);
       // Once GREAT saturates, further loss must produce misses instead of flattening scores.
       const overload=Math.max(0,loss-.24)*.65;
-      const missP=clamp((loss*.30+overload+precision.miss)*factor,0,1),goodP=clamp((loss*.25+precision.good)*factor,0,Math.min(.3,1-missP)),greatP=clamp((loss*2.5+precision.great)*factor,0,Math.min(.6,1-missP-goodP)),perfectP=clamp(loss*10+(margin<2?.04:0)+precision.perfect,0,Math.min(.65,Math.max(0,1-missP-goodP-greatP)));
+      const missP=clamp((loss*.30+overload+precision.miss)*factor*errorScale,0,1),goodP=clamp((loss*.25+precision.good)*factor*errorScale,0,Math.min(.3,1-missP)),greatP=clamp((loss*2.5+precision.great)*factor*errorScale,0,Math.min(.6,1-missP-goodP)),perfectP=clamp(loss*10+(margin<2?.04:0)+precision.perfect,0,Math.min(.65,Math.max(0,1-missP-goodP-greatP)));
       for(let n=0;n<count;n++){const r=rand(s);let judge=r<missP?'miss':r<missP+goodP?'good':r<missP+goodP+greatP?'great':r<missP+goodP+greatP+perfectP?'perfect':'critical';g[judge]++;if(i===4){if(judge==='perfect')b[rand(s)<.65?'perfect50':'perfect100']++;else if(judge==='great'){const q=rand(s);b[q<.6?'great80':q<.85?'great60':'great50']++;}else b[judge]++;}}
       groups.push(g);
     });return finish(groups,b,noteSequence(s,groups));

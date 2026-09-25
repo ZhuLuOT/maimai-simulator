@@ -1,1 +1,1 @@
-module.exports={label:'v2.3',summary:'新增别名搜歌；NPC Rating 上限调整为 16465；旷工改为发薪时扣除当月工资；电压更名为 elubos。'};
+module.exports={label:'v2.4',summary:'1.优化了类似《39》这一类曲目在查询时无法找到的错误。\n2.优化了高底力玩家在游玩低难度绿谱或红谱的表现。\n3.新增难度将、分类将的显示。'};

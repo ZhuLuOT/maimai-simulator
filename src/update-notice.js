@@ -29,7 +29,7 @@ export function installUpdateNotice({current,save,hasSave}){
     }
     dialog.replaceChildren();
     const title=document.createElement('h2');title.id='release-title';title.textContent=`${release.label||'游戏'} 已更新，请刷新`;
-    const description=document.createElement('p');description.textContent=release.summary||'新版本已就绪，刷新后继续当前进度。';
+    const description=document.createElement('p');description.style.whiteSpace='pre-line';description.textContent=release.summary||'新版本已就绪，刷新后继续当前进度。';
     const status=document.createElement('p');status.setAttribute('role','status');
     const button=document.createElement('button');button.className='primary-btn';button.textContent='保存进度并刷新';
     button.addEventListener('click',()=>{

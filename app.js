@@ -1,4 +1,5 @@
 import {createSongSearch,createLevelQuery,isExactSongTitle} from './src/song-search.cjs';
+import {difficultyLevels,createPoolCompletion} from './src/pool-completion.cjs';
 import {createSukunaAudio} from './src/sukuna-audio.js';
 import {majorView,birdMenu} from './src/major-ui.js';
 import {esc,icon} from './src/ui.js';
@@ -24,7 +25,9 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
     s.version = pool.find(c => c.id === s.id)?.version || s.version;
   });
   const matchesSong = createSongSearch(songs);
-  const queryLevel = createLevelQuery(songs,pool.map(c=>G.displayLevel(c)));
+  const levelPools = difficultyLevels(pool,G.displayLevel);
+  const queryLevel = createLevelQuery(songs,levelPools);
+  const poolCompletion = createPoolCompletion(pool,G);
   const $ = s => document.querySelector(s);
   function updateKeyboardViewport(){
     const viewport=window.visualViewport;
@@ -233,7 +236,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
   }
   function chartMatches(c) {
     const levelQuery = queryLevel(search);
-    const level=G.displayLevel(c),levelMatches=levelFilter==='all'||(levelFilter==='12-range'?['12','12+'].includes(level):level===levelFilter);
+    const level=G.displayLevel(c),levelMatches=levelFilter==='all'||level===levelFilter;
     return levelMatches && (ageFilter==='all'||c.isNew===(ageFilter==='new')) && (!levelQuery || G.displayLevel(c) === levelQuery) && (difficulty === 'all' || c.index === Number(difficulty)) && (patternFilter === 'all' || c.tendency === patternFilter || c.tag === patternFilter);
   }
   function filtered() {
@@ -245,8 +248,9 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
     return q && !queryLevel(q) ? matches.sort((a,b)=>Number(isExactSongTitle(b,q))-Number(isExactSongTitle(a,q))) : matches;
   }
   function filters() {
+    const completion=poolCompletion(state.records),marked=(label,grade)=>label+(grade?`（${grade}）`:'');
     const select = (id, label, options, value) => html`<select id="${id}" aria-label="${label}"><option value="all" ?selected=${value==='all'}>${label}</option>${options.map(([v, t]) => html`<option value="${esc(v)}" ?selected=${value === v}>${esc(t)}</option>`)}</select>`;
-    return html`<div class="library-filters"><label class="search-box">${icon('search')}<input id="song-search" aria-label="搜索曲名、别名、艺术家或曲目 ID" .value=${live(search)} placeholder="曲名 / 别名 / ID / 等级（如 12+）" autocomplete="off"></label>${select('song-level','全部等级',[['12-range','12 和 12+'],...[...new Set(pool.map(c=>G.displayLevel(c)))].sort((a,b)=>parseInt(a)-parseInt(b)||a.length-b.length).map(v=>[v,v])],levelFilter)}<select id="difficulty" aria-label="谱面难度"><option value="all" ?selected=${difficulty==='all'}>全部谱色</option>${names.map((n, i) => html`<option value="${i}" ?selected=${difficulty === String(i)}>${n} · ${['绿谱','黄谱','红谱','紫谱','白谱'][i]}</option>`)}</select><select id="song-type" aria-label="谱面版本"><option value="all" ?selected=${typeFilter==='all'}>标准 + DX</option><option value="SD" ?selected=${typeFilter === 'SD'}>标准</option><option value="DX" ?selected=${typeFilter === 'DX'}>DX</option></select>${select('song-age','新旧版本',[['old','旧版本 · B35'],['new','新版本 · B15']],ageFilter)}${select('song-era', '全部时代', [...new Set(songs.map(s => s.version))].map(v => [v, v]), eraFilter)}${select('song-genre', '全部分区', [...new Set(songs.map(s => s.genre))].map(v => [v, v]), genreFilter)}${select('song-pattern', '全部配置', [['star', '星星谱'], ['key', '键盘谱'], ['ghost', '鬼歌'], ['easy', '吃分推荐']], patternFilter)}<select id="song-utage" aria-label="宴曲筛选">${[['exclude', '排除宴曲'], ['only', '只看宴曲'], ['all', '包含宴曲']].map(([v, t]) => html`<option value="${v}" ?selected=${utageFilter === v}>${t}</option>`)}</select><button class="icon-btn" data-action="filter-reset" title="重置筛选" aria-label="重置筛选">${icon('rotate-ccw')}</button></div>`;
+    return html`<div class="library-filters"><label class="search-box">${icon('search')}<input id="song-search" aria-label="搜索曲名、别名、艺术家或曲目 ID" .value=${live(search)} placeholder="曲名 / 别名 / ID / 等级（如 12+）" autocomplete="off"></label>${select('song-level','全部等级',levelPools.map(v=>[v,marked(v,completion.levels.get(v))]),levelFilter)}<select id="difficulty" aria-label="谱面难度"><option value="all" ?selected=${difficulty==='all'}>全部谱色</option>${names.map((n, i) => html`<option value="${i}" ?selected=${difficulty === String(i)}>${n} · ${['绿谱','黄谱','红谱','紫谱','白谱'][i]}</option>`)}</select><select id="song-type" aria-label="谱面版本"><option value="all" ?selected=${typeFilter==='all'}>标准 + DX</option><option value="SD" ?selected=${typeFilter === 'SD'}>标准</option><option value="DX" ?selected=${typeFilter === 'DX'}>DX</option></select>${select('song-age','新旧版本',[['old','旧版本 · B35'],['new','新版本 · B15']],ageFilter)}${select('song-era', '全部时代', [...new Set(songs.map(s => s.version))].map(v => [v, v]), eraFilter)}${select('song-genre', '全部分区', [...new Set(songs.map(s => s.genre))].map(v => [v,marked(v,completion.genres.get(v))]), genreFilter)}${select('song-pattern', '全部配置', [['star', '星星谱'], ['key', '键盘谱'], ['ghost', '鬼歌'], ['easy', '吃分推荐']], patternFilter)}<select id="song-utage" aria-label="宴曲筛选">${[['exclude', '排除宴曲'], ['only', '只看宴曲'], ['all', '包含宴曲']].map(([v, t]) => html`<option value="${v}" ?selected=${utageFilter === v}>${t}</option>`)}</select><button class="icon-btn" data-action="filter-reset" title="重置筛选" aria-label="重置筛选">${icon('rotate-ccw')}</button></div>`;
   }
   function grouped(list, selectable = false) {
     return list.map(s => html`<article class="song-group"><div class="song-group-header">${cover(s)}<div><h3>${esc(s.title)} <span class="type-label ${s.type}">${s.type === 'DX' ? 'DX' : '标准'}</span></h3><p>${esc(s.artist)}</p><small>${esc(s.version)} · ${s.bpm} BPM · ID ${s.id}</small></div></div><div class="difficulty-grid">${s.ds.map((ds, index) => {
@@ -437,7 +441,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
     return {unplayed:recommendLock.unplayed,levels:recommendLock.levels,charts};
   }
   function recommendFilterControls(){
-    const levels=[...new Set(pool.map(c=>G.displayLevel(c)))].sort((a,b)=>parseFloat(a)-parseFloat(b)||a.localeCompare(b));
+    const levels=levelPools;
     const plates=G.COLLECTIONS.filter(c=>c.kind==='plate'&&c.category==='achievement'&&/将/.test(c.name));
     return html`<div class="recommend-lock" aria-label="推荐曲目锁定"><b>推荐锁定</b><label><input type="checkbox" id="recommend-unplayed" ?checked=${recommendLock.unplayed}>只推荐没打过</label><label><select id="recommend-level" aria-label="推荐难度池"><option value="all">全部难度池</option>${levels.map(v=>html`<option value=${v} ?selected=${recommendLock.levels.length===1&&recommendLock.levels[0]===v}>${v} 池</option>`)}</select></label><label><select id="recommend-plate" aria-label="推荐将牌池"><option value="">不限将牌池</option>${plates.map(c=>html`<option value=${c.id} ?selected=${recommendLock.plateId===c.id}>${c.name} · ${c.description.slice(0,28)}</option>`)}</select></label><button class="text-btn" data-action="recommend-lock-reset">清除锁定</button></div>`;
   }
