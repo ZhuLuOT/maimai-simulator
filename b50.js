@@ -13,7 +13,7 @@
     const frames=['normal','blue','green','orange','red','purple','bronze','silver','gold','platinum','rainbow'];
     const plateId=root.Game.collectionItem(s.plate)?.kind==='plate'?s.plate:'default',title=root.Game.collectionItem(s.title);
     const color=['Normal','Bronze','Silver','Gold','Rainbow'].includes(title?.color)?title.color:'Normal';
-    const course=s.courseRank||0,keys=['plate-'+plateId,'rating-'+frames[root.Game.ratingTier(s.rating)-1],'cabinet-Name','cabinet-UI_CMN_Shougou_'+color,'class_rank-'+(s.classRank||0),'course_rank-'+(course?course+11:0),...String(s.rating).padStart(5,'0').split('').map(d=>'digit-'+d)];
+    const course=s.courseRank||0,keys=['plate-'+plateId,'rating-'+frames[root.Game.ratingTier(s.rating)-1],'cabinet-Name','cabinet-UI_CMN_Shougou_'+color,'class_rank-'+(s.classRank||0),'course_rank-'+root.Game.courseAsset(course),...String(s.rating).padStart(5,'0').split('').map(d=>'digit-'+d)];
     const [plate,frame,name,trophy,rank,dan,...digits]=await Promise.all(keys.map(headerImage)),avatar=await dataImage(s.avatar);
     ctx.save();ctx.translate(60,10);ctx.scale(1380/720,1380/720);
     ctx.fillStyle='#ddf8fc';ctx.fillRect(0,0,720,116);

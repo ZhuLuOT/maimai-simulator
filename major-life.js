@@ -6,6 +6,11 @@
  const random=o=>{o.seed=(Math.imul(o.seed,1664525)+1013904223)>>>0;return o.seed/4294967296;};
  function ensure(s){s.major??={};const m=s.major;m.completed??={good:s.ending==='good',love:s.ending==='love'};m.returnPhase??=s.trip?'play':'home';m.duel??={stage:s.ending==='good'?'intro':'locked',result:null,quote:null};m.performance??=null;m.bird??=null;m.birdReward??=false;m.yakuReward??=false;
   const p=m.performance;
+  // Legacy courses gathered all decisions before charging. Cancel them safely;
+  // new courses retain their paid round and completed songs across reloads.
+  if(p?.course&&!p.round){
+   m.performance=null;s.roundReview=false;G.log(s,'段位挑战已改为逐曲结算，尚未扣费的旧挑战已取消，请重新选择段位。','event');return;
+  }
   if(p&&p.format===undefined&&Array.isArray(p.plans)&&Array.isArray(p.choices)&&p.plans.length===p.choices.length&&p.plans.every(x=>x===null||x&&typeof x==='object'&&!Array.isArray(x))){
    p.choices=p.choices.map((choice,i)=>p.plans[i]===null&&choice==='skip'?[]:[choice]);
    p.plans=p.plans.map(plan=>plan===null?[]:[plan]);p.format=2;
@@ -40,7 +45,7 @@
  }
  function nextAction(s){
   const p=s.major.performance;if(!p||p.feedback)return null;
-  for(let i=0;i<p.charts.length;i++){
+  for(let i=p.course?p.round.results.length:0;i<(p.course?p.round.results.length+1:p.charts.length);i++){
    if(p.duel&&p.curses[i].choice===null)return {kind:'curse',index:i};
    const j=p.choices[i].indexOf(null);if(j>=0)return {kind:'segment',index:i,segmentIndex:j};
   }
@@ -53,7 +58,7 @@
   const text=passed?e.success:e.failure;
   p.feedback={kind:'curse',index:e.index,passed,title:e.title,text};G.log(s,`${e.title} · ${passed?'事件成功':'事件失败'}：${text}`,'event');
  }
- function acknowledgePerformance(s){const p=s.major.performance;if(!p?.feedback)throw Error('当前没有待确认的事件结果。');p.feedback=null;if(!nextAction(s))return commitPerformance(s);}
+ function acknowledgePerformance(s){const p=s.major.performance;if(!p?.feedback)throw Error('当前没有待确认的事件结果。');p.feedback=null;if(p.course)return advanceCourse(s);if(!nextAction(s))return commitPerformance(s);}
  function opponentScore(s,c){
   const fixedChart=['834:4','11663:4'].includes(G.key(c));
   // W62 profile: specialist practice on his two signature charts, stable around SSS+.
@@ -90,15 +95,17 @@
  function startPerformance(s,selection,course=0,duel=false){
   if(s.major.performance||s.major.bird||s.ending||!duel&&(s.world.notice||s.world.mahjong.active||s.event!==null||s.school.pending||s.city.encounter||s.videoEvent))throw Error('请先完成当前事件。');
   if(duel){if(s.major.duel.stage!=='select'||selection.length!==2)throw Error('请自选两首歌曲。');}
-  else{if(s.major.duel.stage!=='locked'&&s.major.duel.stage!=='done')throw Error('先回应宿傩。');const reason=course?G.courseReason(s):G.playReason(s);if(reason)throw Error(reason);}
+  else{if(s.major.duel.stage!=='locked'&&s.major.duel.stage!=='done')throw Error('先回应宿傩。');const reason=course?G.courseReason(s,course):G.playReason(s);if(reason)throw Error(reason);}
   const selected=selection.map(c=>pool.find(x=>G.key(c)===G.key(x)));if(selected.some(c=>!c||G.isUtage(c)&&duel))throw Error('请选择有效普通谱面。');
   let charts;if(duel)charts=[...selected,...fixed()];else if(course)charts=G.courseCharts(course,pool);else{const count=G.selectCount(s);if(selected.length!==count)throw Error('请完成本轮选曲。');charts=[...selected,...(s.mode==='pair'?G.preparePartner(s,pool).map(x=>pool.find(c=>c.id===x.id&&c.index===x.playerIndex)):[])];}
   if(charts.some(c=>!c))throw Error('谱面资料不完整。');
   if(!duel&&(s.gloves.durability<charts.length*1.75*s.gloves.wear||G.timeChargeReason(s,course?20:G.MODES[s.mode].duration,course?G.pcPrice(s)*2:G.pcPrice(s))))throw Error('手套耐久或余额不足本轮游玩。');
   const plans=charts.map(c=>J.planSegments(s,{...c,ds:G.effectiveDifficulty(s,c)}));
-  s.major.performance={format:2,selection:(course?charts:selected).map(G.key),charts:charts.map(G.key),plans,choices:plans.map(list=>list.map(()=>null)),course,duel,partnerSongs:s.partnerSongs?structuredClone(s.partnerSongs):null};
+  const round=course?G.beginCoursePlay(s,course,pool):null;if(course&&!round)return;
+  s.major.performance={format:2,...(course?{round}:{}),selection:(course?charts:selected).map(G.key),charts:charts.map(G.key),plans,choices:plans.map(list=>list.map(()=>null)),course,duel,partnerSongs:s.partnerSongs?structuredClone(s.partnerSongs):null};
   battleFields(s.major.performance);
   if(duel)s.major.duel.stage='battle';
+  if(course)return advanceCourse(s);
   if(!nextAction(s))return commitPerformance(s);
  }
  function currentSegment(s){
@@ -117,8 +124,24 @@
     const round={results,gain:0,skillsBefore:{...s.skills},mode:'pair',battle:null,queue:0,duration:0,partnerName:'两面宿傩',curses:p.curses};
     s.last=round;s.roundReview=true;return round;
   }
-  function commitPerformance(s){const p=s.major.performance;if(!p||p.feedback||nextAction(s))throw Error('先选择应对方式。');s.major.performance=null;const options={duel:p.duel,segments:p.plans.map((plans,i)=>plans.map((plan,j)=>{const c=pool.find(c=>G.key(c)===p.charts[i]),option=J.segmentOptions(s,{...c,ds:G.effectiveDifficulty(s,c)},plan.tag).find(o=>o.id===p.choices[i][j]);return {tag:plan.tag,strategy:p.choices[i][j],chance:p.resolutions[i][j]?.chance??option.chance,passed:p.resolutions[i][j]?.passed,intensity:1/plans.length};}))};s.partnerSongs=p.partnerSongs;
-  try{const round=p.duel?duelRound(s,p,options):p.course?G.runCourse(s,p.course,pool,options):G.play(s,p.selection.map(k=>pool.find(c=>G.key(c)===k)),pool,0,options);if(p.duel)finishDuel(s,round);return round;}
+  function segmentDecisions(s,p,i){return p.plans[i].map((plan,j)=>{
+    const c=pool.find(c=>G.key(c)===p.charts[i]),option=J.segmentOptions(s,{...c,ds:G.effectiveDifficulty(s,c)},plan.tag).find(o=>o.id===p.choices[i][j]);
+    return {tag:plan.tag,strategy:p.choices[i][j],chance:p.resolutions[i][j]?.chance??option.chance,passed:p.resolutions[i][j]?.passed,intensity:1/p.plans[i].length};
+  });}
+  function advanceCourse(s){
+    const p=s.major.performance;if(!p?.course||p.feedback)return;
+    while(!nextAction(s)){
+      const i=p.round.results.length;
+      G.settleCourseSong(s,p.round,pool,segmentDecisions(s,p,i));
+      // No later track can prompt an event or record a score after LIFE runs out.
+      if(G.courseLife(p.course,p.round.results).life===0||p.round.results.length===4){
+        s.major.performance=null;
+        return G.completeCourse(s,p.course,G.finishCoursePlay(s,p.round,pool));
+      }
+    }
+  }
+  function commitPerformance(s){const p=s.major.performance;if(!p||p.feedback||nextAction(s))throw Error('先选择应对方式。');if(p.course)return advanceCourse(s);s.major.performance=null;const options={duel:p.duel,segments:p.plans.map((_,i)=>segmentDecisions(s,p,i))};s.partnerSongs=p.partnerSongs;
+  try{const round=p.duel?duelRound(s,p,options):G.play(s,p.selection.map(k=>pool.find(c=>G.key(c)===k)),pool,0,options);if(p.duel)finishDuel(s,round);return round;}
   catch(e){if(p.duel)s.major.duel.stage='select';throw e;}
  }
  function collectionRewards(s){if(!s.major||!s.world||s.ending)return;const m=s.major;if(!m.birdReward&&G.WORLD_ENTRIES.filter(e=>e.kind==='bird').every(e=>s.world.entries.includes(e.id))){m.birdReward=true;const gain=Math.min(.5,22-s.skills.reading);s.skills.reading+=gain;G.log(s,`广州鸟类图鉴全收集：读谱力 +${gain.toFixed(2)}。`,'event');}if(!m.yakuReward&&G.MAHJONG_YAKU.every(e=>s.world.mahjong.collection[e.id])){m.yakuReward=true;s.money+=8888;G.log(s,'立直麻将役种全收集：获得 ¥8888。','money');}}
@@ -148,14 +171,22 @@
   else{s.world.notice={title:'鸟儿飞远了',text:'这次没能看清。放下望远镜休息一下，下次可以主动出发再试。',entry:null};G.log(s,'观鸟结束：没有完成记录。','event');}G.check(s);
  }
  function blocked(s){return !!(s.major?.performance||s.major?.bird||s.major&&!['locked','done'].includes(s.major.duel.stage)&&!s.ending);}
+ function validCourseRound(s,p){
+  const r=p.round,num=(v,a,b)=>Number.isFinite(v)&&v>=a&&v<=b;
+  if(!r||r.course!==p.course||r.mode!=='solo'||r.select!==4||r.duration!==20||r.name!==G.MODES.solo.name||r.partnerName!==null||!Array.isArray(r.partnerSongs)||!Array.isArray(r.charts)||r.charts.join(',')!==p.charts.join(',')||p.charts.join(',')!==G.courseDefinition(p.course).charts.join(',')||!num(r.before,0,30000)||!r.skillsBefore||!['star','key','reading'].every(k=>num(r.skillsBefore[k],1,22))||!Array.isArray(r.results)||r.results.length>=4||s.credits<1||!s.trip?.rounds)return false;
+  const index=r.results.length;
+  if(!r.results.every((x,i)=>x&&G.key(x)===p.charts[i]&&x.judgements&&['critical','perfect','great','good','miss'].every(k=>Number.isInteger(x.judgements[k])&&num(x.judgements[k],0,100000))&&p.choices[i].every(v=>v!==null)))return false;
+  if(G.courseLife(p.course,r.results).life===0||p.feedback&&p.feedback.index!==index||!p.feedback&&!p.choices[index].includes(null))return false;
+  return p.choices.every((list,i)=>i<=index||list.every(v=>v===null));
+ }
  function valid(s){const m=s.major,num=(x,a,b)=>Number.isFinite(x)&&x>=a&&x<=b;if(!m||!m.completed||!['good','love'].every(k=>typeof m.completed[k]==='boolean')||!['home','travel','drink','play','meal','ending'].includes(m.returnPhase)||typeof m.birdReward!=='boolean'||typeof m.yakuReward!=='boolean')return false;
   const d=m.duel;if(!d||!['locked','intro','select','battle','win','loss','draw','done'].includes(d.stage)||d.quote!==null&&(!Number.isInteger(d.quote)||!QUOTES[d.quote]))return false;
   if(d.music!==undefined&&!['yuai','aizo'].includes(d.music)||d.musicPaused!==undefined&&typeof d.musicPaused!=='boolean')return false;
   if(['technique','domain'].some(k=>d[k]!==undefined&&(typeof d[k]!=='string'||d[k].length>20)))return false;
   if(['win','loss','draw','done'].includes(d.stage)&&!d.result)return false;
   if(d.result&&(!num(d.result.ours,0,404)||!num(d.result.theirs,0,404)||!['win','loss','draw'].includes(d.result.outcome)||!Array.isArray(d.result.charts)||d.result.charts.length!==4||!d.result.charts.every(c=>c&&typeof c.key==='string'&&typeof c.title==='string'&&num(c.ours,0,101)&&num(c.theirs,0,101))))return false;
-  const p=m.performance;if(p){if(p.format!==2||!Array.isArray(p.charts)||!num(p.charts.length,3,4)||!p.charts.every(k=>typeof k==='string'&&(!pool.length||pool.some(c=>G.key(c)===k)))||!Array.isArray(p.selection)||!p.selection.every(k=>p.charts.includes(k))||!Array.isArray(p.plans)||p.plans.length!==p.charts.length||!p.plans.every(list=>Array.isArray(list)&&list.length<=3&&list.every(x=>x&&typeof x==='object'&&J.segments[x.tag]))||!Array.isArray(p.choices)||p.choices.length!==p.charts.length||!p.choices.every((list,i)=>Array.isArray(list)&&list.length===p.plans[i].length&&list.every(x=>x===null||['technique','alternate','read','luck'].includes(x)))||!Number.isInteger(p.course)||!num(p.course,0,10)||typeof p.duel!=='boolean'||p.duel&&d.stage!=='battle')return false;}
-  if(p&&!validBattle(s,p))return false;
+  const p=m.performance;if(p){if(p.format!==2||!Array.isArray(p.charts)||!num(p.charts.length,3,4)||!p.charts.every(k=>typeof k==='string'&&(!pool.length||pool.some(c=>G.key(c)===k)))||!Array.isArray(p.selection)||!p.selection.every(k=>p.charts.includes(k))||!Array.isArray(p.plans)||p.plans.length!==p.charts.length||!p.plans.every(list=>Array.isArray(list)&&list.length<=3&&list.every(x=>x&&typeof x==='object'&&J.segments[x.tag]))||!Array.isArray(p.choices)||p.choices.length!==p.charts.length||!p.choices.every((list,i)=>Array.isArray(list)&&list.length===p.plans[i].length&&list.every(x=>x===null||['technique','alternate','read','luck'].includes(x)))||!Number.isInteger(p.course)||!(p.course===0||G.courseDefinition(p.course))||typeof p.duel!=='boolean'||p.duel&&d.stage!=='battle')return false;}
+  if(p&&(!validBattle(s,p)||p.course&&!validCourseRound(s,p)||!p.course&&p.round!==undefined))return false;
   const b=m.bird;if(b&&(!G.WORLD_ENTRIES.some(e=>e.id===b.entry&&e.kind==='bird')||typeof b.quest!=='boolean'||!Number.isInteger(b.stage)||!num(b.stage,0,5)||!Number.isInteger(b.seed)||!num(b.seed,0,4294967295)||!num(b.position,0,100)||!num(b.velocity,-2.8,2.8)||!num(b.target,0,100)||!num(b.targetGoal,0,100)||!num(b.progress,0,100)||!Number.isInteger(b.ticks)||!num(b.ticks,0,600)||![24,32,42].includes(b.width)||b.entry==='owl'&&(!b.quest||b.stage!==4)))return false;
   if(p&&!p.feedback&&!p.choices.some(list=>list.includes(null))&&!(p.duel&&p.curses.some(e=>e.choice===null))||d.stage==='battle'&&!p||p?.duel&&p.charts.slice(2).join(',')!=='834:4,11663:4'||p?.duel&&p.selection.length!==2||p&&!p.duel&&(s.phase!=='play'||p.charts.length!==(p.course?4:G.MODES[s.mode]?.count))||p&&p.plans.some((list,i)=>list.some(x=>pool.length&&!(pool.find(c=>G.key(c)===p.charts[i]).tags||[]).includes(x.tag))))return false;
   if(p&&(!p.selection.length||p.selection.some((k,i)=>k!==p.charts[i])||p.duel&&p.course!==0||p.course&&p.selection.length!==4||p.partnerSongs!==null&&(!Array.isArray(p.partnerSongs)||p.partnerSongs.length>2||!p.partnerSongs.every(c=>c&&typeof c.id==='string'&&Number.isInteger(c.index)&&num(c.index,0,4)&&Number.isInteger(c.playerIndex)&&num(c.playerIndex,0,4)))))return false;
@@ -163,7 +194,7 @@
   return !(p&&b);
  }
  function install(api){G=api;Object.assign(api,{ensureMajor:ensure,markMilestone:reached,canContinue,continueGame,setMajorPool:p=>{pool=p;},SUKUNA_QUOTES:QUOTES,sukunaCharts:fixed,sukunaPerformance:opponentScore,nameDuel,currentCurse,chooseCurse,acknowledgePerformance,acceptDuel,closeDuel,startPerformance,currentSegment,chooseSegment,collectionRewards,birdReason,startBird,birdStep,endBird,majorBlocked:blocked});
-  for(const name of ['advance','advanceMeal','packDrink','eatHome','daily','sleep','nextDay','resolveClass','teacher','startTrip','setMode','travel','drink','play','meal','runCourse','waitQueue','refill','buyGloves','chatSend','watchVideos','explore','answerEncounter','answer','contactLove','doQuest','sendDM','startMahjong']){const fn=api[name];if(fn)api[name]=function(s,...args){if(blocked(s))throw Error('请先完成当前挑战或观鸟。');return fn(s,...args);};}
+  for(const name of ['advance','advanceMeal','packDrink','eatHome','daily','sleep','nextDay','resolveClass','teacher','startTrip','setMode','travel','drink','play','beginCoursePlay','meal','runCourse','waitQueue','refill','buyGloves','chatSend','watchVideos','explore','answerEncounter','answer','contactLove','doQuest','sendDM','startMahjong']){const fn=api[name];if(fn)api[name]=function(s,...args){if(blocked(s))throw Error('请先完成当前挑战或观鸟。');return fn(s,...args);};}
  }
  const api={ensure,valid,install};if(typeof module!=='undefined')module.exports=api;else root.MajorLife=api;
 })(globalThis);
