@@ -1,6 +1,16 @@
 {
   "source": "https://www.diving-fish.com/api/maimaidxprober/music_data",
-  "retrievedAt": "2026-09-14T13:35:54.397Z",
-  "count": 1394,
-  "note": "Public community snapshot; chart constants and new-version grouping follow this snapshot, not a guarantee of current official availability."
+  "retrievedAt": "2026-10-01T00:00:00.000Z",
+  "count": 1404,
+  "note": "Public community snapshot; chart constants and new-version grouping follow this snapshot, not a guarantee of current official availability.",
+  "comparison": {
+    "apiCount": 1405,
+    "localCount": 1404,
+    "excludedInvalid": [
+      "11879"
+    ],
+    "includesUtage": true
+  },
+  "checkedAt": "2026-10-01T17:20:23.662Z",
+  "versionSource": "https://maimai.lxns.net/api/v0/maimai/song/list?version=25500&notes=true"
 }

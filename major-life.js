@@ -93,10 +93,10 @@
  }
  function closeDuel(s,quote){const d=s.major.duel;if(d.stage==='win'){if(!Number.isInteger(quote)||!QUOTES[quote])throw Error('请选择要说的话。');d.quote=quote;G.log(s,'你对宿傩说：“'+QUOTES[quote]+'” 他收起笑意，消失在裂隙中。','event');}else if(d.stage!=='loss')throw Error('先完成对决。');d.stage='done';G.check(s);}
  function startPerformance(s,selection,course=0,duel=false){
-  if(s.major.performance||s.major.bird||s.ending||!duel&&(s.world.notice||s.world.mahjong.active||s.event!==null||s.school.pending||s.city.encounter||s.videoEvent))throw Error('请先完成当前事件。');
+  if(s.unlocks?.active||s.major.performance||s.major.bird||s.ending||!duel&&(s.world.notice||s.world.mahjong.active||s.event!==null||s.school.pending||s.city.encounter||s.videoEvent))throw Error('请先完成当前事件。');
   if(duel){if(s.major.duel.stage!=='select'||selection.length!==2)throw Error('请自选两首歌曲。');}
   else{if(s.major.duel.stage!=='locked'&&s.major.duel.stage!=='done')throw Error('先回应宿傩。');const reason=course?G.courseReason(s,course):G.playReason(s);if(reason)throw Error(reason);}
-  const selected=selection.map(c=>pool.find(x=>G.key(c)===G.key(x)));if(selected.some(c=>!c||G.isUtage(c)&&duel))throw Error('请选择有效普通谱面。');
+  const selected=selection.map(c=>pool.find(x=>G.key(c)===G.key(x)));if(!duel&&!course&&selected.some(c=>c&&!G.songUnlocked(s,c.id)))throw Error('曲目尚未解锁。');if(selected.some(c=>!c||G.isUtage(c)&&duel))throw Error('请选择有效普通谱面。');
   let charts;if(duel)charts=[...selected,...fixed()];else if(course)charts=G.courseCharts(course,pool);else{const count=G.selectCount(s);if(selected.length!==count)throw Error('请完成本轮选曲。');charts=[...selected,...(s.mode==='pair'?G.preparePartner(s,pool).map(x=>pool.find(c=>c.id===x.id&&c.index===x.playerIndex)):[])];}
   if(charts.some(c=>!c))throw Error('谱面资料不完整。');
   if(!duel&&(s.gloves.durability<charts.length*1.75*s.gloves.wear||G.timeChargeReason(s,course?20:G.MODES[s.mode].duration,course?G.pcPrice(s)*2:G.pcPrice(s))))throw Error('手套耐久或余额不足本轮游玩。');

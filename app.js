@@ -1,8 +1,10 @@
 import {createSongSearch,createLevelQuery,isExactSongTitle} from './src/song-search.cjs';
 import {difficultyLevels,createPoolCompletion} from './src/pool-completion.cjs';
 import {createSukunaAudio} from './src/sukuna-audio.js';
+import {gates,gateNotice} from './src/kaleidxscope-ui.js';
 import {majorView,birdMenu} from './src/major-ui.js';
 import {courseRules,courseResult} from './src/course-ui.js';
+import {regionResult,regions,regionStatus} from './src/region-ui.js';
 import {esc,icon,statNumber} from './src/ui.js';
 import { html, render as mount } from 'lit';
 import { live } from 'lit/directives/live.js';
@@ -43,6 +45,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
     arcades = G.ARCADES.map(a => a.name);
   let renderedModal = null, avatarPage = 0, forceModalTop = false, introReplay = false, conversation = 'group', conversationList = false, atlasTab = 'bird', sleepMinutes = 480, calendarMonth = 3, calendarDay = 1, mahjongCollectionReturn = 'trip';
   const modalScroll = new Map();
+  let regionCredit=-1;
   let state = G.create(),
     view = 'home',
     modal = null,
@@ -232,7 +235,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
       const c = canonical(raw),
         r = c.achievement !== undefined ? c : state.records[G.key(c)],
         isPicked = picked[pickSlot] && G.key(picked[pickSlot]) === G.key(c);
-      return html`<div class="song-row">${cover(c)}<div class="song-info"><b>${esc(c.title)}</b><small>${esc(c.version)} · ${c.type === 'DX' ? 'DX' : '标准'} ${badge(c)}</small></div><span class="difficulty diff-${c.index}">${names[c.index]}<b>${G.displayLevel(c)}</b></span>${selectable ? html`<button class="icon-btn pick-btn ${isPicked ? 'picked' : ''}" data-action="pick" data-value="${esc(G.key(c))}" title="选择谱面" aria-label="选择 ${esc(c.title)} ${c.type} ${names[c.index]}">${icon(isPicked ? 'check' : 'plus')}</button>` : html`<div class="record-score">${r ? html`<b>${r.achievement.toFixed(4)}%</b><small>${G.rank(r.achievement)} · ${r.ra} RA ${esc(r.combo || '')}</small>` : html`<small>未游玩</small>`}</div>`}</div>`;
+      return html`<div class="song-row">${cover(c)}<div class="song-info"><b>${esc(c.title)}</b><small>${esc(c.version)} · ${c.type === 'DX' ? 'DX' : '标准'} ${badge(c)}</small></div><span class="difficulty diff-${c.index}">${names[c.index]}<b>${G.displayLevel(c)}</b></span>${selectable ? html`<button class="icon-btn pick-btn ${isPicked ? 'picked' : ''}" ?disabled=${state.major.duel.stage!=='select'&&!G.songUnlocked(state,c.id)} data-action="pick" data-value="${esc(G.key(c))}" title="选择谱面" aria-label="选择 ${esc(c.title)} ${c.type} ${names[c.index]}">${icon(isPicked ? 'check' : 'plus')}</button>` : html`<div class="record-score">${r ? html`<b>${r.achievement.toFixed(4)}%</b><small>${G.rank(r.achievement)} · ${r.ra} RA ${esc(r.combo || '')}</small>` : html`<small>未游玩</small>`}</div>`}</div>`;
     });
   }
   function chartMatches(c) {
@@ -254,13 +257,13 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
     return html`<div class="library-filters"><label class="search-box">${icon('search')}<input id="song-search" aria-label="搜索曲名、别名、艺术家或曲目 ID" .value=${live(search)} placeholder="曲名 / 别名 / ID / 等级（如 12+）" autocomplete="off"></label>${select('song-level','全部等级',levelPools.map(v=>[v,marked(v,completion.levels.get(v))]),levelFilter)}<select id="difficulty" aria-label="谱面难度"><option value="all" ?selected=${difficulty==='all'}>全部谱色</option>${names.map((n, i) => html`<option value="${i}" ?selected=${difficulty === String(i)}>${n} · ${['绿谱','黄谱','红谱','紫谱','白谱'][i]}</option>`)}</select><select id="song-type" aria-label="谱面版本"><option value="all" ?selected=${typeFilter==='all'}>标准 + DX</option><option value="SD" ?selected=${typeFilter === 'SD'}>标准</option><option value="DX" ?selected=${typeFilter === 'DX'}>DX</option></select>${select('song-age','新旧版本',[['old','旧版本 · B35'],['new','新版本 · B15']],ageFilter)}${select('song-era', '全部时代', [...new Set(songs.map(s => s.version))].map(v => [v, v]), eraFilter)}${select('song-genre', '全部分区', [...new Set(songs.map(s => s.genre))].map(v => [v,marked(v,completion.genres.get(v))]), genreFilter)}${select('song-pattern', '全部配置', [['star', '星星谱'], ['key', '键盘谱'], ['ghost', '鬼歌'], ['easy', '吃分推荐']], patternFilter)}<select id="song-utage" aria-label="宴曲筛选">${[['exclude', '排除宴曲'], ['only', '只看宴曲'], ['all', '包含宴曲']].map(([v, t]) => html`<option value="${v}" ?selected=${utageFilter === v}>${t}</option>`)}</select><button class="icon-btn" data-action="filter-reset" title="重置筛选" aria-label="重置筛选">${icon('rotate-ccw')}</button></div>`;
   }
   function grouped(list, selectable = false) {
-    return list.map(s => html`<article class="song-group"><div class="song-group-header">${cover(s)}<div><h3>${esc(s.title)} <span class="type-label ${s.type}">${s.type === 'DX' ? 'DX' : '标准'}</span></h3><p>${esc(s.artist)}</p><small>${esc(s.version)} · ${s.bpm} BPM · ID ${s.id}</small></div></div><div class="difficulty-grid">${s.ds.map((ds, index) => {
+    return list.map(s => html`<article class="song-group"><div class="song-group-header">${cover(s)}<div><h3>${esc(s.title)} <span class="type-label ${s.type}">${s.type === 'DX' ? 'DX' : '标准'}</span></h3><p>${esc(s.artist)}</p><small>${esc(s.version)} · ${s.bpm} BPM · ID ${s.id}</small>${G.songLockReason(state,s.id)?html`<span class="song-lock">${icon('lock')}${G.songLockReason(state,s.id)}</span>`:''}</div></div><div class="difficulty-grid">${s.ds.map((ds, index) => {
       if (difficulty !== 'all' && Number(difficulty) !== index) return '';
       const c = catalog.get(`${s.id}:${index}`);
       if (!c || !chartMatches(c)) return '';
       const r = state.records[G.key(c)],
         chosen = picked[pickSlot] && G.key(picked[pickSlot]) === G.key(c);
-      return html`<button class="chart-cell diff-${index} ${chosen ? 'chosen' : ''}" data-action="${selectable ? 'pick' : 'chart-detail'}" data-value="${esc(G.key(c))}" aria-label="${selectable ? '选择' : '查看'} ${esc(s.title)} ${s.type} ${names[index]}"><span>${names[index]} ${chosen ? icon('check') : ''}</span><b>${G.displayLevel(c)}</b>${badge(c)}<small>${r ? `${r.achievement.toFixed(4)}% · ${r.ra} RA` : '未游玩'}</small>${r?.combo ? html`<em>${esc(r.combo)}</em>` : ''}</button>`;
+      return html`<button class="chart-cell diff-${index} ${chosen ? 'chosen' : ''}" ?disabled=${selectable&&state.major.duel.stage!=='select'&&!G.songUnlocked(state,c.id)} data-action="${selectable ? 'pick' : 'chart-detail'}" data-value="${esc(G.key(c))}" aria-label="${selectable ? '选择' : '查看'} ${esc(s.title)} ${s.type} ${names[index]}"><span>${names[index]} ${chosen ? icon('check') : ''}</span><b>${G.displayLevel(c)}</b>${badge(c)}<small>${r ? `${r.achievement.toFixed(4)}% · ${r.ra} RA` : '未游玩'}</small>${r?.combo ? html`<em>${esc(r.combo)}</em>` : ''}</button>`;
     })}</div></article>`);
   }
   function pagination(total, size) {
@@ -305,7 +308,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
   }
   function results() {
     if (!state.last) return '';
-    return html`${state.last.battle?html`<p class="battle-result">友人对战 · ${state.last.battle.outcome==='wins'?'获胜':state.last.battle.outcome==='losses'?'落败':'平局'} · ${state.last.battle.ours.toFixed(4)} / ${state.last.battle.theirs.toFixed(4)}</p>`:''}<div class="result-banner"><div>${icon('sparkles')}Rating <b>+${state.last.gain}</b></div><span>星星 +${(state.skills.star - state.last.skillsBefore.star).toFixed(3)} · 键盘 +${(state.skills.key - state.last.skillsBefore.key).toFixed(3)} · 读谱 +${(state.skills.reading - (state.last.skillsBefore.reading ?? state.skills.reading)).toFixed(3)}</span></div><div class="performance-results">${state.last.results.map(c => html`<article>${cover(c)}<div><small class="diff-text-${c.index}">${names[c.index]} ${G.displayLevel(c)} · ${state.last.courseLevel ? '段位课题' : c.partner ? '对方选曲' : '自选'}</small><b>${esc(c.title)}</b><div class="performance-score">${c.achievement.toFixed(4)}% <em class="grade-icon"><img src="assets/grades/music_icon_${G.rank(c.achievement).toLowerCase().replace('+','p')}.png" alt="${G.rank(c.achievement)}"></em><span class="combo-badge">${c.combo || 'CLEAR'}</span></div>${c.opponent?html`<small class="sync-result">${G.syncLabel(c.sync)} · ${esc(c.opponent.id)} ${names[c.opponent.index]} ${c.opponent.achievement.toFixed(4)}% ${c.opponent.combo||'CLEAR'}</small>`:''}<small>${c.overreach ? '越级 · ' : ''}第 ${c.plays} 次 · ${c.improved ? 'NEW BEST' : ''}</small><details class="judgement-fold"><summary>查看判定</summary>${Number.isInteger(c.maxCombo)?html`<small>最大连击 ${c.maxCombo} / ${c.notes.reduce((a,b)=>a+b,0)}</small>`:''}<div class="judgements">${['critical', 'perfect', 'great', 'good', 'miss'].map((k, i) => html`<span>${['CRITICAL', 'PERFECT', 'GREAT', 'GOOD', 'MISS'][i]} <b>${c.judgements?.[k] ?? 0}</b></span>`)}</div>${c.breakJudgements ? html`<small class="break-details">BREAK 判定 · 基础 ${c.baseScore.toFixed(4)}% + 加分 ${c.extraScore.toFixed(4)}%</small>` : ''}</details>${(c.segmentEvents||(c.segmentEvent?[c.segmentEvent]:[])).map((e,i)=>html`<p class="segment-outcome ${e.passed?'passed':'failed'}">难点 ${i+1} · ${e.scene} · ${e.passed?'判定通过':`段落坠机 · +${e.misses} MISS · -${e.loss.toFixed(4)}%`}</p>`)}</div></article>`)}</div>`;
+    return html`${regionResult(state.last.region)}${state.last.battle?html`<p class="battle-result">友人对战 · ${state.last.battle.outcome==='wins'?'获胜':state.last.battle.outcome==='losses'?'落败':'平局'} · ${state.last.battle.ours.toFixed(4)} / ${state.last.battle.theirs.toFixed(4)}</p>`:''}<div class="result-banner"><div>${icon('sparkles')}Rating <b>+${state.last.gain}</b></div><span>星星 +${(state.skills.star - state.last.skillsBefore.star).toFixed(3)} · 键盘 +${(state.skills.key - state.last.skillsBefore.key).toFixed(3)} · 读谱 +${(state.skills.reading - (state.last.skillsBefore.reading ?? state.skills.reading)).toFixed(3)}</span></div><div class="performance-results">${state.last.results.map(c => html`<article>${cover(c)}<div><small class="diff-text-${c.index}">${names[c.index]} ${G.displayLevel(c)} · ${state.last.courseLevel ? '段位课题' : c.partner ? '对方选曲' : '自选'}</small><b>${esc(c.title)}</b><div class="performance-score">${c.achievement.toFixed(4)}% <em class="grade-icon"><img src="assets/grades/music_icon_${G.rank(c.achievement).toLowerCase().replace('+','p')}.png" alt="${G.rank(c.achievement)}"></em><span class="combo-badge">${c.combo || 'CLEAR'}</span></div>${c.opponent?html`<small class="sync-result">${G.syncLabel(c.sync)} · ${esc(c.opponent.id)} ${names[c.opponent.index]} ${c.opponent.achievement.toFixed(4)}% ${c.opponent.combo||'CLEAR'}</small>`:''}<small>${c.overreach ? '越级 · ' : ''}第 ${c.plays} 次 · ${c.improved ? 'NEW BEST' : ''}</small><details class="judgement-fold"><summary>查看判定</summary>${Number.isInteger(c.maxCombo)?html`<small>最大连击 ${c.maxCombo} / ${c.notes.reduce((a,b)=>a+b,0)}</small>`:''}<div class="judgements">${['critical', 'perfect', 'great', 'good', 'miss'].map((k, i) => html`<span>${['CRITICAL', 'PERFECT', 'GREAT', 'GOOD', 'MISS'][i]} <b>${c.judgements?.[k] ?? 0}</b></span>`)}</div>${c.breakJudgements ? html`<small class="break-details">BREAK 判定 · 基础 ${c.baseScore.toFixed(4)}% + 加分 ${c.extraScore.toFixed(4)}%</small>` : ''}</details>${(c.segmentEvents||(c.segmentEvent?[c.segmentEvent]:[])).map((e,i)=>html`<p class="segment-outcome ${e.passed?'passed':'failed'}">难点 ${i+1} · ${e.scene} · ${e.passed?'判定通过':`段落坠机 · +${e.misses} MISS · -${e.loss.toFixed(4)}%`}</p>`)}</div></article>`)}</div>`;
   }
   function sleepForecast(kind) {
     const plan=G.sleepPlan(state,kind),day=plan.day===state.day?'今天':'明天';
@@ -318,6 +321,8 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
     if(state.ending&&modal!=='restart')modal='ending';else if(!state.ending&&state.school.pending)modal='teacher';
     if(!state.ending&&!state.school.pending&&state.event===null&&!state.city.encounter&&!state.world?.notice&&!state.world?.mahjong.active&&!state.videoEvent&&state.setupDone&&state.guide.introDone&&(!modal||['trip','chat','entertain'].includes(modal))&&G.mealReminder(state)>=0){mealReturn=modal;modal='daily-meal';forceModalTop=true;}
     if(!state.ending&&G.majorBlocked(state)&&!(state.major.duel.stage==='select'&&modal==='picker'))modal='major';
+    if(state.unlocks.active||state.unlocks.result?.pending)modal='gates';
+    else if(state.unlocks.notices.length&&!state.ending&&!G.majorBlocked(state)&&!state.world.notice&&state.event===null&&!state.school.pending&&!state.city.encounter&&!state.videoEvent)modal='gate-notice';
     if(state.competition.lastCourse?.pending&&!state.major.performance&&modal!=='restart')modal='course-result';
     const root = $('#modal-root');
     if (!modal) {
@@ -336,6 +341,8 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
       const inlineMusic=state.major.duel.stage==='loss'&&!state.major.performance&&!state.major.bird;
       content=frame(state.major.bird?'观察鸟儿':state.major.performance?'难段应对':'时空裂隙 · 两面宿傩',state.major.bird?'保持对准，记录自然':state.major.performance?'你的策略会影响这一首的表现':intro?'不属于这个时代的挑战':'',html`${majorView(state,picked,inlineMusic?musicControl:'')}${inlineMusic?'':musicControl}`,!intro,false);
     }
+    if(modal==='gates')content=frame('万花筒 · 门之挑战','KALEIDXSCOPE',gates(state,pool),true,!state.unlocks.active&&!state.unlocks.result?.pending);
+    if(modal==='gate-notice')content=frame('新的发现','',gateNotice(state),false,false);
     if(modal==='bird-menu')content=frame('出发观鸟','选择今天的观察地点',birdMenu(state));
     if(modal==='daily-meal')content=frame(`${G.MEAL_NAMES[G.mealDue(state)]||'用餐'}时间，吃点什么`,`${G.time(state.clock)} · ${state.mealBreak?'午休':G.residence(state)}`,html`${LifeUI.mealStatus(state)}${options(G.homeMeals(state),'eat-home')}<p class="form-note">连续 3 天漏餐开始降低最大体力；连续 3 天规律三餐并出门活动，最大体力 +1。</p><button class="secondary-btn" data-action="meal-later">稍后再吃</button>`,false,false);
     if(modal==='sleep'){const plan=G.sleepPlan(state,sleepMinutes);content=frame('休息一下',`困意 ${statNumber(state.drowsiness)}/100 · 体力 ${Math.floor(state.stamina)}/${Math.floor(state.maxStamina)}`,html`<label class="sleep-duration">自选睡眠时长<select id="sleep-duration" .value=${String(sleepMinutes)}>${Array.from({length:24},(_,i)=>(i+1)*30).map(m=>html`<option value=${m} ?selected=${m===sleepMinutes}>${m/60} 小时</option>`)}</select></label><p class="sleep-preview" role="status">消除困意 ${statNumber(plan.recovery,2)} · 醒后困意 ${statNumber(state.drowsiness-plan.recovery,2)}/100<br>恢复体力 ${statNumber(plan.staminaRecovery,2)} · ${sleepForecast(sleepMinutes)}</p><div class="option-grid"><button class="option" data-action="sleep-now" data-value=${sleepMinutes}>${icon('alarm-clock')}<div><b>睡 ${sleepMinutes/60} 小时</b><small>按所选时长休息</small></div></button><button class="option" data-action="sleep-now" data-value="full">${icon('moon')}<div><b>一次睡到爽</b><small>10 小时 · 困意清零 · 体力恢复满</small><small>${sleepForecast('full')}</small></div></button></div><p class="form-note">每小时消除 12.5 困意。睡过课程记旷课，睡过班次记旷工；冲突会在上方预览。</p>`);}
@@ -370,7 +377,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
     }
     if (modal === 'phone') content = frame('机厅看看', 'ARCADE RADAR', phone());
     if (modal === 'trip') {
-      if (state.phase === 'travel') content = frame('选择机厅与出行方式', `${G.dateLabel(state)} · ${G.time(state.clock)}`, html`${steps(0)}<div class="travel-layout">${phone(true)}<div>${modeControl()}<p class="form-note">${G.allNight(state)?html`<span class="den-price">猫窝全天营业 · ¥30 / 小时，入场预付首小时，超时按整小时续费。PC / 段位不另收费，离店吃饭暂停计时。困意满会强制回${G.residence(state)}睡觉。</span>`:''}本次单程 ${G.ARCADE_KM[state.arcade].toFixed(1)} km，往返 ${(G.ARCADE_KM[state.arcade] * 2).toFixed(1)} km；到店与回${G.residence(state)}时分别累计。</p>${options(G.transportOptions(state.arcade), 'travel')}<button class="finish-btn" data-action="cancel-trip">今天先不出门 ${icon('undo-2')}</button></div></div>`, true);
+      if (state.phase === 'travel') content = frame('选择机厅与出行方式', `${G.dateLabel(state)} · ${G.time(state.clock)}`, html`${steps(0)}<div class="travel-layout">${phone(true)}<div>${modeControl()}${regionStatus(state)}<p class="form-note">${G.allNight(state)?html`<span class="den-price">猫窝全天营业 · ¥30 / 小时，入场预付首小时，超时按整小时续费。PC / 段位不另收费，离店吃饭暂停计时。困意满会强制回${G.residence(state)}睡觉。</span>`:''}本次单程 ${G.ARCADE_KM[state.arcade].toFixed(1)} km，往返 ${(G.ARCADE_KM[state.arcade] * 2).toFixed(1)} km；到店与回${G.residence(state)}时分别累计。</p>${options(G.transportOptions(state.arcade), 'travel')}<button class="finish-btn" data-action="cancel-trip">今天先不出门 ${icon('undo-2')}</button></div></div>`, true);
       if (state.phase === 'drink') content = frame('上机前，喝点什么', `${G.time(state.clock)} · ${arcades[state.arcade]}`, html`${steps(1)}${LifeUI.drinkShop(state)}<button class="primary-btn" data-action="drinks-ready">选好了，进入排队</button>`);
       if (state.phase === 'play') {
         const reason = G.playReason(state), canSelect=state.queueUntil<=state.clock&&!state.roundReview;
@@ -378,7 +385,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
         const selection=picked.length?picked:recommendations,selectionReady=selection.filter(Boolean).length===G.selectCount(state);
         content = frame('上机 / 排队', `${G.time(state.clock)} · ${G.allNight(state)?'猫窝全天营业 · ':''}最晚 ${G.availableUntil(state)>=1440?'次日 ':''}${G.time(G.availableUntil(state)%1440)} 结束上机`, html`${steps(1)}${!canSelect?results():''}${modeControl()}<div class="crowd-broadcast" role="status">${state.logs.filter(l=>l.type==='crowd'&&l.day===state.day&&(l.day>(state.trip.startDay||state.day)||l.time>=state.trip.start)).slice(0,3).map(l=>html`<p>${G.time(l.time)} · ${esc(l.text)}</p>`)}</div>${LifeUI.supplies(state)}${G.linArcade(state)===state.arcade?html`<div class="lin-at-arcade"><span>小凛在店 · 正在挑 V 家曲</span><button class="secondary-btn" data-action="lin-pair">${icon('users')}一起拼机</button></div>`:''}${state.arcade===5&&(state.clock<G.OPEN||state.clock>=G.CLOSE)?html`<p class="night-visitors">夜间出勤 · ${G.denVisitors(state).map(n=>n.id).join('、')||'暂时只有你'}</p>`:''}${state.mode==='solo'&&canSelect?html`<div class="supply-actions"><button class="secondary-btn" data-action="ranks">${icon('medal')}段位挑战</button></div>`:''}${state.arcade===5?html`<div class="supply-actions"><button class="secondary-btn" data-action="mahjong" ?disabled=${G.mahjongPlayers(state).length<3}>${icon('grid-2x2')}${G.mahjongPlayers(state).length<3?'牌友不足三人':'猫窝麻将 · 25 分钟'}</button><button class="secondary-btn" data-action="mahjong-collection">${icon('book-open')}役种收藏</button></div>`:''}${state.last ? html`<div class="round-events">${state.logs.filter(l => l.day === state.day && l.time === state.clock && ['event', 'crowd', 'talent', 'heart'].includes(l.type)).slice(0, 4).map(l => html`<p>${icon('sparkles')}${esc(l.text.replace('的鬼歌手元，','的手元，').replace('；这次没有刷到适合自己的手元。','。'))}</p>`)}</div>` : ''}${canSelect?html`${recommendFilterControls()}${recommendations.length<G.selectCount(state)?html`<p class="recommend-empty" role="status">当前锁定池只剩 ${recommendations.length} 张可推荐谱面。请调整锁定，或手动补齐本轮选曲。</p>`:''}<div class="small-heading">本轮自选 ${G.selectCount(state)} 首<span>${state.mode === 'pair' ? '拼机伙伴选择剩余曲目，两人同时游玩' : '单人三首 · 可重复选同一首'}</span></div><div class="selection-slots">${Array.from({
           length: G.selectCount(state)
-        }, (_, i) => html`<button class="secondary-btn" data-action="picker" data-value="${i}">${icon('disc-3')}第 ${i + 1} 首 · ${esc(picked[i]?.title || recommendations[i]?.title || '选择曲目')}</button>`)}</div>${state.mode==='solo'?html`<div class="supply-actions">${(picked.length?picked:recommendations).map((c,i)=>c?html`<button class="secondary-btn" data-action="repeat-song" data-value="${i}" aria-label="本轮连打三首 ${esc(c.title)}">连打第 ${i+1} 首 ×3</button>`:'')}</div>`:''}${rows((picked.length ? picked : recommendations).filter(Boolean))}${LifeUI.partnerChoices(state, pool)}<div class="modal-actions"><button class="secondary-btn" data-action="picker">${icon('list-music')}自选曲目</button><button class="secondary-btn" data-action="reroll" title="换一组">${icon('shuffle')}换一组</button><button class="primary-btn" data-action="play" ?disabled=${!!reason||!selectionReady}>${icon('play')}${G.allNight(state)?'开始游玩 · 已计时':`投币上机 · ¥${G.pcPrice(state)}`}</button></div>${reason ? html`<p class="warning">${reason}</p>` : ''}`:html`<p class="queue-notice">本轮已结束或正在排队，轮到上机后再选择下一轮曲目。</p>${state.queueUntil<=state.clock?html`<button class="primary-btn" data-action="next-round">下一轮上机 · 开始选曲</button>`:''}`}<button class="finish-btn" data-action="finish">结束上机，去吃饭 ${icon('arrow-right')}</button>`, true);
+        }, (_, i) => html`<button class="secondary-btn" data-action="picker" data-value="${i}">${icon('disc-3')}第 ${i + 1} 首 · ${esc(picked[i]?.title || recommendations[i]?.title || '选择曲目')}</button>`)}</div>${state.mode==='solo'?html`<div class="supply-actions">${(picked.length?picked:recommendations).map((c,i)=>c?html`<button class="secondary-btn" data-action="repeat-song" data-value="${i}" aria-label="本轮连打三首 ${esc(c.title)}">连打第 ${i+1} 首 ×3</button>`:'')}</div>`:''}${rows((picked.length ? picked : recommendations).filter(Boolean))}${LifeUI.partnerChoices(state, pool)}<div class="modal-actions"><button class="secondary-btn" data-action="picker">${icon('list-music')}自选曲目</button>${state.mode==='solo'?html`<button class="secondary-btn" data-action="random-songs">随机选曲</button>`:''}<button class="secondary-btn" data-action="gates">万花筒</button><button class="secondary-btn" data-action="reroll" title="换一组">${icon('shuffle')}换一组</button><button class="primary-btn" data-action="play" ?disabled=${!!reason||!selectionReady}>${icon('play')}${G.allNight(state)?'开始游玩 · 已计时':`投币上机 · ¥${G.pcPrice(state)}`}</button></div>${reason ? html`<p class="warning">${reason}</p>` : ''}`:html`<p class="queue-notice">本轮已结束或正在排队，轮到上机后再选择下一轮曲目。</p>${state.queueUntil<=state.clock?html`<button class="primary-btn" data-action="next-round">下一轮上机 · 开始选曲</button>`:''}`}<button class="finish-btn" data-action="finish">结束上机，去吃饭 ${icon('arrow-right')}</button>`, true);
       }
       if (state.phase === 'meal') content = frame('下机了，好好吃顿饭', `${G.time(state.clock)} · 回程 ${state.trip.returnTime} 分钟`, html`${steps(2)}<div class="outing-summary"><div><small>本次上机</small><b>${state.trip.rounds}<span> 轮</span></b></div><div><small>Rating 提升</small><b>+${state.rating - state.trip.ratingBefore}</b></div><div><small>已花费</small><b>¥${state.trip.cost}</b></div></div><div class="mode-select" aria-label="饭后去向">${[['home',`吃完回${G.residence(state)}`],['arcade','吃完回机厅继续打']].map(([id,label])=>html`<button class="${mealDestination===id?'selected':''}" aria-pressed=${mealDestination===id} data-action="meal-destination" data-value="${id}">${label}</button>`)}</div>${options(G.mealOptions(state).filter(m=>mealDestination!=='arcade'||m.id!=='home'), 'meal')}<button class="secondary-btn" data-action="resume-play" ?disabled=${!!G.returnToPlayReason(state)}>先不吃，返回机厅继续打</button>${mealDestination==='home'&&G.canSkipMeal(state) ? html`<button class="secondary-btn" data-action="meal" data-value="skip">不吃饭，直接回${G.residence(state)}</button>` : ''}<p class="form-note">选择回机厅：附近用餐另计往返步行 10 分钟，回店后重新排队；仍须在闭店或固定日程前结束。回${G.residence(state)}后也可再次出勤。每日基本开销至多 ¥${G.JOBS[state.job].daily}，已付正餐每餐可抵扣至多 ¥${G.JOBS[state.job].mealAllowance} 的基础餐费。</p>`);
     }
@@ -417,8 +424,10 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
         r = state.records[G.key(c)];
       content = frame(c.title, `${c.type === 'DX' ? 'DX' : '标准'} · ${c.version}`, html`${rows([c])}<div class="chart-details"><div><b>${names[c.index]} ${c.ds}</b>${badge(c)}</div><p>${esc(c.classification)} · 星星权重 ${Math.round(c.starWeight * 100)}% · 键盘权重 ${Math.round((1 - c.starWeight) * 100)}%</p><p>已游玩 ${state.practice[G.key(c)] || 0} 次 · ${r ? `${r.achievement.toFixed(4)}% ${G.rank(r.achievement)} ${r.combo || ''}` : '暂无成绩'}</p>${Number.isFinite(c.fit) ? html`<p>水鱼拟合 ${c.fit.toFixed(3)} · 官方 ${c.ds} · 差值 ${(c.fit - c.ds).toFixed(3)}<br>样本 ${c.samples} · 落雪定数 ${c.comparison ?? '未收录'}<br>样本 ≥100 且定数一致时，差值 ≥0.3 为鬼歌，≤-0.3 为吃分推荐；BASIC 和定数 <10 不标记，ADVANCED 不标吃分。</p>` : html`<p>暂无拟合数据，不添加难度推荐标签。</p>`}<p>TAP ${c.notes[0]} · HOLD ${c.notes[1]} · SLIDE ${c.notes[2]} · TOUCH ${c.notes[3]} · BREAK ${c.notes[4]}</p></div>`);
     }
+    const selectingRegion=modal==='trip'&&state.phase==='play'&&state.queueUntil<=state.clock&&!state.roundReview&&(regionCredit!==state.credits||!G.regionSnapshot(state));
+    if(selectingRegion)content=frame('上机 · 选择区域',`${G.time(state.clock)} · ${arcades[state.arcade]}`,html`${steps(1)}${regions(state,collectionSearch,true)}`,true);
     const activeElement = document.activeElement;
-    const modalKey = modal==='trip' ? modal+':'+state.phase : modal;
+    const modalKey = modal==='trip' ? modal+':'+(selectingRegion?'region':state.phase) : modal;
     const previousDialog = root.querySelector('.modal');
     if(renderedModal && previousDialog) modalScroll.set(renderedModal, previousDialog.scrollTop);
     mount(content, root);
@@ -481,7 +490,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
     save();
   }
   function act(a, v) {
-    if(G.majorBlocked(state)&&!['continue-ending','sukuna-music','duel-accept','duel-start','duel-close','segment-choice','curse-choice','performance-next','bird-abandon','export',...(state.major.duel.stage==='select'?['picker','pick','filter-reset','page','close','picked']:[])].includes(a))throw Error('请先完成当前挑战或观鸟。');
+    if(G.majorBlocked(state)&&!['gate-choice','gate-next','continue-ending','sukuna-music','duel-accept','duel-start','duel-close','segment-choice','curse-choice','performance-next','bird-abandon','export',...(state.major.duel.stage==='select'?['picker','pick','filter-reset','page','close','picked']:[])].includes(a))throw Error('请先完成当前挑战或观鸟。');
     switch (a) {
       case 'sukuna-music':sukunaAudio.toggle();break;
       case 'sleep-menu':modal='sleep';break;
@@ -536,6 +545,20 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
       case 'collection-target':
         G.collectionTarget(state, v);
         break;
+      case 'gates':G.gateRefresh(state);modal='gates';break;
+      case 'gate-start':G.startGate(state,v,Number($('#gate-diff-'+v).value),pool);picked=[];recommendations=[];modal='gates';break;
+      case 'gate-choice':G.chooseGate(state,v,pool);break;
+      case 'gate-next':G.stepGate(state,pool);break;
+      case 'gate-result-close':state.unlocks.result.pending=false;modal='trip';break;
+      case 'gate-notice-close':state.unlocks.notices.shift();modal=state.phase==='play'?'trip':null;break;
+      case 'random-songs':picked=G.randomSongs(state,pool);modal='trip';break;
+      case 'regions':collectionTab='region';collectionSearch='';modal='plates';break;
+      case 'region-select':G.regionSelect(state,v);break;
+      case 'region-confirm':
+        if(state.phase!=='play'||state.queueUntil>state.clock||state.roundReview)throw Error('请先等待轮到上机。');
+        if(!G.regionSnapshot(state))throw Error('请选择本期开放的探索区域。');
+        regionCredit=state.credits;collectionSearch='';modal='trip';forceModalTop=true;break;
+      case 'region-task':search=v;difficulty=levelFilter=ageFilter=typeFilter=eraFilter=genreFilter=patternFilter='all';utageFilter='exclude';pickSlot=0;act('picker');break;
       case 'equip-collection':
         G.equipCollection(state, v, pool);
         break;
@@ -629,9 +652,10 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
         beep();
         break;
       case 'close':
+        if(state.unlocks.active)throw Error('请先完成当前门挑战。');
         if(modal==='course-result'&&state.competition.lastCourse)state.competition.lastCourse.pending=false;
         introReplay=false;
-        modal = modal==='mahjong-collection'?mahjongCollectionReturn:modal==='atlas'||modal==='quests'||modal==='relationship'?'chat':modal==='supplies'&&state.phase==='play'?supplyReturn:modal==='course-preview'?'ranks':modal?.startsWith('b50chat:')?'chat':modal === 'picker' || ['supplies','ranks','course-result'].includes(modal) && state.phase === 'play' ? 'trip' : null;
+        modal = modal==='plates'&&state.phase==='play'?'trip':modal==='mahjong-collection'?mahjongCollectionReturn:modal==='atlas'||modal==='quests'||modal==='relationship'?'chat':modal==='supplies'&&state.phase==='play'?supplyReturn:modal==='course-preview'?'ranks':modal?.startsWith('b50chat:')?'chat':modal === 'picker' || ['supplies','ranks','course-result'].includes(modal) && state.phase === 'play' ? 'trip' : null;
         break;
       case 'attend':
         if (state.phase === 'home') G.startTrip(state);
@@ -661,6 +685,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
         recommend();
         break;
       case 'play':
+        if(regionCredit!==state.credits||!G.regionSnapshot(state)){modal='trip';forceModalTop=true;break;}
         const selection=picked.length?picked:recommendations;if(selection.filter(Boolean).length!==G.selectCount(state))throw Error('当前曲池不足，请调整推荐锁定或手动补齐选曲。');
         G.startPerformance(state, selection);
         state.roundReview=true;forceModalTop=true;
@@ -691,6 +716,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
       case 'pick':
         {
           if (!catalog.has(v)) throw Error('谱面不存在。');
+          if(state.major.duel.stage!=='select'&&!G.songUnlocked(state,catalog.get(v).id))throw Error(G.songLockReason(state,catalog.get(v).id));
           if(state.major.duel.stage==='select'&&G.isUtage(catalog.get(v)))throw Error('宿傩对决请选择普通谱面。');
           if (!picked.length) picked = [...recommendations];
           picked[pickSlot] = catalog.get(v);
@@ -858,6 +884,11 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
   }
   document.addEventListener('input', updateInput);
   document.addEventListener('change', async e => {
+    if(e.target.id==='region-select'){
+      if(!e.target.value)return;
+      try{act('region-select',e.target.value);save();render();}catch(error){toast(error.message);}
+      return;
+    }
     if(e.target.id==='sleep-duration'){updateInput(e);return;}
     if (e.target.dataset.partnerSlot !== undefined) {
       try {

@@ -1,0 +1,36 @@
+.region-status,.region-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.region-status{padding:12px 0;border-top:1px solid #d5e2df;margin-top:12px}
+.region-status>span,.region-heading b,.region-rotation b{display:flex;align-items:center;gap:8px}
+.region-status>span{flex:1;min-width:180px;font-size:13px;overflow-wrap:anywhere}
+.region-rotation{padding:16px 0;border-bottom:1px solid #d5e2df;color:#42594f}
+.region-rotation>div{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.region-rotation p,.region-bonus-songs p{font-size:12px;line-height:1.8;overflow-wrap:anywhere;margin:10px 0}
+.region-rotation span{font-size:12px}
+.region-picker{display:grid;grid-template-columns:1fr 1.4fr;gap:16px;margin:20px 0}
+.region-picker label{display:flex;flex-direction:column;gap:8px;font-size:12px;min-width:0}
+.region-picker .search-box{flex-direction:row;align-self:end;margin:0}
+.region-picker select{width:100%;max-width:100%;height:42px;text-overflow:ellipsis;border:1px solid #b4ccc0;border-radius:6px;background:#fff;padding:0 10px;color:#213b32}
+.region-route{border-top:1px solid #d5e2df;padding:18px 0 4px}
+.region-heading h3{font-size:18px;margin:6px 0;overflow-wrap:anywhere}
+.region-heading small,.region-route>p,.region-settlement small{font-size:12px;color:#566d64}
+.region-heading strong{font-size:14px;color:#236d57;white-space:nowrap}
+.region-route>progress,.region-settlement>progress{width:100%;height:12px;margin:12px 0 6px;accent-color:#31806b}
+.region-task{display:flex;align-items:center;gap:12px;background:#eef5fa;border-left:3px solid #448ca3;padding:12px;margin:18px 0}
+.region-task img{width:52px;height:52px;object-fit:cover;flex-shrink:0;border-radius:4px}
+.region-task>div{flex:1;min-width:0;font-size:13px}
+.region-task span{display:block;font-size:12px;margin-top:6px;line-height:1.5;overflow-wrap:anywhere}
+.region-nodes{list-style:none;margin:20px 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px}
+.region-nodes li{border-top:3px solid #c6d4d0;padding-top:12px;min-width:0;display:flex;flex-direction:column;align-items:start;gap:10px}
+.region-nodes .earned{border-color:#31806b}
+.region-node-label{display:flex;align-items:center;gap:7px;font-size:13px;color:#637870}
+.region-nodes img{width:100%;height:60px;object-fit:contain;object-position:left}
+.region-nodes li>span{font-size:12px;overflow-wrap:anywhere;line-height:1.5}
+.region-nodes button{margin-top:auto}
+.region-title-reward{background:#f6ebfa;color:#765681;min-height:60px;display:flex;align-items:center;padding:8px}
+.region-bonus-songs{padding:12px 0;border-top:1px solid #d5e2df;font-size:12px}
+.region-settlement{padding:16px 0;margin:12px 0;border-block:1px solid #c3d8cf}
+.region-settlement p{font-size:13px;line-height:1.6;margin:10px 0 0}
+.region-success{color:#246d4d!important}
+.region-start-actions{margin-bottom:20px}
+.region-empty{padding:32px 0;text-align:center;color:#566d64}
+@media(max-width:600px){.region-picker{grid-template-columns:1fr;gap:12px}.region-nodes{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.region-task{flex-wrap:wrap}.region-task button{margin-left:64px}.region-status>span{flex-basis:100%}.region-heading h3{font-size:16px}.region-rotation p{max-height:100px;overflow:auto}}

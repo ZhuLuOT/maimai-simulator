@@ -1,5 +1,6 @@
 (function(root){
   'use strict';
+  const K=typeof module!=='undefined'?require('./kaleidxscope'):root.Kaleidxscope;
   const MAJOR=typeof module!=='undefined'?require('./major-life'):root.MajorLife;
   const WORLD=typeof module!=='undefined'?require('./world'):root.World;
   const REST=typeof module!=='undefined'?require('./rest-life'):root.RestLife;
@@ -42,7 +43,7 @@
   function create(job='student',seed=Date.now()){
     if(!JOBS[job])job='student';
     const s={version:2,job,seed:seed>>>0,day:1,clock:480,money:JOBS[job].money,mood:78,skills:{star:8,key:8},rating:0,records:{},practice:{},phase:'home',started:false,visits:0,credits:0,tracks:0,people:0,arcade:0,mode:'solo',trip:null,drink:null,last:null,love:0,loveFailed:false,event:null,nextLoveVisit:2,ending:null,logs:[],history:[{day:1,rating:0}],school:{academic:70,failing:false,since:null,talks:0,pending:false},completed:[],rests:0,workCount:0,paidMonths:[],lastSettlement:null};
-    crowd(s);X.ensure(s);C.ensure(s);CITY.ensure(s);M.ensure(s);R.ensure(s);GUIDE.ensure(s);NEEDS.ensure(s);REST.ensure(s);WORLD.ensure(s);MAJOR.ensure(s);log(s,'2026 年 3 月 1 日，新学期与新生活开始。','start');return s;
+    crowd(s);X.ensure(s);C.ensure(s);CITY.ensure(s);M.ensure(s);R.ensure(s);GUIDE.ensure(s);NEEDS.ensure(s);REST.ensure(s);WORLD.ensure(s);MAJOR.ensure(s);K.ensure(s,true);log(s,'2026 年 3 月 1 日，新学期与新生活开始。','start');return s;
   }
   function end(s,ending){if(['good','love'].includes(ending))api.markMilestone(s,ending);s.ending=ending;s.phase='ending';s.event=null;s.school.pending=false;return true;}
   function check(s){api.collectionRewards(s);if(s.guide)api.claimHomeGoals(s);s.money=Math.round(s.money*100)/100;if(s.trip)s.trip.cost=Math.round(s.trip.cost*100)/100;if(s.ending)return true;if(s.school.talks>=3)return end(s,'dropout');if(s.mood<=0)return end(s,'burnout');if(s.money<=0)return end(s,'broke');if(s.rating>=16000&&!s.major.completed.good)return end(s,'good');return false;}
@@ -134,7 +135,7 @@
   }
   function combo(j){if(j.miss>0)return '';if(j.good>0)return 'FC';if(j.great>0)return 'FC+';return 'AP';}
   function simulate(s,c,segment){const chart={...c,ds:M.effective(s,c)};return J.segment(s,chart,J.simulate(s,chart,expected(s,c),ability(s,c)),segment);}
-  function preparePartner(s,pool){if(s.mode!=='pair'||s.partner===null||peopleAt(s)===0)return [];if(!s.partnerSongs)s.partnerSongs=X.partnerCharts(s,pool,MODES.pair.count-X.selectCount(s)).map(c=>({id:c.id,index:c.index,playerIndex:pool.filter(p=>p.id===c.id).sort((a,b)=>Math.abs(a.ds-ability(s,a))-Math.abs(b.ds-ability(s,b)))[0].index}));return s.partnerSongs;}
+  function preparePartner(s,pool){if(s.mode!=='pair'||s.partner===null||peopleAt(s)===0)return [];if(s.partnerSongs?.some(c=>!api.songUnlocked(s,c.id)))s.partnerSongs=null;if(!s.partnerSongs)s.partnerSongs=X.partnerCharts(s,pool.filter(c=>api.songUnlocked(s,c.id)),MODES.pair.count-X.selectCount(s)).map(c=>({id:c.id,index:c.index,playerIndex:pool.filter(p=>p.id===c.id).sort((a,b)=>Math.abs(a.ds-ability(s,a))-Math.abs(b.ds-ability(s,b)))[0].index}));return s.partnerSongs;}
   function setPartnerDifficulty(s,slot,index,pool){guard(s,'play');const item=preparePartner(s,pool)[slot];if(!item||!pool.some(c=>c.id===item.id&&c.index===index))throw Error('这首曲目没有该难度。');item.playerIndex=index;}
   function baseAbility(s,c){const technical=s.skills.star*c.starWeight+s.skills.key*(1-c.starWeight);return technical-Math.max(0,technical-s.skills.reading-1)*.4;}
   function levelValue(c){const level=api.displayLevel(c);return parseInt(level,10)+(level.endsWith('+')?.5:0);}
@@ -147,7 +148,7 @@
     const lock=options&&typeof options==='object'?options:{};
     const lockLevels=Array.isArray(lock.levels)&&lock.levels.length?new Set(lock.levels.map(String)):null;
     const lockCharts=Array.isArray(lock.charts)?new Set(lock.charts.map(String)):null;
-    const all=pool.filter(c=>!isUtage(c)&&(!lock.unplayed||!s.records[key(c)]&&!(s.practice[key(c)]>0))&&(!lockLevels||lockLevels.has(api.displayLevel(c)))&&(!lockCharts||lockCharts.has(key(c)))).map(c=>{
+    const all=pool.filter(c=>api.songUnlocked(s,c.id)&&!isUtage(c)&&(!lock.unplayed||!s.records[key(c)]&&!(s.practice[key(c)]>0))&&(!lockLevels||lockLevels.has(api.displayLevel(c)))&&(!lockCharts||lockCharts.has(key(c)))).map(c=>{
       const gap=(J.difficultyValue?J.difficultyValue(c.ds)-J.difficultyValue(Math.min(15,baseAbility(s,c))):c.ds-Math.min(15,baseAbility(s,c))),gain=chartRating(c.ds,expected(s,c))-Math.max(s.records[key(c)]?.ra||0,c.isNew?newFloor:oldFloor);
       return {c,gap,score:clamp(gain,-15,35)*.65-Math.abs(gap-.15)*10-(recent.has(c.id)?18:0)-Math.min(10,(s.practice[key(c)]||0)*.5)};
     });
@@ -167,15 +168,16 @@
     while(picked.length<count&&pick(all)){}
     return picked;
   }
-  function beginPlayRound(s,selection,pool,courseLevel=0){
+  function beginPlayRound(s,selection,pool,courseLevel=0,gate=false){
     if(courseLevel){const reason=api.courseReason(s,courseLevel);if(reason)throw Error(reason);}
     guard(s,'play');const reason=playReason(s);if(reason)throw Error(reason);if(courseLevel&&(!api.courseDefinition(courseLevel)||s.mode!=='solo'))throw Error('无效段位挑战。');const m=courseLevel?{...MODES.solo,count:4,select:4,duration:20,cost:pcPrice(s)*2}:{...MODES[s.mode],cost:pcPrice(s),select:X.selectCount(s)},known=new Map(pool.map(c=>[key(c),c]));if(s.clock+m.duration>availableUntil(s)||s.money<m.cost)throw Error('挑战所需时间或金钱不足。');if(s.gloves.durability<m.count*1.75*s.gloves.wear)throw Error('手套耐久不足。');if(!selection.length||selection.length>m.select)throw Error(`${m.name}最多自选 ${m.select} 首。`);
-    const chosen=selection.map(c=>known.get(key(c)));if(chosen.some(c=>!c))throw Error('谱面不存在。');const fill=recommend(s,pool,10);while(chosen.length<m.select)chosen.push(fill.find(c=>!chosen.some(x=>key(x)===key(c)))||fill[0]);
+    const chosen=selection.map(c=>known.get(key(c)));if(chosen.some(c=>!c))throw Error('谱面不存在。');if(!courseLevel&&!gate&&chosen.some(c=>!api.songUnlocked(s,c.id)))throw Error('曲目尚未解锁，请先完成区域或门挑战。');const fill=recommend(s,pool,10);while(chosen.length<m.select)chosen.push(fill.find(c=>!chosen.some(x=>key(x)===key(c)))||fill[0]);
     const partner=s.mode==='pair'?preparePartner(s,pool).map(item=>known.get(`${item.id}:${item.playerIndex}`)):[];
     if(partner.some(c=>!c))throw Error('拼机伙伴选曲无效，请重新进入出勤。');
     const feeReason=api.timeChargeReason(s,m.duration,m.cost);if(feeReason)throw Error(feeReason);
+    const region=courseLevel||gate?null:api.regionSnapshot(s);
     const partnerIndex=s.partner,partnerNpc=s.mode==='pair'?s.npcs[s.partner]:null,partnerSongSnapshot=s.partnerSongs?.map(x=>({...x}))||[],partnerName=partnerNpc?.id||null;advance(s,m.duration);if(s.ending)return;if(partnerNpc)s.partner=partnerIndex;s.money-=m.cost;s.trip.cost+=m.cost;s.trip.rounds++;s.credits++;const before=s.rating,skillsBefore={...s.skills};
-    return {course:courseLevel,charts:[...chosen,...partner].map(key),results:[],before,skillsBefore,mode:s.mode,select:m.select,duration:m.duration,name:m.name,partnerIndex,partnerName,partnerSongs:partnerSongSnapshot};
+    return {course:courseLevel,gate,region,charts:[...chosen,...partner].map(key),results:[],before,skillsBefore,mode:s.mode,select:m.select,duration:m.duration,name:m.name,partnerIndex,partnerName,partnerSongs:partnerSongSnapshot};
   }
   function recordPlaySong(s,round,c,segments){
     const i=round.results.length,before=round.before;const k=key(c),n=s.practice[k]||0,result={...c,...simulate(s,c,segments),day:s.day,plays:n+1,partner:i>=round.select};result.overreach=isOverreach(before,c,result.achievement);result.ratingBefore=before;result.ra=isUtage(c)?0:chartRating(c.ds,result.achievement);const old=s.records[k],order=['','FC','FC+','AP'];result.improved=!old||result.achievement>old.achievement;result.bestSync=old?.bestSync||'';result.bestCombo=order[Math.max(order.indexOf(old?.bestCombo||old?.combo||''),order.indexOf(result.combo))];if(result.improved)s.records[k]=result;else old.bestCombo=result.bestCombo;s.practice[k]=n+1;P.afterSong(s);
@@ -187,7 +189,7 @@
   function finishPlayRound(s,round,pool){
     const {results,before,skillsBefore,partnerName,duration,name,mode}=round,partnerNpc=partnerName?s.npcs[round.partnerIndex]:null;
     if(partnerNpc)COMP.paired(s,results,partnerNpc,round.partnerSongs,pool);
-    s.roundReview=true;s.tracks+=results.length;s.mood=clamp(s.mood-(mode==='pair'?4:3),0,100);recalculate(s);s.last={results,gain:s.rating-before,skillsBefore,mode,battle:partnerNpc&&s.competition.battle?{...s.competition.last}:null,queue:0,duration,partnerName};s.trip.played.push(...results);log(s,`${name}${partnerName?' · '+partnerName:''} ${results.length} 首：上机 ${duration} 分钟，Rating +${s.rating-before}。`,'play');X.afterPlay(s,results);api.linAfterPlay(s,results);C.stamp(s);C.route(s);s.partnerSongs=null;check(s);return s.last;
+    s.roundReview=true;s.tracks+=results.length;s.mood=clamp(s.mood-(mode==='pair'?4:3),0,100);recalculate(s);s.last={results,gain:s.rating-before,skillsBefore,mode,battle:partnerNpc&&s.competition.battle?{...s.competition.last}:null,queue:0,duration,partnerName};s.trip.played.push(...results);log(s,`${name}${partnerName?' · '+partnerName:''} ${results.length} 首：上机 ${duration} 分钟，Rating +${s.rating-before}。`,'play');X.afterPlay(s,results);api.linAfterPlay(s,results);C.stamp(s);s.last.region=C.route(s,round);K.afterRound(s,round);s.partnerSongs=null;check(s);return s.last;
   }
   // Interactive courses use the same scoring/resource path, one song at a time.
   function beginCoursePlay(s,level,pool){return beginPlayRound(s,api.courseCharts(level,pool),pool,level);}
@@ -231,9 +233,9 @@
     }
     log(s,`${m.name}后到家，本次花费 ¥${s.trip.cost}，现在是 ${time(s.clock)}，累计出勤 ${s.collection.distanceKm.toFixed(1)} km。`,'meal');CITY.food(s,m);s.phase='home';s.trip=null;check(s);}
   function migrate(old){
-    if(!old||old.version!==1){if(old?.version===2){X.ensure(old);C.ensure(old);CITY.ensure(old);M.ensure(old);R.ensure(old);GUIDE.ensure(old);NEEDS.ensure(old);REST.ensure(old);WORLD.ensure(old);MAJOR.ensure(old);}return old;}if(!JOBS[old.job]||!Number.isFinite(old.skill)||!Number.isInteger(old.day)||!old.records)throw Error('旧存档格式错误。');
+    if(!old||old.version!==1){if(old?.version===2){X.ensure(old);C.ensure(old);CITY.ensure(old);M.ensure(old);R.ensure(old);GUIDE.ensure(old);NEEDS.ensure(old);REST.ensure(old);WORLD.ensure(old);MAJOR.ensure(old);K.ensure(old);}return old;}if(!JOBS[old.job]||!Number.isFinite(old.skill)||!Number.isInteger(old.day)||!old.records)throw Error('旧存档格式错误。');
     const s=create(old.job,old.seed);s.day=clamp(old.day,1,DAYS);s.skills={star:clamp(old.skill,1,16.5),key:clamp(old.skill,1,16.5)};s.money=Number.isFinite(old.money)?old.money:s.money;s.mood=clamp(old.mood,0,100);s.records=old.records;s.started=!!old.started;s.visits=old.visits||0;s.credits=old.credits||0;s.tracks=s.credits*3;s.love=old.love||0;s.loveFailed=!!old.loveFailed;s.nextLoveVisit=old.nextLoveVisit||2;delete s.romance;delete s.precision;
-    for(const [k,r] of Object.entries(s.records)){r.combo=r.combo||'';s.practice[k]=1;}s.ending=old.ending||null;if(s.ending)s.phase='ending';X.ensure(s);C.ensure(s);CITY.ensure(s);M.ensure(s);R.ensure(s);GUIDE.ensure(s);NEEDS.ensure(s);REST.ensure(s);WORLD.ensure(s);MAJOR.ensure(s);s.setupDone=true;crowd(s);recalculate(s);log(s,'已迁移旧存档：保留余额、成绩与关系；旧底力等分为星星 / 键盘，回到当天 08:00。','start');return s;
+    for(const [k,r] of Object.entries(s.records)){r.combo=r.combo||'';s.practice[k]=1;}s.ending=old.ending||null;if(s.ending)s.phase='ending';X.ensure(s);C.ensure(s);CITY.ensure(s);M.ensure(s);R.ensure(s);GUIDE.ensure(s);NEEDS.ensure(s);REST.ensure(s);WORLD.ensure(s);MAJOR.ensure(s);K.ensure(s);s.unlocks.legacy=[...new Set([...api.UNLOCK_DATA.regions.flatMap(r=>r.songs),...api.UNLOCK_DATA.doors.map(d=>d.song),...api.UNLOCK_DATA.prismRewards])];s.setupDone=true;crowd(s);recalculate(s);log(s,'已迁移旧存档：保留余额、成绩与关系；旧底力等分为星星 / 键盘，回到当天 08:00。','start');return s;
   }
   function validate(s){
     const num=(x,a,b)=>Number.isFinite(x)&&x>=a&&x<=b,integer=(x,a,b)=>Number.isInteger(x)&&num(x,a,b),record=r=>r&&typeof r.id==='string'&&typeof r.title==='string'&&integer(r.index,0,4)&&num(r.ds,0,20)&&num(r.achievement,0,101)&&num(r.ra,0,500)&&typeof r.isNew==='boolean'&&(r.maxCombo===undefined||Array.isArray(r.notes)&&r.notes.length===5&&r.notes.every(n=>integer(n,0,100000))&&integer(r.maxCombo,0,r.notes.reduce((a,b)=>a+b,0)));
@@ -252,12 +254,13 @@
     if(!Array.isArray(s.completed)||!s.completed.every(x=>typeof x==='string')||!Array.isArray(s.paidMonths)||!s.paidMonths.every(n=>integer(n,3,6))||!integer(s.rests,0,2)||!integer(s.workCount,0,2))return false;
     if(!integer(s.totalWorkCount,0,100000)||!integer(s.workAbsences,0,DAYS)||!Array.isArray(s.absences)||!s.collection||!C.byId.has(s.profile.title)||!(s.profile.avatar===null||typeof s.profile.avatar==='string'&&s.profile.avatar.length<300000&&/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(s.profile.avatar)))return false;
     if(!num(s.collection.distanceKm,0,1e6)||!integer(s.collection.lastStamp,0,DAYS)||!s.collection.stamps||!Object.values(s.collection.stamps).every(v=>integer(v,0,DAYS))||!s.collection.regions||!Object.values(s.collection.regions).every(v=>integer(v,0,10))||!Array.isArray(s.collection.unlocked)||!s.collection.unlocked.every(id=>C.byId.has(id))||![null,...C.byId.keys()].includes(s.collection.stampTarget)||![null,...C.byId.keys()].includes(s.collection.regionTarget)||!(s.partnerSongs===null||Array.isArray(s.partnerSongs)&&s.partnerSongs.length<=2&&s.partnerSongs.every(c=>c&&typeof c.id==='string'&&integer(c.index,0,4)&&integer(c.playerIndex,0,4))))return false;
+    if(!C.valid(s)||!K.valid(s,record))return false;
     if(![null,...DRINKS.map(d=>d.id)].includes(s.drink))return false;if(['drink','play','meal'].includes(s.phase)&&!s.trip)return false;
     if(s.trip&&(!integer(s.trip.returnTime,0,180)||!num(s.trip.cost,0,1e9)||!integer(s.trip.rounds,0,10000)||!num(s.trip.ratingBefore,0,30000)||!Array.isArray(s.trip.played)||!s.trip.played.every(record)))return false;
     if(s.major.performance?.round&&!s.major.performance.round.results.every(record))return false;
     if(s.last&&(!Array.isArray(s.last.results)||!s.last.results.every(record)||!num(s.last.gain,0,30000)||!MODES[s.last.mode]||!s.last.skillsBefore))return false;return CITY.valid(s)&&M.valid(s);
   }
   const api={NPC_RATING_CAP,START,DAYS,OPEN,CLOSE,NIGHT,HOLIDAYS,dayInfo,pcPrice,entryPrice,allNight,arcadeIsOpen,JOBS,ARCADE_KM,TRANSPORT,transportOptions,DRINKS,MEALS,EVENTS,WEEK,MODES,create,date,dateISO,dateLabel,time,key,log,check,resolveClass,teacher,daily,workIncome,sleep,nextDay:sleep,schedule,pending,nextObligation,canSpendTime,academicChange,startTrip,setMode,peopleAt,roundInfo,roundMinutes,travel,drink,availableUntil,playReason,coefficient,chartRating,rank,ratingTier,best,recalculate,charts,baseAbility,levelValue,challengeThreshold,isOverreach,growthFactor,ability,familiarity,expected,combo,simulate,recommend,play,beginCoursePlay,settleCourseSong,finishCoursePlay,finishPlay,answer,returnToPlayReason,meal,migrate,validate};
-  LIN.install(api);SOCIAL.install(api);X.install(api);C.install(api);CITY.install(api);NEEDS.install(api);M.install(api);COMP.install(api);R.install(api);GUIDE.install(api);WORLD.install(api);REST.install(api,{rollover,tick:X.tick,condition:X.rollCondition,distance:C.distance});Object.assign(api,{isUtage,advance,preparePartner,setPartnerDifficulty,calculateJudgements:J.calculate});REST.wrap(api);MAJOR.install(api);
+  LIN.install(api);SOCIAL.install(api);X.install(api);C.install(api);CITY.install(api);NEEDS.install(api);M.install(api);COMP.install(api);R.install(api);GUIDE.install(api);WORLD.install(api);REST.install(api,{rollover,tick:X.tick,condition:X.rollCondition,distance:C.distance});Object.assign(api,{isUtage,advance,preparePartner,setPartnerDifficulty,calculateJudgements:J.calculate});REST.wrap(api);MAJOR.install(api);K.install(api,{begin:beginPlayRound,record:recordPlaySong,finish:finishPlayRound});
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.Game=api;
 })(typeof window==='undefined'?globalThis:window);
