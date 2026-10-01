@@ -1,7 +1,7 @@
 import {createSongSearch,createLevelQuery,isExactSongTitle} from './src/song-search.cjs';
 import {difficultyLevels,createPoolCompletion} from './src/pool-completion.cjs';
 import {createSukunaAudio} from './src/sukuna-audio.js';
-import {gates,gateNotice} from './src/kaleidxscope-ui.js';
+import {gates,gateNotice,gateBlueScreen} from './src/kaleidxscope-ui.js';
 import {majorView,birdMenu} from './src/major-ui.js';
 import {courseRules,courseResult} from './src/course-ui.js';
 import {regionResult,regions,regionStatus} from './src/region-ui.js';
@@ -315,6 +315,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
     return `预计 ${day} ${G.time(plan.clock)} 起床${plan.conflicts.length?' · 将错过：'+plan.conflicts.map(c=>c.name).join('、'):''}`;
   }
   function renderModal() {
+    if(G.endGateBlueScreen(state))save();
     if(sukunaAudio.sync(state))save();
     if (state.ending && modal !== 'restart') modal = 'ending';else if (state.world?.mahjong.active) modal='mahjong';else if(state.world?.notice) modal='world-event';else if (state.school.pending) modal = 'teacher';else if (state.event !== null) modal = 'event';else if (state.city.encounter) modal = 'city-encounter';else if (state.videoEvent) modal = 'video';else if(state.setupDone&&!state.guide.introDone){modal='intro';if(G.postIntro(state))save();}
     if(state.forcedSleeps!==seenForcedSleeps){seenForcedSleeps=state.forcedSleeps;modal=null;state.roundReview=false;picked=[];recommendations=[];forceModalTop=true;toast(G.homeText(state,'困意已满，已结束行动并回家睡觉。'));}
@@ -324,6 +325,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
     if(state.unlocks.active||state.unlocks.result?.pending)modal='gates';
     else if(state.unlocks.notices.length&&!state.ending&&!G.majorBlocked(state)&&!state.world.notice&&state.event===null&&!state.school.pending&&!state.city.encounter&&!state.videoEvent)modal='gate-notice';
     if(state.competition.lastCourse?.pending&&!state.major.performance&&modal!=='restart')modal='course-result';
+    if(state.unlocks.blueUntil)modal='gates';
     const root = $('#modal-root');
     if (!modal) {
       const dialog=root.querySelector('.modal');
@@ -426,6 +428,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
     }
     const selectingRegion=modal==='trip'&&state.phase==='play'&&state.queueUntil<=state.clock&&!state.roundReview&&(regionCredit!==state.credits||!G.regionSnapshot(state));
     if(selectingRegion)content=frame('上机 · 选择区域',`${G.time(state.clock)} · ${arcades[state.arcade]}`,html`${steps(1)}${regions(state,collectionSearch,true)}`,true);
+    if(state.unlocks.blueUntil)content=gateBlueScreen();
     const activeElement = document.activeElement;
     const modalKey = modal==='trip' ? modal+':'+(selectingRegion?'region':state.phase) : modal;
     const previousDialog = root.querySelector('.modal');
@@ -971,6 +974,7 @@ import {calendar as calendarView,timetable as timetableView} from './src/calenda
   document.addEventListener('visibilitychange',()=>{birdHeld=false;if(state.major.bird)save();});
   document.addEventListener('keyup',e=>{if([' ','ArrowUp'].includes(e.key)){birdHeld=false;if(state.major.bird)save();}});
   setInterval(()=>{if(!state.major.bird||document.hidden||!document.hasFocus()||document.querySelector('.release-dialog[open]'))return;try{G.birdStep(state,birdHeld);if(!state.major.bird||state.major.bird.ticks%10===0)save();if(state.major.bird)renderModal();else{birdHeld=false;render();}}catch(e){birdHeld=false;toast(e.message);}},100);
+  setInterval(()=>{if(G.endGateBlueScreen(state)){save();render();}},100);
   document.addEventListener('keydown', e => {
     if(state.major.bird&&[' ','ArrowUp'].includes(e.key)){e.preventDefault();birdHeld=true;return;}
 

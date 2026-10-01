@@ -52,6 +52,7 @@ function browserModule(specifier) {
   return path.resolve(folder,target);
 }
 require('./cache-b50-headers.cjs');
+require('./cache-b50-covers.cjs');
 
 async function main() {
 const hash=createHash('sha256');

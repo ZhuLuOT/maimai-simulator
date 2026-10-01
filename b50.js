@@ -1,6 +1,6 @@
 (function(root){
   const cache=new Map(),images=new Map(),colors=['#8cc774','#eac169','#df929a','#b19bcf','#c8b7d9'];
-  function jacket(id){if(images.has(id))return images.get(id);const promise=new Promise(resolve=>{const load=()=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>resolve(null);img.src=root.B50_COVERS?.[id]||'';};if(root.B50_COVERS?.[id])load();else{const script=document.createElement('script');script.src=`assets/b50-covers/${encodeURIComponent(id)}.js`;script.onload=load;script.onerror=()=>resolve(null);document.head.append(script);}});images.set(id,promise);return promise;}
+  function jacket(id){if(images.has(id))return images.get(id);const promise=new Promise(resolve=>{const load=(embedded=true)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>embedded?load(false):resolve(null);img.src=embedded&&root.B50_COVERS?.[id]||`assets/covers/${encodeURIComponent(id)}.webp`;};if(root.B50_COVERS?.[id])load();else{const script=document.createElement('script');script.src=`assets/b50-covers/${encodeURIComponent(id)}.js`;script.onload=()=>load();script.onerror=()=>load(false);document.head.append(script);}});images.set(id,promise);return promise;}
   function dataImage(src){return new Promise(resolve=>{if(!src)return resolve(null);const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>resolve(null);img.src=src;});}
   function headerImage(key){
     const id='header:'+key;if(images.has(id))return images.get(id);
