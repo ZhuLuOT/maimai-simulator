@@ -14,7 +14,7 @@ export function courseResult(s,pool){
         <img class="dan-jacket" src="assets/covers/${c.id}.webp" data-cover=${c.id} alt="${c.title} 曲绘">
         <div class="dan-track-body"><div class="dan-song-title"><span>${difficulties[c.index]} · ${c.type}</span><b>${c.title}</b></div>
           <div class="dan-song-score"><strong>${score?score.achievement.toFixed(4):'—'}<small>${score?'%':''}</small></strong><span class="dan-level">Lv.<b>${G.displayLevel(c)}</b></span></div>
-          <div class="dan-song-detail">${score?html`<span>${G.rank(score.achievement)} · ${score.combo||'CLEAR'}</span><span>DX 分数 ${dx(score)}</span>`:html`<span>未到达此曲</span>`}</div>
+          <div class="dan-song-detail">${score?html`<span>${G.rank(score.achievement)} · ${window.Judgement.clearLabel(score)}</span><span>DX 分数 ${dx(score)}</span>`:html`<span>未到达此曲</span>`}</div>
           ${life?html`<div class="dan-track-life">LIFE ${life.before} → ${life.afterLoss}${life.recovery?` +${life.recovery} → ${life.life}`:''}${life.passed?'':' · 挑战结束'}</div>`:''}
         </div>
       </article>`;})}</div>

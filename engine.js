@@ -142,13 +142,14 @@
   function challengeThreshold(rating){return rating>=14000?14.5:rating>=13000?14:rating>=12000?13.5:rating>=11000?12:11.5;}
   function isOverreach(rating,c,achievement=c.achievement){return !isUtage(c)&&levelValue(c)>=challengeThreshold(rating)&&Number.isFinite(achievement)&&achievement<=97;}
   function growthFactor(s,c){const raw=c.ds-baseAbility(s,c),gap=J.difficultyValue?J.difficultyValue(c.ds)-J.difficultyValue(baseAbility(s,c)):raw,base=clamp(1-Math.abs(gap)*.18,.2,1),average=(s.skills.star+s.skills.key+s.skills.reading)/3,advanced=Math.max(0,average-10),maturity=1/(1+advanced*.5+advanced*advanced*.2);return base*maturity*(gap>0&&gap<1.5?1+.5*Math.min(1,gap/.4,(1.5-gap)/.5):1);}
+  function recordMatches(s,c,lock={}){const r=s.records[key(c)];return (!lock.unplayed||!r&&!(s.practice[key(c)]>0))&&(!lock.unsss||!(r?.achievement>=100))&&(!lock.unfc||![r?.bestCombo,r?.combo].some(v=>['FC','FC+','AP','AP+'].includes(v)));}
   function recommend(s,pool,count=X.selectCount(s),exclude=[],options={}){
     const b=best(s),oldFloor=b.old.length<35?0:b.old.at(-1).ra,newFloor=b.fresh.length<15?0:b.fresh.at(-1).ra;
     const excluded=new Set(exclude.map(c=>c.id)),recent=new Set((s.last?.results||[]).map(c=>c.id));
     const lock=options&&typeof options==='object'?options:{};
     const lockLevels=Array.isArray(lock.levels)&&lock.levels.length?new Set(lock.levels.map(String)):null;
     const lockCharts=Array.isArray(lock.charts)?new Set(lock.charts.map(String)):null;
-    const all=pool.filter(c=>api.songUnlocked(s,c.id)&&!isUtage(c)&&(!lock.unplayed||!s.records[key(c)]&&!(s.practice[key(c)]>0))&&(!lockLevels||lockLevels.has(api.displayLevel(c)))&&(!lockCharts||lockCharts.has(key(c)))).map(c=>{
+    const all=pool.filter(c=>api.songUnlocked(s,c.id)&&!isUtage(c)&&recordMatches(s,c,lock)&&(!lockLevels||lockLevels.has(api.displayLevel(c)))&&(!lockCharts||lockCharts.has(key(c)))).map(c=>{
       const gap=(J.difficultyValue?J.difficultyValue(c.ds)-J.difficultyValue(Math.min(15,baseAbility(s,c))):c.ds-Math.min(15,baseAbility(s,c))),gain=chartRating(c.ds,expected(s,c))-Math.max(s.records[key(c)]?.ra||0,c.isNew?newFloor:oldFloor);
       return {c,gap,score:clamp(gain,-15,35)*.65-Math.abs(gap-.15)*10-(recent.has(c.id)?18:0)-Math.min(10,(s.practice[key(c)]||0)*.5)};
     });
@@ -171,7 +172,7 @@
   function beginPlayRound(s,selection,pool,courseLevel=0,gate=false){
     if(courseLevel){const reason=api.courseReason(s,courseLevel);if(reason)throw Error(reason);}
     guard(s,'play');const reason=playReason(s);if(reason)throw Error(reason);if(courseLevel&&(!api.courseDefinition(courseLevel)||s.mode!=='solo'))throw Error('无效段位挑战。');const m=courseLevel?{...MODES.solo,count:4,select:4,duration:20,cost:pcPrice(s)*2}:{...MODES[s.mode],cost:pcPrice(s),select:X.selectCount(s)},known=new Map(pool.map(c=>[key(c),c]));if(s.clock+m.duration>availableUntil(s)||s.money<m.cost)throw Error('挑战所需时间或金钱不足。');if(s.gloves.durability<m.count*1.75*s.gloves.wear)throw Error('手套耐久不足。');if(!selection.length||selection.length>m.select)throw Error(`${m.name}最多自选 ${m.select} 首。`);
-    const chosen=selection.map(c=>known.get(key(c)));if(chosen.some(c=>!c))throw Error('谱面不存在。');if(!courseLevel&&!gate&&chosen.some(c=>!api.songUnlocked(s,c.id)))throw Error('曲目尚未解锁，请先完成区域或门挑战。');const fill=recommend(s,pool,10);while(chosen.length<m.select)chosen.push(fill.find(c=>!chosen.some(x=>key(x)===key(c)))||fill[0]);
+    const chosen=selection.map(c=>known.get(key(c)));if(chosen.some(c=>!c))throw Error('谱面不存在。');if(!courseLevel&&!gate&&chosen.some(c=>!api.songUnlocked(s,c.id)))throw Error('曲目尚未解锁，请先完成区域或门挑战。');const fill=recommend(s,pool,10);while(!gate&&chosen.length<m.select)chosen.push(fill.find(c=>!chosen.some(x=>key(x)===key(c)))||fill[0]);
     const partner=s.mode==='pair'?preparePartner(s,pool).map(item=>known.get(`${item.id}:${item.playerIndex}`)):[];
     if(partner.some(c=>!c))throw Error('拼机伙伴选曲无效，请重新进入出勤。');
     const feeReason=api.timeChargeReason(s,m.duration,m.cost);if(feeReason)throw Error(feeReason);
@@ -262,7 +263,7 @@
     if(s.major.performance?.round&&!s.major.performance.round.results.every(record))return false;
     if(s.last&&(!Array.isArray(s.last.results)||!s.last.results.every(record)||!num(s.last.gain,0,30000)||!MODES[s.last.mode]||!s.last.skillsBefore))return false;return CITY.valid(s)&&M.valid(s);
   }
-  const api={NPC_RATING_CAP,START,DAYS,OPEN,CLOSE,NIGHT,HOLIDAYS,dayInfo,pcPrice,entryPrice,allNight,arcadeIsOpen,JOBS,ARCADE_KM,TRANSPORT,transportOptions,DRINKS,MEALS,EVENTS,WEEK,MODES,create,date,dateISO,dateLabel,time,key,log,check,resolveClass,teacher,daily,workIncome,sleep,nextDay:sleep,schedule,pending,nextObligation,canSpendTime,academicChange,startTrip,setMode,peopleAt,roundInfo,roundMinutes,travel,drink,availableUntil,playReason,coefficient,chartRating,rank,ratingTier,best,recalculate,charts,baseAbility,levelValue,challengeThreshold,isOverreach,growthFactor,ability,familiarity,expected,combo,simulate,recommend,play,beginCoursePlay,settleCourseSong,finishCoursePlay,finishPlay,answer,returnToPlayReason,meal,migrate,validate};
+  const api={NPC_RATING_CAP,START,DAYS,OPEN,CLOSE,NIGHT,HOLIDAYS,dayInfo,pcPrice,entryPrice,allNight,arcadeIsOpen,JOBS,ARCADE_KM,TRANSPORT,transportOptions,DRINKS,MEALS,EVENTS,WEEK,MODES,create,date,dateISO,dateLabel,time,key,log,check,resolveClass,teacher,daily,workIncome,sleep,nextDay:sleep,schedule,pending,nextObligation,canSpendTime,academicChange,startTrip,setMode,peopleAt,roundInfo,roundMinutes,travel,drink,availableUntil,playReason,coefficient,chartRating,rank,ratingTier,best,recalculate,charts,baseAbility,levelValue,challengeThreshold,isOverreach,growthFactor,ability,familiarity,expected,combo,simulate,recordMatches,recommend,play,beginCoursePlay,settleCourseSong,finishCoursePlay,finishPlay,answer,returnToPlayReason,meal,migrate,validate};
   LIN.install(api);SOCIAL.install(api);X.install(api);C.install(api);CITY.install(api);NEEDS.install(api);M.install(api);COMP.install(api);R.install(api);GUIDE.install(api);WORLD.install(api);REST.install(api,{rollover,tick:X.tick,condition:X.rollCondition,distance:C.distance});Object.assign(api,{isUtage,advance,preparePartner,setPartnerDifficulty,calculateJudgements:J.calculate});REST.wrap(api);MAJOR.install(api);K.install(api,{begin:beginPlayRound,record:recordPlaySong,finish:finishPlayRound});
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.Game=api;
 })(typeof window==='undefined'?globalThis:window);

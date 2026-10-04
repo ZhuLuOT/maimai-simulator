@@ -66,17 +66,29 @@
     '交互':{skills:{key:.65,reading:.35},groups:[0],scene:'双手交互段开始了'},
     '高物量':{skills:{key:.6,reading:.4},groups:[0,3],scene:'密集音符涌入屏幕'}
   };
+  // Only concrete configurations attached to this exact chart can create events.
+  const patternTags=new Set(['拆弹','错位','一笔画','反手','绝赞段','定拍','扫键','爆发','大位移','转圈','散打','跳拍','纵连','交互']);
+  function eventTags(c){return [...new Set((c.tags||[]).filter(t=>patternTags.has(t)))];}
+  function clearLabel(c){return c.achievement>=80?(c.combo||'CLEAR'):'';}
+  function finalGateLife(result,life,maxLife){
+    // With no chart timeline available, use the same sampled note order as max combo.
+    const sequence=sequences.get(result)||noteSequence({seed:0},result.judgementGroups),half=Math.ceil(sequence.length/2);
+    const first=sequence.slice(0,half).reduce((n,x)=>n+(x%5===4?3:x%5===3?1:0),0);
+    const second=sequence.slice(half).reduce((n,x)=>n+(x%5===0?0:x%5===4?3:1),0);
+    const midpoint=Math.max(0,life-first),recovered=midpoint>0?maxLife-midpoint:0;
+    return {first,second,midpoint,recovered,life:midpoint>0?Math.max(0,maxLife-second):0};
+  }
   function planSegment(s,c){
-    const tags=(c.tags||[]).filter(t=>segments[t]);
+    const tags=eventTags(c);
     if(!tags.length||rand(s)>(s.condition<2?.45:s.condition>2?.35:.4))return null;
     return {tag:tags[Math.floor(rand(s)*tags.length)]};
   }
   function planSegments(s,c){
     const first=planSegment(s,c);if(!first)return [];
-    const plans=[first],tags=[...new Set(c.tags.filter(t=>segments[t]))];
+    const plans=[first],tags=eventTags(c);
     for(const chance of [c.ds>=13.6?.55:.25,c.ds>=14?.3:.15]){
       if(rand(s)>=chance)break;
-      const remaining=tags.filter(t=>!plans.some(p=>p.tag===t)),choices=remaining.length?remaining:tags;
+      const choices=tags.filter(t=>!plans.some(p=>p.tag===t));if(!choices.length)break;
       plans.push({tag:choices[Math.floor(rand(s)*choices.length)]});
     }
     return plans;
@@ -122,5 +134,5 @@
     const adjusted=finish(groups,breaks,sequence);event.loss=Number((result.achievement-adjusted.achievement).toFixed(4));
     return withEvent(adjusted);
   }
-  const api={calculate,difficultyPenalty,difficultyValue,simulate,segment,segments,planSegment,planSegments,segmentOptions};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.Judgement=api;
+  const api={calculate,difficultyPenalty,difficultyValue,simulate,segment,segments,eventTags,clearLabel,finalGateLife,planSegment,planSegments,segmentOptions};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.Judgement=api;
 })(globalThis);

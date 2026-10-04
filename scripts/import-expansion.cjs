@@ -4,7 +4,7 @@ vm.runInNewContext(fs.readFileSync(path.join(root,'data/music.js'),'utf8'),ctx);
 const songs=ctx.window.MUSIC_DATA,read=n=>JSON.parse(fs.readFileSync(path.join(tmp,'chiffon-'+n+'.json')));
 const tags=read('tags'),tagNames=Object.fromEntries(tags.tags.map(t=>[t.id,t.localized_name['zh-Hans']]));
 const difficulty=['basic','advanced','expert','master','remaster'],chartTags={};
-for(const t of tags.tagSongs){const matches=songs.filter(s=>s.title===t.song_id&&s.type===(t.sheet_type==='dx'?'DX':'SD')),i=difficulty.indexOf(t.sheet_difficulty);if(i<0)continue;for(const s of matches)if(s.ds[i]){const k=s.id+':'+i;chartTags[k]??=[];if(!chartTags[k].includes(tagNames[t.tag_id]))chartTags[k].push(tagNames[t.tag_id]);}}
+for(const t of tags.tagSongs){if(!['std','dx'].includes(t.sheet_type)||!tagNames[t.tag_id])continue;const matches=songs.filter(s=>s.title===t.song_id&&s.type===(t.sheet_type==='dx'?'DX':'SD')),i=difficulty.indexOf(t.sheet_difficulty);if(i<0)continue;for(const s of matches)if(s.ds[i]){const k=s.id+':'+i;chartTags[k]??=[];if(!chartTags[k].includes(tagNames[t.tag_id]))chartTags[k].push(tagNames[t.tag_id]);}}
 const catalogue=[],removedTitleIds=[];
 for(const [kind,list]of [['plate',read('plates').plates],['title',read('trophies').trophies]])for(const c of list){
   if(c.id===2)continue;
