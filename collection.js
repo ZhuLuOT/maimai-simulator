@@ -27,7 +27,7 @@
       item.required.some(rule=>rule.songs.length>0);
   }
   const collections=DATA.collections.filter(available).map(item=>coursePlates.has(item.id)?{...item,courseId:coursePlates.get(item.id)}:item);
-  collections.push({id:'title-kaleidxscope-error',kind:'title',category:'event',name:'サイゴノキボウ ヲミツケテ',description:'通关表门 ERROR',required:[]});
+  collections.push({id:'title-kaleidxscope-error',kind:'title',category:'event',color:'Normal',name:'サイゴノキボウ ヲミツケテ',description:'通关表门 ERROR',required:[]});
   regions.configure(collections,music);
   let G;const removedIds=new Set([...(DATA.removedTitleIds||[]),...DATA.collections.filter(c=>!available(c)).map(c=>c.id)]);const byId=new Map(collections.map(c=>[c.id,c])),ratings={d:0,c:50,b:60,bb:70,bbb:75,a:80,aa:90,aaa:94,s:97,sp:98,ss:99,ssp:99.5,sss:100,sssp:100.5};
   const initial=()=>({stampTarget:null,stamps:{},lastStamp:0,regionTarget:null,regions:{},unlocked:[]});

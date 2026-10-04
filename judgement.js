@@ -24,7 +24,10 @@
     let current=0,maxCombo=0;for(const note of sequence){current=note%5===4?0:current+1;maxCombo=Math.max(maxCombo,current);}
     const result={...calculate(groups,breaks),maxCombo};sequences.set(result,sequence);return result;
   }
+  function strongLowChart(s,c){return !!s.precision&&c.ds>0&&c.ds<11&&!c.utage&&!/^\s*\[[^\]]+\]/.test(c.title||'')&&['star','key','reading'].every(k=>s.skills?.[k]>=13);}
+  function performanceState(s,c){return strongLowChart(s,c)?{...s,stamina:100,drowsiness:0}:s;}
   function lowerChartErrors(s,c,ability){
+    if(strongLowChart(s,c)){const advantage=Math.min(s.skills.star,s.skills.key,s.skills.reading)-c.ds;return Math.max(.0005,.004*Math.exp(-Math.max(0,advantage-2)*.45));}
     // Fundamentals make under-level BASIC/EXPERT clears consistent. Retain
     // normal precision on harder charts, and never replace sampled notes with AP.
     if(!s.precision||![0,2].includes(c.index)||c.ds>=13||c.utage||/^\s*\[[^\]]+\]/.test(c.title||''))return 1;
@@ -34,7 +37,7 @@
     return Math.max(.01,Math.exp(-advantage*1.6*readiness*lowLevel));
   }
   function simulate(s,c,expected,ability){const groups=[],b={critical:0,perfect50:0,perfect100:0,great80:0,great60:0,great50:0,good:0,miss:0},margin=ability-c.ds,plays=s.practice[`${c.id}:${c.index}`]||0;
-    const precision=P.lapses(s,margin,plays);
+    const precision=P.lapses(performanceState(s,c),margin,plays);
     const errorScale=lowerChartErrors(s,c,ability);
     const loss=Math.max(0,101-clamp(expected,0,101))/100*(.9+rand(s)*.2);
     c.notes.forEach((count,i)=>{const g=empty(),technical=i===2?s.skills.star:s.skills.key,weighted=s.skills.star*c.starWeight+s.skills.key*(1-c.starWeight),factor=clamp(Math.exp((weighted-technical)*.17),.45,2.3);
@@ -94,6 +97,7 @@
     return plans;
   }
   function segmentOptions(s,c,tag){
+    s=performanceState(s,c);
     const rule=segments[tag];if(!rule)return [];
     const names={star:'星星力',key:'键盘力',reading:'读谱力'};
     const star=(rule.skills.star||0)>(rule.skills.key||0),alternate=star?'key':'star';
@@ -134,5 +138,5 @@
     const adjusted=finish(groups,breaks,sequence);event.loss=Number((result.achievement-adjusted.achievement).toFixed(4));
     return withEvent(adjusted);
   }
-  const api={calculate,difficultyPenalty,difficultyValue,simulate,segment,segments,eventTags,clearLabel,finalGateLife,planSegment,planSegments,segmentOptions};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.Judgement=api;
+  const api={calculate,difficultyPenalty,difficultyValue,simulate,segment,segments,eventTags,clearLabel,finalGateLife,strongLowChart,performanceState,planSegment,planSegments,segmentOptions};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.Judgement=api;
 })(globalThis);
