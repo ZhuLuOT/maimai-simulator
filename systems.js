@@ -18,7 +18,7 @@
   function ensure(s){
     P.ensure(s);
     s.skills.reading??=(s.skills.star+s.skills.key)/2;
-    s.profile??={name:'玩家',id:'初来乍到',plate:'default'};
+    s.profile??={name:'玩家',id:'初来乍到',plate:'default',frame:'frame-1'};
     s.talents??=[];s.curseBreakerRewarded??=false;s.maxStamina??=100;s.stamina??=s.maxStamina;
     s.gloves??={...GLOVES[0],durability:100};s.liquid??=s.drink?600:0;
     s.condition??=2;s.queueUntil??=0;s.consecutive??=0;s.partner??=null;s.friendship??=false;s.instinct??=false;
@@ -75,7 +75,7 @@
     G.log(s,`获得词条「${t.name}」：${Object.keys(gains).length?talentGainText(gains):t.description}`,'talent');
   }
   function draw(s,run=1){const a=TALENTS.filter(t=>t.initial&&(t.id!=='dragon'||run>=2));for(let i=a.length-1;i>0;i--){const j=Math.floor(rand(s)*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a.slice(0,3).map(t=>t.id);}
-  function setup(s,{name,id,talent,offers,playStyle='outer'}){if(s.setupDone||s.started)throw Error('角色已经创建。');name=String(name??'').trim()||'神秘人';id=String(id??'').trim()||'Maimai';if(name.length>16||id.length>16)throw Error('姓名和舞萌 ID 请填写 1–16 个字符。');if(!offers?.includes(talent))throw Error('请在本次三个词条中选择一个。');if(!G.PLAY_STYLES[playStyle])throw Error('请选择外键或内屏。');G.startGuide(s,playStyle);s.profile={name,id,plate:'default',title:'title-1',avatar:null};s.setupDone=true;grant(s,talent);rollCondition(s);}
+  function setup(s,{name,id,talent,offers,playStyle='outer'}){if(s.setupDone||s.started)throw Error('角色已经创建。');name=String(name??'').trim()||'神秘人';id=String(id??'').trim()||'Maimai';if(name.length>16||id.length>16)throw Error('姓名和舞萌 ID 请填写 1–16 个字符。');if(!offers?.includes(talent))throw Error('请在本次三个词条中选择一个。');if(!G.PLAY_STYLES[playStyle])throw Error('请选择外键或内屏。');G.startGuide(s,playStyle);s.profile={name,id,plate:'default',frame:'frame-1',title:'title-1',avatar:null};s.setupDone=true;grant(s,talent);rollCondition(s);}
   function crowdOffset(s){const h=s.clock/60;return h<12?-5:h>=12&&h<14?-6:h>=17&&h<19?-3:h>=19&&h<22?3:h>=22?-2:0;}
   function choosePartner(s){if(s.mode!=='pair'||G.peopleAt(s)===0){s.partner=null;s.partnerSongs=null;s.friendship=false;return;}const candidates=s.arcade===5?G.denVisitors(s):s.npcs.filter(n=>n.id!=='小凛'||G.linArcade(s)===s.arcade);if(!candidates.length){s.partner=null;s.partnerSongs=null;s.friendship=false;return;}s.partner=s.npcs.indexOf(candidates[Math.floor(rand(s)*candidates.length)]);s.partnerSongs=null;const n=s.npcs[s.partner];s.friendship=n.familiarity>=40&&rand(s)<.35;if(s.friendship)G.log(s,`${n.id}：今天你多选一首吧！本轮可自选 3 首。`,'heart');}
   function selectCount(s){return s.mode==='pair'?(s.friendship?3:2):3;}

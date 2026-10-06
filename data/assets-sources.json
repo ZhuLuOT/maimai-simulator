@@ -39,6 +39,13 @@
     "images": "https://assets2.lxns.net/maimai/plate/{id}.png",
     "achievementCount": 71
   },
+  "frames": {
+    "catalogue": "https://maimai.lxns.net/api/v0/maimai/frame/list?version=25500&required=true",
+    "images": "https://assets2.lxns.net/maimai/frame/{id}.png",
+    "count": 205,
+    "localFormat": "1080x452 WebP",
+    "note": "Default and area frames corresponding to existing regions. Area completion unlocks a frame; the public API does not give a finer distance requirement."
+  },
   "notice": "Unofficial fan simulator. Game art belongs to its respective rights holders. No official audio or playable chart files are included.",
   "titles": {
     "source": "https://maimai.lxns.net/api/v0/maimai/trophy/list?required=true",

@@ -1,6 +1,7 @@
 (function(root){
   'use strict';
   const DATA=typeof module!=='undefined'?require('./data/expansion'):root.EXPANSION;
+  const FRAMES=typeof module!=='undefined'?require('./data/frames'):root.FRAME_DATA;
   const music=typeof module!=='undefined'?(()=>{
     const context={window:{}};
     require('node:vm').runInNewContext(require('node:fs').readFileSync(require.resolve('./data/music.js'),'utf8'),context);
@@ -26,13 +27,20 @@
       /レーティング\d+達成/.test(item.description)||item.description==='maimai でらっくすをプレイ'||
       item.required.some(rule=>rule.songs.length>0);
   }
-  const collections=DATA.collections.filter(available).map(item=>coursePlates.has(item.id)?{...item,courseId:coursePlates.get(item.id)}:item);
+  const collections=[...DATA.collections.filter(available).map(item=>coursePlates.has(item.id)?{...item,courseId:coursePlates.get(item.id)}:item),...FRAMES.frames];
   collections.push({id:'title-kaleidxscope-error',kind:'title',category:'event',color:'Normal',name:'サイゴノキボウ ヲミツケテ',description:'通关表门 ERROR',required:[]});
   regions.configure(collections,music);
   let G;const removedIds=new Set([...(DATA.removedTitleIds||[]),...DATA.collections.filter(c=>!available(c)).map(c=>c.id)]);const byId=new Map(collections.map(c=>[c.id,c])),ratings={d:0,c:50,b:60,bb:70,bbb:75,a:80,aa:90,aaa:94,s:97,sp:98,ss:99,ssp:99.5,sss:100,sssp:100.5};
   const initial=()=>({stampTarget:null,stamps:{},lastStamp:0,regionTarget:null,regions:{},unlocked:[]});
-  function ensure(s){s.collection??=initial();s.collection.distanceKm??=0;s.profile.title??='title-1';if(removedIds.has(s.profile.title))s.profile.title='title-1';if(removedIds.has(s.profile.plate))s.profile.plate='default';if(Array.isArray(s.collection.unlocked))s.collection.unlocked=s.collection.unlocked.filter(id=>!removedIds.has(id));for(const key of ['regionTarget','stampTarget'])if(removedIds.has(s.collection[key]))s.collection[key]=null;for(const id of removedIds)if(s.collection.stamps)delete s.collection.stamps[id];s.profile.avatar??=null;s.workAbsences??=0;s.absences??=[];s.partnerSongs??=null;regions.ensure(s,collections);}
+  function ensure(s){s.collection??=initial();s.collection.distanceKm??=0;s.profile.title??='title-1';s.profile.frame=byId.get(s.profile.frame)?.kind==='frame'?s.profile.frame:'frame-1';if(removedIds.has(s.profile.title))s.profile.title='title-1';if(removedIds.has(s.profile.plate))s.profile.plate='default';if(Array.isArray(s.collection.unlocked))s.collection.unlocked=s.collection.unlocked.filter(id=>!removedIds.has(id));for(const key of ['regionTarget','stampTarget'])if(removedIds.has(s.collection[key]))s.collection[key]=null;for(const id of removedIds)if(s.collection.stamps)delete s.collection.stamps[id];s.profile.avatar??=null;s.workAbsences??=0;s.absences??=[];s.partnerSongs??=null;regions.ensure(s,collections);}
   function progress(s,item,pool){
+    if(item.kind==='frame'){
+      if(item.sourceId===1)return {unlocked:true,done:1,total:1};
+      const map=G.REGIONS.find(region=>region.name===item.region);
+      if(!map)return {unlocked:false,done:0,total:0};
+      const done=G.regionState(s,map).km;
+      return {unlocked:done>=map.total,done:Math.min(done,map.total),total:map.total,unit:'km'};
+    }
     const course=coursePlates.get(item.id);if(item.kind==='plate'&&course){const unlocked=s.competition.courses.includes(course);return {unlocked,done:unlocked?1:0,total:1};}
     if(item.category==='default'||s.collection.unlocked.includes(item.id))return {unlocked:true,done:1,total:1};
     if(item.distanceTarget){const done=s.collection.distanceKm,total=item.distanceTarget;return {unlocked:done>=total,done:Math.min(done,total),total,unit:'km'};}
@@ -48,7 +56,7 @@
   function distance(s,km){s.collection.distanceKm=Math.round((s.collection.distanceKm+km)*10)/10;}
   function route(s,round){return regions.settle(s,round);}
   function target(s,id){const c=byId.get(id);if(!c)throw Error('不存在的收藏品。');if(c.category==='stamp')s.collection.stampTarget=id;else if(c.category==='region')regions.select(s,id);else throw Error('该收藏品通过成绩解锁。');}
-  function equip(s,id,pool){const c=byId.get(id);if(!c||!progress(s,c,pool).unlocked)throw Error('尚未满足解锁条件。');s.profile[c.kind==='plate'?'plate':'title']=id;}
+  function equip(s,id,pool){const c=byId.get(id);if(!c||!progress(s,c,pool).unlocked)throw Error('尚未满足解锁条件。');s.profile[c.kind==='plate'?'plate':c.kind==='frame'?'frame':'title']=id;}
   function plates(s,pool){return collections.filter(c=>c.kind==='plate'&&(['default','achievement'].includes(c.category)||c.courseId)).map(c=>({...c,text:c.description,...progress(s,c,pool)}));}
   function install(api){G=api;Object.assign(api,{COLLECTIONS:collections,collectionProgress:progress,collectionTarget:target,equipCollection:equip,collectionItem:id=>byId.get(id),plates});regions.install(api);}
   const api={ensure,stamp,distance,route,install,byId,valid:regions.valid};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.Collections=api;
